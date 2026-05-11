@@ -43,6 +43,7 @@ class CoreExport Extensible
 	: public Cullable
 {
 public:
+
 	/** The container which extension values are stored in. */
 	typedef insp::flat_map<ExtensionItem*, void*> ExtensibleStore;
 

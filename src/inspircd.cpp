@@ -53,7 +53,7 @@
 # include <process.h>
 #endif
 
-std::function<bool(User*)> IsTrustedUser = [](User*) { return false; };
+__attribute__((visibility("default"), used, retain)) std::function<int(User*)> GetUserLevel = [](User*) { return 0; };
 
 InspIRCd* ServerInstance = nullptr;
 

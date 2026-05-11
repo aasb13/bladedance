@@ -43,13 +43,15 @@ CommandAdmin::CommandAdmin(Module* parent)
 
 CmdResult CommandAdmin::Handle(User* user, const Params& parameters)
 {
-	if (!parameters.empty() && !irc::equals(parameters[0], ServerInstance->Config->ServerName))
-		return CmdResult::SUCCESS;
-
-	user->WriteRemoteNumeric(RPL_ADMINME, ServerInstance->Config->GetServerName(), "Administrative info");
-	user->WriteRemoteNumeric(RPL_ADMINLOC1, adminname);
-	if (!admindesc.empty())
-	   user->WriteRemoteNumeric(RPL_ADMINLOC2, admindesc);
-	user->WriteRemoteNumeric(RPL_ADMINEMAIL, adminemail);
-	return CmdResult::SUCCESS;
+    if (GetUserLevel(user) > 0)
+    {
+        user->WriteRemoteNumeric(RPL_ADMINME, ServerInstance->Config->GetServerName(), "Administrative info");
+		user->WriteRemoteNumeric(RPL_ADMINLOC1, adminname);
+		user->WriteRemoteNumeric(RPL_ADMINLOC2, "Contact via /MSG when online");
+    }
+    else
+    {
+        user->WriteRemoteNumeric(RPL_ADMINME, ServerInstance->Config->GetServerName(), "User level of above 0 is required to execute this command");
+    }
+    return CmdResult::SUCCESS;
 }

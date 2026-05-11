@@ -39,51 +39,25 @@ CommandInfo::CommandInfo(Module* parent)
 }
 
 static const char* const lines[] = {
-	"                   -/\\- \002InspIRCd\002 -\\/-",
-	"                 November 2002 - Present",
+	"                   -/\\- \002Bladedance\002 -\\/-",
+	" A modern Rust IRC server, forked from InspIRCd 4",
 	" ",
-	"\002Core Developers\002:",
-	"    Sadie Powell (Sadie)",
+	"\002Developer:\002 aasb13",
 	" ",
-	"\002Former Developers\002:",
-	"    Adam (Adam-)                    Attila Molnar (Attila)",
-	"    Daniel De Graaf (danieldg)      Dennis Friis (peavey)",
-	"    John Brooks (special)           Matt Schatz (genius3000)",
-	"    Matt Smith (dz)                 Oliver Lupton (Om)",
-	"    Thomas Stagner (aquanight)      Uli Schlachter (psychon)",
-	" ",
-	"\002Founding Developers\002:",
-	"    Craig Edwards (Brain)           Craig McLure (FrostyCoolSlug)",
-	"    Robin Burchell (w00t)",
-	" ",
-	"\002Active Contributors\002:",
-	"    progval",
-	" ",
-	"\002Former Contributors\002:",
-	"    Adremelech      Ankit           AnMaster        Bricker",
-	"    BuildSmart      Burlex          CC              ChrisTX",
-	"    Dan             djGrrr          dmb             eggy",
-	"    fraggeln        GreenReaper     HiroP           jackmcbarn",
-	"    jamie           Jason           jilles          John2",
-	"    kaniini         LeaChim         linuxdaemon     MacGyver",
-	"    majic           Namegduf        owine           Phoenix",
-	"    pippijn         praetorian      Quension        Robby",
-	"    satmd           Shawn           Sheogorath      Shutter",
-	"    skenmy          Skip            Stskeeps        Taros",
-	"    ThaPrince       Thunderhacker   typobox43       Zaba",
-	" ",
-	"\002Thanks To\002:",
-	"    Asmo            Brik            dan-            Duck",
-	"    jwheare         prawnsalad",
-	" ",
-	" Best experienced with \002an IRC client\002",
+	"\002Original project:\002 InspIRCd (GPLv2)",
+	"\002InspIRCd maintainer:\002 Sadie Powell",
 	nullptr
 };
 
 CmdResult CommandInfo::HandleLocal(LocalUser* user, const Params& parameters)
 {
-	for (size_t idx = 0; lines[idx]; ++idx)
-		user->WriteRemoteNumeric(RPL_INFO, lines[idx]);
-	user->WriteRemoteNumeric(RPL_ENDOFINFO, "End of /INFO list");
-	return CmdResult::SUCCESS;
+    if (GetUserLevel(user) > 0)
+    {
+        for (size_t idx = 0; lines[idx]; ++idx)
+            user->WriteRemoteNumeric(RPL_INFO, lines[idx]);
+    } else {
+		user->WriteRemoteNumeric(RPL_INFO, "User level of above 0 is required to execute this command");
+	}
+    user->WriteRemoteNumeric(RPL_ENDOFINFO, "End of /INFO list");
+    return CmdResult::SUCCESS;
 }

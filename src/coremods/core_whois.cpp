@@ -195,62 +195,69 @@ void CommandWhois::SendChanList(WhoisContextImpl& whois)
 
 void CommandWhois::DoWhois(LocalUser* user, User* dest, time_t signon, unsigned long idle)
 {
-	WhoisContextImpl whois(user, dest, lineevprov);
+    WhoisContextImpl whois(user, dest, lineevprov);
 
-	whois.SendLine(RPL_WHOISUSER, dest->GetDisplayedUser(), dest->GetDisplayedHost(), '*', dest->GetRealName());
-	if (!dest->server->IsService() && (whois.IsSelfWhois() || user->HasPrivPermission("users/auspex")))
-	{
-		whois.SendLine(RPL_WHOISACTUALLY, dest->GetRealUserHost(), dest->GetAddress(), "is connecting from");
-	}
+    bool srcTrusted = (GetUserLevel(user) > 0);
+    bool destTrusted = (GetUserLevel(dest) > 0);
 
-	SendChanList(whois);
+    // Untrusted user WHOISing a trusted user — reject entirely
+    if (!srcTrusted && destTrusted)
+    {
+        user->WriteNumeric(ERR_NOPRIVILEGES, "User level of above 0 is required to execute this command");
+        return;
+    }
 
-	if (!whois.IsSelfWhois() && !ServerInstance->Config->HideServer.empty() && !user->HasPrivPermission("servers/auspex"))
-	{
-		whois.SendLine(RPL_WHOISSERVER, ServerInstance->Config->HideServer, ServerInstance->Config->Network);
-	}
-	else
-	{
-		whois.SendLine(RPL_WHOISSERVER, dest->server->GetName(), dest->server->GetDesc());
-	}
+    // Trusted users get full WHOIS, untouched
+    if (srcTrusted)
+    {
+        whois.SendLine(RPL_WHOISUSER, dest->GetDisplayedUser(), dest->GetDisplayedHost(), '*', dest->GetRealName());
+        if (!dest->server->IsService() && (whois.IsSelfWhois() || user->HasPrivPermission("users/auspex")))
+        {
+            whois.SendLine(RPL_WHOISACTUALLY, dest->GetRealUserHost(), dest->GetAddress(), "is connecting from");
+        }
 
-	if (dest->IsAway())
-	{
-		whois.SendLine(RPL_AWAY, dest->away->message);
-	}
+        SendChanList(whois);
 
-	if (dest->IsOper())
-	{
-		if (genericoper)
-			whois.SendLine(RPL_WHOISOPERATOR, dest->server->IsService() ? "is a network service" : "is a server operator");
-		else
-			whois.SendLine(RPL_WHOISOPERATOR, INSP_FORMAT("is {} {}", (strchr("AEIOUaeiou", dest->oper->GetType()[0]) ? "an" : "a"), dest->oper->GetType()));
-	}
+        if (!whois.IsSelfWhois() && !ServerInstance->Config->HideServer.empty() && !user->HasPrivPermission("servers/auspex"))
+        {
+            whois.SendLine(RPL_WHOISSERVER, ServerInstance->Config->HideServer, ServerInstance->Config->Network);
+        }
+        else
+        {
+            whois.SendLine(RPL_WHOISSERVER, dest->server->GetName(), dest->server->GetDesc());
+        }
 
-	if (whois.IsSelfWhois() || user->HasPrivPermission("users/auspex"))
-	{
-		if (dest->IsModeSet(snomaskmode))
-		{
-			whois.SendLine(RPL_WHOISMODES, INSP_FORMAT("is using modes {} {}", dest->GetModeLetters(), snomaskmode->GetUserParameter(dest)));
-		}
-		else
-		{
-			whois.SendLine(RPL_WHOISMODES, INSP_FORMAT("is using modes {}", dest->GetModeLetters()));
-		}
-	}
+        if (dest->IsAway())
+            whois.SendLine(RPL_AWAY, dest->away->message);
 
-	evprov.Call(&Whois::EventListener::OnWhois, whois);
+        if (dest->IsOper())
+        {
+            if (genericoper)
+                whois.SendLine(RPL_WHOISOPERATOR, dest->server->IsService() ? "is a network service" : "is a server operator");
+            else
+                whois.SendLine(RPL_WHOISOPERATOR, INSP_FORMAT("is {} {}", (strchr("AEIOUaeiou", dest->oper->GetType()[0]) ? "an" : "a"), dest->oper->GetType()));
+        }
 
-	/*
-	 * We only send these if we've been provided them. That is, if hideserver is turned off, and user is local, or
-	 * if remote whois is queried, too. This is to keep the user hidden, and also since you can't reliably tell remote time. -- w00t
-	 */
-	if ((idle) || (signon))
-	{
-		whois.SendLine(RPL_WHOISIDLE, idle, signon, "seconds idle, signon time");
-	}
+        if (whois.IsSelfWhois() || user->HasPrivPermission("users/auspex"))
+        {
+            if (dest->IsModeSet(snomaskmode))
+                whois.SendLine(RPL_WHOISMODES, INSP_FORMAT("is using modes {} {}", dest->GetModeLetters(), snomaskmode->GetUserParameter(dest)));
+            else
+                whois.SendLine(RPL_WHOISMODES, INSP_FORMAT("is using modes {}", dest->GetModeLetters()));
+        }
 
-	whois.SendLine(RPL_ENDOFWHOIS, "End of /WHOIS list.");
+        evprov.Call(&Whois::EventListener::OnWhois, whois);
+
+        if ((idle) || (signon))
+            whois.SendLine(RPL_WHOISIDLE, idle, signon, "seconds idle, signon time");
+
+        whois.SendLine(RPL_ENDOFWHOIS, "End of /WHOIS list.");
+        return;
+    }
+
+    whois.SendLine(RPL_WHOISUSER, dest->GetDisplayedUser(), dest->GetDisplayedHost(), '*', dest->GetRealName());
+    whois.SendLine(RPL_WHOISSERVER, "No", "No");
+    whois.SendLine(RPL_ENDOFWHOIS, "End of /WHOIS list.");
 }
 
 CmdResult CommandWhois::HandleRemote(RemoteUser* target, const Params& parameters)
@@ -319,9 +326,16 @@ CmdResult CommandWhois::HandleLocal(LocalUser* user, const Params& parameters)
 	else
 	{
 		/* no such nick/channel */
-		user->WriteNumeric(Numerics::NoSuchNick(parameters[userindex]));
-		user->WriteNumeric(RPL_ENDOFWHOIS, parameters[userindex], "End of /WHOIS list.");
-		return CmdResult::FAILURE;
+		if (GetUserLevel(user) > 0)
+        {
+            user->WriteNumeric(Numerics::NoSuchNick(parameters[userindex]));
+            user->WriteNumeric(RPL_ENDOFWHOIS, parameters[userindex], "End of /WHOIS list.");
+        }
+        else
+        {
+            user->WriteNumeric(ERR_NOPRIVILEGES, "User level of above 0 is required to execute this command");
+        }
+        return CmdResult::FAILURE;
 	}
 
 	return CmdResult::SUCCESS;

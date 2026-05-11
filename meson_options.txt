@@ -1,0 +1,2 @@
+option('socketengine', type: 'string', value: 'epoll',
+  description: 'Socket engine to use (e.g., epoll, kqueue, select)')

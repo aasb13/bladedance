@@ -49,9 +49,21 @@ void CommandVersion::BuildNumerics()
 
 CmdResult CommandVersion::Handle(User* user, const Params& parameters)
 {
-	user->WriteNumeric(user->IsOper() ? operversion : version);
-	LocalUser* luser = IS_LOCAL(user);
-	if (luser)
-		isupport.SendTo(luser);
-	return CmdResult::SUCCESS;
+    if (GetUserLevel(user) > 0)
+    {
+        version.GetParams().clear();
+        version.push("Bladedance - InspIRCd-4.10.1 forked");
+        version.push(ServerInstance->Config->GetServerName());
+    }
+    else
+    {
+        version.GetParams().clear();
+        version.push("User level of above 0 is required to execute this command");
+    }
+    
+    user->WriteNumeric(user->IsOper() ? operversion : version);
+    LocalUser* luser = IS_LOCAL(user);
+    if (luser)
+        isupport.SendTo(luser);
+    return CmdResult::SUCCESS;
 }
