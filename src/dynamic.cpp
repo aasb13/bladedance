@@ -43,6 +43,8 @@ DLLManager::DLLManager(const std::string& name)
 #ifdef _WIN32
 	lib = LoadLibraryA(name.c_str());
 #else
+	dlopen("libmongoc-1.0.so", RTLD_NOW|RTLD_GLOBAL);
+	dlopen("libbson-1.0.so", RTLD_NOW|RTLD_GLOBAL);
 	lib = dlopen(name.c_str(), RTLD_NOW|RTLD_LOCAL);
 #endif
 

@@ -53,6 +53,8 @@
 # include <process.h>
 #endif
 
+std::function<bool(User*)> IsTrustedUser = [](User*) { return false; };
+
 InspIRCd* ServerInstance = nullptr;
 
 /** Separate from the other casemap tables so that code *can* still exclusively rely on RFC casemapping

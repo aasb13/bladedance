@@ -97,6 +97,9 @@ CoreExport extern InspIRCd* ServerInstance;
 #include "bancache.h"
 #include "logging.h"
 
+/** Function pointer for checking if a user is trusted. Set by m_gateway. */
+extern std::function<bool(User*)> IsTrustedUser;
+
 /** This class contains various STATS counters
  * It is used by the InspIRCd class, which internally
  * has an instance of it.
