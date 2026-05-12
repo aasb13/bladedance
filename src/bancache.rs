@@ -80,6 +80,16 @@ pub struct BanCacheManager {
     BanHash: HashMap<String, *mut BanCacheHit>,
 }
 
+fn log_bancache_line(message: &str) {
+    const TAG: &[u8] = b"BANCACHE\0";
+    let tag = TAG.as_ptr() as *const c_char;
+    if let Ok(c) = CString::new(message) {
+        unsafe {
+            LogManager_Debug(tag, c.as_ptr());
+        }
+    }
+}
+
 impl BanCacheManager {
     pub fn new() -> Self {
         BanCacheManager {
@@ -109,21 +119,13 @@ impl BanCacheManager {
     }
 
     pub fn RemoveEntries(&mut self, type_str: &str, positive: bool) {
-        const TAG: &[u8] = b"BANCACHE\0";
-        let tag = TAG.as_ptr() as *const c_char;
-
-        let log = |msg: String| {
-            if let Ok(c) = CString::new(msg) {
-                unsafe { LogManager_Debug(tag, c.as_ptr()) };
-            }
-        };
-
         if positive {
-            log(format!(
+            let line = format!(
                 "BanCacheManager::RemoveEntries(): Removing positive hits for {type_str}"
-            ));
+            );
+            log_bancache_line(&line);
         } else {
-            log("BanCacheManager::RemoveEntries(): Removing all negative hits".to_string());
+            log_bancache_line("BanCacheManager::RemoveEntries(): Removing all negative hits");
         }
 
         let mut ips_to_remove = Vec::new();
@@ -142,9 +144,8 @@ impl BanCacheManager {
             };
 
             if remove {
-                log(format!(
-                    "BanCacheManager::RemoveEntries(): Removing a hit on {ip}"
-                ));
+                let line = format!("BanCacheManager::RemoveEntries(): Removing a hit on {ip}");
+                log_bancache_line(&line);
                 ips_to_remove.push(ip.clone());
             }
         }
@@ -172,11 +173,7 @@ impl BanCacheManager {
             return false;
         }
         let msg = format!("Hit on {ip} is out of date, removing!");
-        if let Ok(c) = CString::new(msg) {
-            unsafe {
-                LogManager_Debug(b"BANCACHE\0".as_ptr() as *const c_char, c.as_ptr());
-            }
-        }
+        log_bancache_line(&msg);
         self.BanHash.remove(ip);
         unsafe {
             let _ = Box::from_raw(hit_ptr);

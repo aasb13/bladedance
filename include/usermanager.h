@@ -53,6 +53,9 @@ public:
 	*/
 	typedef insp::intrusive_list<LocalUser> LocalList;
 
+	/** Access for the Rust UserManager port (usermanager_ffi.cpp). */
+	friend struct UserManagerRustAccess;
+
 private:
 	/** Map of IP addresses for clone counting
 	 */
@@ -280,4 +283,36 @@ public:
 	{
 		return IS_REMOTE(FindUUID(uuid, fullyconnected));
 	}
+};
+
+/** Private member access for Rust UserManager port (see usermanager_ffi.cpp). */
+struct CoreExport UserManagerRustAccess
+{
+	static const UserManager::CloneCounts& LookupCloneCounts(UserManager* um, User* user);
+
+	static void IncUnknown(UserManager* um);
+	static void DecUnknown(UserManager* um);
+	static void ClientListInsert(UserManager* um, LocalUser* lu);
+	static void LocalUsersPushFront(UserManager* um, LocalUser* lu);
+	static void LocalUsersErase(UserManager* um, LocalUser* lu);
+	static void CloneMapClear(UserManager* um);
+	static void CloneMapAddEntry(UserManager* um, User* user);
+	static void CloneMapRemoveEntry(UserManager* um, User* user);
+	static bool ClientListEraseNick(UserManager* um, const std::string& nick);
+	static void UuidListErase(UserManager* um, const std::string& uuid);
+	static uint64_t GetAlreadySentId(UserManager* um);
+	static void SetAlreadySentId(UserManager* um, uint64_t v);
+	static size_t LocalUsersSize(UserManager* um);
+
+	struct ClientIter;
+	static ClientIter* ClientIterNew(UserManager* um);
+	static User* ClientIterNext(ClientIter* it);
+	static void ClientIterFree(ClientIter* it);
+
+	struct LocalIter;
+	static LocalIter* LocalIterNew(UserManager* um);
+	static LocalUser* LocalIterNext(LocalIter* it);
+	static void LocalIterFree(LocalIter* it);
+
+	static void ServicesSwapFromVector(UserManager* um, User* const* users, size_t count);
 };

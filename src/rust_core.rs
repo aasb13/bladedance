@@ -7,3 +7,4 @@
 
 mod stringutils;
 mod bancache;
+mod usermanager;
