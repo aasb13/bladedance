@@ -177,7 +177,7 @@ namespace Cap
 			Unregister();
 		}
 
-		~Capability() override
+		~Capability()
 		{
 			SetActive(false);
 		}

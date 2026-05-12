@@ -783,11 +783,10 @@ public:
 	 */
 	void PurgeEmptyChannels();
 
-	/** @copydoc Cullable::Cull */
-	Cullable::Result Cull() override;
-
 	/** Determines whether this user is fully connected to the server .*/
 	inline bool IsFullyConnected() const { return connected == CONN_FULL; }
+
+	virtual ~User() = default;
 };
 
 class CoreExport UserIOHandler final
@@ -840,8 +839,6 @@ private:
 
 public:
 	LocalUser(int fd, const irc::sockets::sockaddrs& client, const irc::sockets::sockaddrs& server);
-
-	Cullable::Result Cull() override;
 
 	UserIOHandler eh;
 
@@ -985,9 +982,6 @@ public:
 	 * @param sdesc The description of the server.
 	 */
 	FakeUser(const std::string& sid, const std::string& sname, const std::string& sdesc);
-
-	/** @copydoc Cullable::Cull. */
-	Cullable::Result Cull() override;
 
 	/** @copydoc User::GetMask. */
 	const std::string& GetMask() override;

@@ -14,5 +14,10 @@ mod snomasks;
 mod wildcard;
 mod logging;
 mod modulemanager;
+mod modules;
+mod timer;
 mod users;
 mod server;
+
+#[path = "coremods/core_info/cmd_admin.rs"] 
+mod cmd_admin;

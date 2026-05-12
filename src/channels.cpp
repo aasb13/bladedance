@@ -101,13 +101,11 @@ void Channel::CheckDestroy()
 
 	FOREACH_MOD(OnChannelDelete, (this));
 	ServerInstance->Channels.GetChans().erase(iter);
-	ServerInstance->GlobalCulls.AddItem(this);
-}
+	}
 
 void Channel::DelUser(const MemberMap::iterator& membiter)
 {
 	Membership* memb = membiter->second;
-	memb->Cull();
 	memb->~Membership();
 	userlist.erase(membiter);
 

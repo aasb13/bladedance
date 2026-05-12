@@ -69,7 +69,6 @@ CoreExport extern InspIRCd* ServerInstance;
 
 #include "config.h"
 #include "dynref.h"
-#include "cull.h"
 #include "extensible.h"
 #include "ctables.h"
 #include "numeric.h"
@@ -179,7 +178,23 @@ private:
 	void WritePID();
 
 public:
+	/** Base class for actions that must happen outside of the current call stack. */
+	class ActionBase
+	{
+	public:
+		virtual ~ActionBase() = default;
+		virtual void Call() = 0;
+	};
+
+public:
 	/** Actions that must happen outside of the current call stack. */
+	class ActionList
+	{
+		std::vector<class ActionBase*> list;
+	public:
+		void AddAction(class ActionBase* item) { list.push_back(item); }
+		void Run();
+	};
 	ActionList AtomicActions;
 
 	/** Caches server bans to speeds up checking of restrictions on connect. */
@@ -194,8 +209,6 @@ public:
 	/* Manager for the extension system. */
 	ExtensionManager Extensions;
 
-	/** Objects that should be culled outside of the current call stack. */
-	CullList GlobalCulls;
 
 	/** Manager for the logging system. */
 	Log::Manager Logs;
@@ -463,11 +476,6 @@ public:
 	void UpdateTime();
 };
 
-inline void Cullable::Deleter::operator()(Cullable* item) const
-{
-	if (item)
-		ServerInstance->GlobalCulls.AddItem(item);
-}
 
 inline void Channel::Write(ClientProtocol::EventProvider& protoevprov, ClientProtocol::Message& msg, char status, const CUList& except_list) const
 {

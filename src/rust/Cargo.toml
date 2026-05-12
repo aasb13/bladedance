@@ -5,7 +5,7 @@ edition = "2024"
 
 [lib]
 crate-type = ["staticlib"]
-path = "lib.rs"
+path = "../rust_core.rs"
 
 [dependencies]
 tracing = "0.1"

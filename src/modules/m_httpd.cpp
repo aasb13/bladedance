@@ -81,9 +81,6 @@ private:
 	size_t total_buffers;
 	int status_code = 0;
 
-	/** True if this object is in the cull list
-	 */
-	bool waitingcull = false;
 	bool messagecomplete = false;
 
 	bool Tick() override
@@ -243,12 +240,10 @@ public:
 
 	void Close() override
 	{
-		if (waitingcull || !HasFd())
+		if (!HasFd())
 			return;
 
-		waitingcull = true;
 		BufferedSocket::Close();
-		ServerInstance->GlobalCulls.AddItem(this);
 	}
 
 	void OnError(BufferedSocketError err) override
@@ -461,18 +456,11 @@ public:
 			++i;
 			if (sock->GetModHook(mod))
 			{
-				sock->Cull();
 				delete sock;
 			}
 		}
 	}
 
-	Cullable::Result Cull() override
-	{
-		for (auto* sock : sockets)
-			sock->Close();
-		return Module::Cull();
-	}
-};
+	};
 
 MODULE_INIT(ModuleHttpServer)

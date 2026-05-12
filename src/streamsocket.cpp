@@ -132,11 +132,6 @@ void StreamSocket::Close(bool writeblock)
 		Close();
 }
 
-Cullable::Result StreamSocket::Cull()
-{
-	Close();
-	return EventHandler::Cull();
-}
 
 ssize_t StreamSocket::HookChainRead(IOHook* hook, std::string& rq)
 {
@@ -386,7 +381,6 @@ bool SocketTimeout::Tick()
 		this->sock->OnError(I_ERR_TIMEOUT);
 		this->sock->state = I_ERROR;
 
-		ServerInstance->GlobalCulls.AddItem(sock);
 	}
 
 	this->sock->Timeout = nullptr;

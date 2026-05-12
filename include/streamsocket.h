@@ -351,7 +351,6 @@ public:
 	void Close(bool writeblock);
 
 	/** This ensures that close is called prior to destructor */
-	Cullable::Result Cull() override;
 
 	/** Get the IOHook of a module attached to this socket
 	 * @param mod Module whose IOHook to return
@@ -398,7 +397,7 @@ public:
 	 */
 	BufferedSocket(int newfd);
 
-	~BufferedSocket() override;
+	~BufferedSocket();
 
 	/** Begin connection to the given address
 	 * This will create a socket, register with socket engine, and start the asynchronous

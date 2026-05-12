@@ -40,7 +40,6 @@ enum class ExtensionType
 
 /** Base class for types which can be extended with additional data. */
 class CoreExport Extensible
-	: public Cullable
 {
 public:
 
@@ -53,10 +52,7 @@ public:
 	/** The type of extensible that this is. */
 	const ExtensionType extype:2;
 
-	~Extensible() override;
-
-	/** @copydoc Cullable::Cull */
-	Cullable::Result Cull() override;
+	~Extensible();
 
 	/** Frees all extensions attached to this extensible. */
 	void FreeAllExtItems();

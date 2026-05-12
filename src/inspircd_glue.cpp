@@ -388,7 +388,6 @@ void InspIRCd::Cleanup()
 	// Close all listening sockets
 	for (auto* port : ports)
 	{
-		port->Cull();
 		delete port;
 	}
 	ports.clear();
@@ -402,7 +401,6 @@ void InspIRCd::Cleanup()
 	while (!list.empty())
 		ServerInstance->Users.QuitUser(list.front(), quitmsg);
 
-	GlobalCulls.Apply();
 	Modules.UnloadAll();
 
 	/* Delete objects dynamically allocated in constructor (destructor would be more appropriate, but we're likely exiting) */
@@ -410,7 +408,6 @@ void InspIRCd::Cleanup()
 	if (FakeClient)
 	{
 		delete FakeClient->server;
-		FakeClient->Cull();
 	}
 	stdalgo::delete_zero(this->FakeClient);
 	stdalgo::delete_zero(this->XLines);
@@ -686,8 +683,7 @@ void InspIRCd::Run()
 		SocketEngine::DispatchEvents();
 
 		/* if any users were quit, take them out */
-		GlobalCulls.Apply();
-		AtomicActions.Run();
+	AtomicActions.Run();
 
 		if (lastsignal)
 		{
@@ -695,6 +691,16 @@ void InspIRCd::Run()
 			lastsignal = 0;
 		}
 	}
+}
+
+void InspIRCd::ActionList::Run()
+{
+	for (auto* action : list)
+	{
+		action->Call();
+		delete action;
+	}
+	list.clear();
 }
 
 sig_atomic_t InspIRCd::lastsignal = 0;

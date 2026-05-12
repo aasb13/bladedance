@@ -642,7 +642,7 @@ void um_ffi_local_user_send_error_quit(LocalUser* lu, const char* operquitmsg)
 
 void um_ffi_global_culls_add_item(User* u)
 {
-	ServerInstance->GlobalCulls.AddItem(u);
+	// GlobalCulls was removed - function now does nothing
 }
 
 void um_ffi_foreach_mod_on_user_quit(User* user, const char* quitmsg, const char* operquitmsg)

@@ -153,7 +153,7 @@ public:
 		managerimpl = this;
 	}
 
-	~ManagerImpl() override
+	~ManagerImpl()
 	{
 		for (const auto& [_, cap] : caps)
 			cap->Unregister();

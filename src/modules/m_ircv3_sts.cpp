@@ -82,7 +82,7 @@ public:
 		DisableAutoRegister();
 	}
 
-	~STSCap() override
+	~STSCap()
 	{
 		// TODO: Send duration=0 when STS vanishes.
 	}

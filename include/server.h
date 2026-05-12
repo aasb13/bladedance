@@ -22,7 +22,6 @@
 #pragma once
 
 class CoreExport Server
-	: public Cullable
 {
 protected:
 	/** The unique identifier for this server. */
@@ -97,4 +96,6 @@ public:
 	 * @param data The network representation of the metadata.
 	 */
 	virtual void SendMetadata(const Extensible* ext, const std::string& key, const std::string& data) const;
+
+	virtual ~Server() = default;
 };

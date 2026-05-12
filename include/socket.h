@@ -222,7 +222,7 @@ public:
 	ListenSocket(const std::shared_ptr<ConfigTag>& tag, const irc::sockets::sockaddrs& bind_to, sa_family_t protocol);
 	/** Close the socket
 	 */
-	~ListenSocket() override;
+	~ListenSocket();
 
 	/** Handles new connections, called by the socket engine
 	 */

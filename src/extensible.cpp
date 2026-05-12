@@ -63,12 +63,6 @@ Extensible::~Extensible()
 	}
 }
 
-Cullable::Result Extensible::Cull()
-{
-	FreeAllExtItems();
-	culled = true;
-	return Cullable::Cull();
-}
 
 void Extensible::FreeAllExtItems()
 {

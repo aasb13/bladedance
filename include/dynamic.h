@@ -38,7 +38,6 @@
  * and locate its init_module symbol.
  */
 class CoreExport DLLManager final
-	: public Cullable
 {
 private:
 	/** The last error string. */
@@ -64,7 +63,7 @@ public:
 	DLLManager(const std::string& name);
 
 	/** Unloads the module if one was loaded. */
-	~DLLManager() override;
+	~DLLManager();
 
 	/** Attempts to create a new module instance from this shared library.
 	 * @return Either a new instance of the Module class or NULL on error.

@@ -22,6 +22,14 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "inspircd.h"
+
 namespace SQL
 {
 	class Error;
@@ -69,7 +77,6 @@ namespace SQL
 
 /** Represents the result of an SQL query. */
 class SQL::Result
-	: public Cullable
 {
 public:
 	/**
@@ -167,7 +174,6 @@ public:
  * this object (UID of user, channel name, etc).
  */
 class SQL::Query
-	: public Cullable
 {
 protected:
 	/** Creates a new SQL query. */
@@ -188,6 +194,9 @@ public:
 	 * @param result The result of the SQL query.
 	 */
 	virtual void OnResult(SQL::Result& result) = 0;
+
+	/** Virtual destructor to ensure proper cleanup of derived classes. */
+	virtual ~Query() = default;
 };
 
 /**

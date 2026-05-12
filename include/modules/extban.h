@@ -219,7 +219,7 @@ protected:
 	{
 	}
 
-	~Base() override
+	~Base()
 	{
 		SetActive(false);
 	}

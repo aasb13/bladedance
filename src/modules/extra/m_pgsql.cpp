@@ -131,7 +131,7 @@ public:
 			rows = ConvToNum<int>(PQcmdTuples(res));
 	}
 
-	~PgSQLresult() override
+	~PgSQLresult()
 	{
 		PQclear(res);
 	}
@@ -212,14 +212,8 @@ public:
 			DelayReconnect();
 	}
 
-	Cullable::Result Cull() override
-	{
-		this->SQL::Provider::Cull();
-		ServerInstance->Modules.DelService(*this);
-		return this->EventHandler::Cull();
-	}
-
-	~SQLConn() override
+	
+	~SQLConn()
 	{
 		SQL::Error err(SQL::BAD_DBID);
 		if (qinprog.c)
@@ -637,7 +631,6 @@ public:
 	{
 		for (const auto& [_, conn] : connections)
 		{
-			conn->Cull();
 			delete conn;
 		}
 		connections.clear();
@@ -687,7 +680,6 @@ void SQLConn::DelayReconnect()
 	ConnMap::iterator it = mod->connections.find(conf->getString("id"));
 	if (it != mod->connections.end())
 		mod->connections.erase(it);
-	ServerInstance->GlobalCulls.AddItem((EventHandler*)this);
 	if (!mod->retimer)
 	{
 		mod->retimer = new ReconnectTimer(mod);

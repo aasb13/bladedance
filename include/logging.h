@@ -149,7 +149,7 @@ protected:
 	Engine(Module* Creator, const std::string& Name);
 
 public:
-	virtual ~Engine() override;
+	virtual ~Engine();
 
 	/** Creates a new logger from the specified config.
 	 * @param tag The config tag to configure the logger with.

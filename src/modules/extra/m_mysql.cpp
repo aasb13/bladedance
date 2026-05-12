@@ -312,7 +312,7 @@ public:
 	{
 	}
 
-	~SQLConnection() override
+	~SQLConnection()
 	{
 		mysql_close(connection);
 	}

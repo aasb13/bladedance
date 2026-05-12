@@ -234,7 +234,7 @@ protected:
 
 public:
 	/** Unregisters this command from the command parser. */
-	~Command() override;
+	~Command();
 
 	/** Who can access this command? */
 	CmdAccess access_needed = CmdAccess::NORMAL;

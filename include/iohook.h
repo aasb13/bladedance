@@ -73,7 +73,6 @@ public:
 };
 
 class IOHook
-	: public Cullable
 {
 public:
 	/** The IOHookProvider for this hook, contains information about the hook,
@@ -120,6 +119,8 @@ public:
 	 * @return True if the client was pinged; otherwise, false.
 	 */
 	virtual bool Ping() { return false; }
+
+	virtual ~IOHook() = default;
 };
 
 class IOHookMiddle

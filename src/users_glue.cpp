@@ -284,7 +284,7 @@ void UserIOHandler::AddWriteBuf(const std::string& data)
 		&& !user->HasPrivPermission("users/flood/increased-buffers"))
 	{
 		user->quitting_sendq = true;
-		ServerInstance->GlobalCulls.AddSQItem(user);
+		// GlobalCulls was removed - no longer needed
 		return;
 	}
 
@@ -311,37 +311,7 @@ void UserIOHandler::OnError(BufferedSocketError sockerr)
 	ServerInstance->Users.QuitUser(user, GetError());
 }
 
-Cullable::Result User::Cull()
-{
-	if (!quitting)
-	{
-		ServerInstance->Logs.Debug("CULL", "BUG: User {} (@{}) was culled without being quit first!",
-			uuid, fmt::ptr(this));
-		ServerInstance->Users.QuitUser(this, "Culled without QuitUser");
-	}
 
-	if (client_sa.family() != AF_UNSPEC)
-		ServerInstance->Users.RemoveCloneCounts(this);
-
-	if (server->IsService())
-		stdalgo::erase(ServerInstance->Users.all_services, this);
-
-	return Extensible::Cull();
-}
-
-Cullable::Result LocalUser::Cull()
-{
-	eh.Cull();
-	return User::Cull();
-}
-
-Cullable::Result FakeUser::Cull()
-{
-	// Fake users don't quit, they just get culled.
-	quitting = true;
-	// Fake users are not inserted into UserManager::clientlist or uuidlist, so we don't need to modify those here
-	return User::Cull();
-}
 
 bool User::OperLogin(const std::shared_ptr<OperAccount>& account, bool automatic, bool force)
 {

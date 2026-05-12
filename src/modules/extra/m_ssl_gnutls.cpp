@@ -1097,7 +1097,7 @@ public:
 		ServerInstance->Modules.AddService(*this);
 	}
 
-	~GnuTLSIOHookProvider() override
+	~GnuTLSIOHookProvider()
 	{
 		ServerInstance->Modules.DelService(*this);
 	}

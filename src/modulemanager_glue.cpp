@@ -130,7 +130,6 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
         if (newmod)
         {
             DoSafeUnload(newmod);
-            ServerInstance->GlobalCulls.AddItem(newhandle);
         }
         else
             delete newhandle;

@@ -62,7 +62,6 @@ typedef XLineLookup::iterator LookupIter;
  * below).
  */
 class CoreExport XLine
-	: public Cullable
 {
 protected:
 
@@ -174,6 +173,8 @@ public:
 	bool from_config = false;
 
 	virtual bool IsBurstable();
+
+	virtual ~XLine() = default;
 };
 
 /** KLine class

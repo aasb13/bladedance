@@ -58,12 +58,11 @@ core_src_list = files(
   'src/commands.cpp',
   'src/configparser.cpp',
   'src/configreader.cpp',
-  'src/cull.cpp',
   'src/dynamic.cpp',
   'src/extensible.cpp',
   'src/hashcomp.cpp',
-  'src/helperfuncs.cpp',
-  'src/inspircd.cpp',
+  'src/helperfuncs_glue.cpp',
+  'src/inspircd_glue.cpp',
   'src/listensocket.cpp',
   'src/listmode.cpp',
   'src/logging_glue.cpp',
@@ -85,10 +84,8 @@ core_src_list = files(
 )
 
 rust_manifest = meson.project_source_root() / 'src' / 'rust' / 'Cargo.toml'
-rust_lib_rs = meson.project_source_root() / 'src' / 'rust' / 'lib.rs'
 rust_core_rs_files = files(
   'src/rust/Cargo.toml',
-  'src/rust/lib.rs',
   'src/rust/Cargo.lock',
   'src/rust_core.rs',
   'src/stringutils.rs',
@@ -103,6 +100,9 @@ rust_core_rs_files = files(
   'src/users.rs',
   'src/server.rs',
   'src/logging.rs',
+  'src/timer.rs',
+  'src/helperfuncs.rs',
+  'src/inspircd.rs',
   'src/coremods/core_info/cmd_admin.rs',
 )
 rust_targetdir = meson.current_build_dir() / 'cargo'

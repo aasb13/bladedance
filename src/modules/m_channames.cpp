@@ -141,12 +141,6 @@ public:
 		}
 	}
 
-	Cullable::Result Cull() override
-	{
-		ServerInstance->Channels.IsChannel = rememberer;
-		ValidateChans();
-		return Module::Cull();
-	}
-};
+	};
 
 MODULE_INIT(ModuleChannelNames)

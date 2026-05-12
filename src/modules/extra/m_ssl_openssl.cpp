@@ -989,7 +989,7 @@ public:
 		ServerInstance->Modules.AddService(*this);
 	}
 
-	~OpenSSLIOHookProvider() override
+	~OpenSSLIOHookProvider()
 	{
 		ServerInstance->Modules.DelService(*this);
 	}

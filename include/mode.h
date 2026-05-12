@@ -170,7 +170,6 @@ public:
 	 * @param mclass The object type of this mode handler, one of ModeHandler::Class
 	 */
 	ModeHandler(Module* me, const std::string& name, char modeletter, ParamSpec params, ModeType type, Class mclass = MC_OTHER);
-	Cullable::Result Cull() override;
 
 	/** Register this object in the ModeParser
 	 */
@@ -474,7 +473,6 @@ public:
  * A ModeWatcher will be called both before and after the mode change.
  */
 class CoreExport ModeWatcher
-	: public Cullable
 {
 private:
 	/**
@@ -498,7 +496,7 @@ public:
 	/**
 	 * The default destructor does nothing.
 	 */
-	~ModeWatcher() override;
+	~ModeWatcher();
 
 	/**
 	 * Get the mode name being watched

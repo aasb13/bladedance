@@ -32,7 +32,6 @@
 #include <string>
 
 #include "utility/uncopiable.h"
-#include "cull.h"
 
 /** The base class for inspircd classes that support reference counting.
  * Any objects that do not have a well-defined lifetime should inherit from
@@ -150,7 +149,6 @@ enum ServiceType {
 
 /** A structure defining something that a module can provide */
 class CoreExport ServiceProvider
-	: public Cullable
 {
 public:
 	/** Module that is providing this service */

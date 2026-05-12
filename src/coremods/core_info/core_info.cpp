@@ -43,8 +43,7 @@ RouteDescriptor ServerTargetCommand::GetRouting(User* user, const Params& parame
 	return ROUTE_LOCALONLY;
 }
 
-struct ISupportAction final
-	: public ActionBase
+struct ISupportAction final : public InspIRCd::ActionBase
 {
 	ISupportManager& isupport;
 
@@ -56,7 +55,6 @@ struct ISupportAction final
 	void Call() override
 	{
 		isupport.Build();
-		ServerInstance->GlobalCulls.AddItem(this);
 	}
 };
 

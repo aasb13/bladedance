@@ -109,7 +109,7 @@ public:
 		}
 	}
 
-	~SQLConn() override
+	~SQLConn()
 	{
 		if (conn)
 		{

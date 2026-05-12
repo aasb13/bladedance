@@ -228,7 +228,6 @@ public:
 
 	ModuleFilter();
 	void init() override;
-	Cullable::Result Cull() override;
 	ModResult OnUserPreMessage(User* user, MessageTarget& target, MessageDetails& details) override;
 	const FilterResult* FilterMatch(User* user, const std::string& text, int flags);
 	bool DeleteFilter(const std::string& freeform, std::string& reason);
@@ -374,12 +373,6 @@ ModuleFilter::ModuleFilter()
 void ModuleFilter::init()
 {
 	ServerInstance->SNO.EnableSnomask('f', "FILTER");
-}
-
-Cullable::Result ModuleFilter::Cull()
-{
-	FreeFilters();
-	return Module::Cull();
 }
 
 void ModuleFilter::FreeFilters()

@@ -83,7 +83,7 @@ public:
 		SocketEngine::AddFd(this, FD_WANT_FAST_READ | FD_WANT_NO_WRITE);
 	}
 
-	~ThreadSignalSocket() override
+	~ThreadSignalSocket()
 	{
 		SocketEngine::Close(this);
 	}
@@ -102,7 +102,6 @@ public:
 
 	void OnEventHandlerWrite() override
 	{
-		ServerInstance->GlobalCulls.AddItem(this);
 	}
 
 	void OnEventHandlerError(int errcode) override
@@ -165,7 +164,6 @@ public:
 
 	void OnEventHandlerWrite() override
 	{
-		ServerInstance->GlobalCulls.AddItem(this);
 	}
 
 	void OnEventHandlerError(int errcode) override
@@ -193,7 +191,6 @@ SocketThread::~SocketThread()
 {
 	if (socket)
 	{
-		socket->Cull();
 		delete socket;
 	}
 }

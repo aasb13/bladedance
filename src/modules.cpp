@@ -63,15 +63,6 @@ Module::Module(int mprops, const std::string& mversion, const std::string& mdesc
 {
 }
 
-Cullable::Result Module::Cull()
-{
-	if (ModuleDLL)
-	{
-		ServerInstance->GlobalCulls.AddItem(ModuleDLL);
-		ModuleDLL = nullptr;
-	}
-	return Cullable::Cull();
-}
 
 void Module::CompareLinkData(const LinkData& otherdata, LinkDataDiff& diffs)
 {
@@ -470,7 +461,7 @@ void ModuleManager::DoSafeUnload(Module* mod)
 	DetachAll(mod);
 
 	Modules.erase(modfind);
-	ServerInstance->GlobalCulls.AddItem(mod);
+	delete mod;
 
 	ServerInstance->Logs.Normal("MODULE", "The {} module was unloaded", mod->ModuleFile);
 }
@@ -494,14 +485,12 @@ void ModuleManager::UnloadAll()
 				DoSafeUnload(me->second);
 			}
 		}
-		ServerInstance->GlobalCulls.Apply();
 	}
 }
 
 namespace
 {
-	struct UnloadAction final
-		: public ActionBase
+	struct UnloadAction final : public InspIRCd::ActionBase
 	{
 		Module* const mod;
 		UnloadAction(Module* m)
@@ -511,8 +500,6 @@ namespace
 		void Call() override
 		{
 			ServerInstance->Modules.DoSafeUnload(mod);
-			ServerInstance->GlobalCulls.Apply();
-			ServerInstance->GlobalCulls.AddItem(this);
 		}
 	};
 }

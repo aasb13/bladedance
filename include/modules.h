@@ -214,8 +214,7 @@ enum Implementation
  *  instantiated by the ModuleFactory class (see relevant section) for the module to be initialised.
  */
 class CoreExport Module
-	: public Cullable
-	, public usecountbase
+	: public usecountbase
 {
 protected:
 	/** Initializes a new instance of the Module class.
@@ -274,7 +273,6 @@ public:
 	/** Clean up prior to destruction
 	 * If you override, you must call this AFTER your module's cleanup
 	 */
-	Cullable::Result Cull() override;
 
 	/** Compares our link data to that of another server.
 	 * @param otherdata Link data from another server.
@@ -970,6 +968,8 @@ public:
 	 * @param force Whether the connect class was explicitly picked (e.g. via <oper:class>).
 	 */
 	virtual void OnPostChangeConnectClass(LocalUser* user, bool force) ATTR_NOT_NULL(2);
+
+	virtual ~Module() = default;
 };
 
 /** ModuleManager takes care of all things module-related

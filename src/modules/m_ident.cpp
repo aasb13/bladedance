@@ -265,11 +265,6 @@ public:
 		done = true;
 	}
 
-	Cullable::Result Cull() override
-	{
-		Close();
-		return EventHandler::Cull();
-	}
 };
 
 class ModuleIdent final
@@ -278,7 +273,7 @@ class ModuleIdent final
 private:
 	unsigned long timeout;
 	bool prefixunqueried;
-	SimpleExtItem<IdentRequestSocket, Cullable::Deleter> socket;
+	SimpleExtItem<IdentRequestSocket> socket;
 	IntExtItem state;
 
 	static void PrefixUser(LocalUser* user)
