@@ -77,7 +77,7 @@ core_src_list = files(
   'src/streamsocket.cpp',
   # 'src/stringutils.cpp',
   'src/thread.cpp',
-  'src/timer.cpp',
+  'src/timer_glue.cpp',
   'src/usermanager_glue.cpp',
   'src/users_glue.cpp',
   'src/wildcard_glue.cpp',

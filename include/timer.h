@@ -53,6 +53,10 @@ class CoreExport Timer
 	bool repeat;
 
 public:
+	/** Rust timer instance for integration
+	 */
+	void* rust_timer;
+
 	/** Default constructor, initializes the triggering time
 	 * @param secs_from_now The number of seconds from now to trigger the timer
 	 * @param repeating Repeat this timer every secs_from_now seconds if set to true
@@ -141,3 +145,12 @@ public:
 	 */
 	void DelTimer(Timer* T);
 };
+
+/* FFI functions for Rust integration */
+extern "C" {
+	/** Get the Rust timer instance from a C++ Timer object
+	 * @param cpp_timer Pointer to the C++ Timer object
+	 * @return Pointer to the Rust timer instance, or nullptr if invalid
+	 */
+	void* timer_ffi_get_rust_timer(void* cpp_timer);
+}
