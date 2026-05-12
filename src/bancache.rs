@@ -35,8 +35,10 @@ use crate::stringutils::{StdString, StdString_Destroy};
 type time_t = i64;
 
 unsafe extern "C" {
-    fn ServerInstance_Time() -> time_t;
-    fn LogManager_Debug(tag: *const c_char, message: *const c_char);
+    fn um_ffi_server_time() -> time_t;
+    fn rust_log_manager_write(level: u8,
+        type_str: *const c_char, type_length: usize, 
+        message: *const c_char, message_length: usize);
 }
 
 /// Layout must match `BanCacheHit` in include/bancache.h (StdString, StdString, time_t).
@@ -58,7 +60,7 @@ impl Drop for BanCacheHit {
 
 impl BanCacheHit {
     pub fn new(type_str: &str, reason: &str, seconds: time_t) -> Self {
-        let expiry = unsafe { ServerInstance_Time() } + if seconds != 0 { seconds } else { 86400 };
+        let expiry = unsafe { um_ffi_server_time() } + if seconds != 0 { seconds } else { 86400 };
         BanCacheHit {
             Type: StdString::from_vec(type_str.as_bytes().to_vec()),
             Reason: StdString::from_vec(reason.as_bytes().to_vec()),
@@ -75,18 +77,20 @@ fn std_string_bytes_eq(s: &StdString, t: &str) -> bool {
     s.as_bytes() == t.as_bytes()
 }
 
+const TAG: &[u8] = b"BANCACHE\0";
+
 /// A manager for ban cache, which allocates and deallocates and checks cached bans.
 pub struct BanCacheManager {
     BanHash: HashMap<String, *mut BanCacheHit>,
 }
 
 fn log_bancache_line(message: &str) {
-    const TAG: &[u8] = b"BANCACHE\0";
-    let tag = TAG.as_ptr() as *const c_char;
-    if let Ok(c) = CString::new(message) {
-        unsafe {
-            LogManager_Debug(tag, c.as_ptr());
-        }
+    let tag = b"BANCACHE";
+    let msg = message.as_bytes();
+    unsafe {
+        rust_log_manager_write(3, // debug level
+            TAG.as_ptr() as *const c_char, TAG.len() - 1, // strip trailing \0 for length
+            msg.as_ptr() as *const c_char, msg.len());
     }
 }
 
@@ -161,7 +165,7 @@ impl BanCacheManager {
 
     fn IsExpiredByPtr(&self, hit_ptr: *mut BanCacheHit) -> bool {
         let hit = unsafe { &*hit_ptr };
-        let current_time = unsafe { ServerInstance_Time() };
+        let current_time = unsafe { um_ffi_server_time() };
         current_time >= hit.Expiry
     }
 

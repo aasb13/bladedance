@@ -32,8 +32,6 @@ extern "C" {
 #endif
 
 /** C-compatible wrapper functions for Rust integration */
-time_t ServerInstance_Time();
-void LogManager_Debug(const char* tag, const char* message);
 void* BanCacheManager_Create();
 void BanCacheManager_Destroy(void* ptr);
 void* BanCacheManager_AddHit(void* ptr, const char* ip, const char* type_str, const char* reason, time_t seconds);

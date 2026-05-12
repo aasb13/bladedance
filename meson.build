@@ -50,10 +50,8 @@ socket_engine = get_option('socketengine')
 
 # ── Core executable ─────────────────────────────────────
 core_src_list = files(
-  'src/bancache_shim.cpp',
   'src/base.cpp',
   'src/channelmanager_glue.cpp',
-  'src/channelmanager_ffi.cpp',
   'src/channels.cpp',
   'src/cidr_glue.cpp',
   'src/clientprotocol.cpp',
