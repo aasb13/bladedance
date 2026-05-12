@@ -8,3 +8,6 @@
 mod stringutils;
 mod bancache;
 mod usermanager;
+mod cidr;
+mod channelmanager;
+mod snomasks;

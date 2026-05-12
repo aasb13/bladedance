@@ -65,6 +65,7 @@ public:
 	std::string GetDescription(char letter) const;
 
 	friend class SnomaskManager;
+	friend struct SnomaskRustAccess;
 };
 
 /** Snomask manager handles routing of SNOMASK (usermode +s) messages to opers.
@@ -73,6 +74,8 @@ public:
  */
 class CoreExport SnomaskManager final
 {
+	friend struct SnomaskRustAccess;
+
 	Snomask	masks[26];
 
 public:
@@ -146,4 +149,15 @@ public:
 	 * @return True if the given char is allowed to be set via +s.
 	 */
 	bool IsSnomaskUsable(char ch) const;
+};
+
+/** Private member access for Rust snomasks port (snomasks_ffi.cpp). */
+struct CoreExport SnomaskRustAccess
+{
+	static Snomask* Mask(SnomaskManager* mgr, size_t idx);
+	static std::string& Description(Snomask* s);
+	static std::string& LastMessage(Snomask* s);
+	static char& LastLetter(Snomask* s);
+	static unsigned int& Count(Snomask* s);
+	static void Send(char letter, const std::string& desc, const std::string& msg);
 };

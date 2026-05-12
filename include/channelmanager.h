@@ -25,6 +25,8 @@ typedef std::unordered_map<std::string, Channel*, irc::insensitive, irc::StrHash
 /** Manages state relating to channels. */
 class CoreExport ChannelManager final
 {
+	friend struct ChannelManagerRustAccess;
+
 private:
 	/** A map of channel names to the channel object. */
 	ChannelMap channels;
@@ -55,4 +57,10 @@ public:
 	 * @return True if the character is a channel prefix; otherwise, false.
 	 */
 	bool IsPrefix(unsigned char prefix) const;
+};
+
+/** Private member access for Rust channelmanager port. */
+struct CoreExport ChannelManagerRustAccess
+{
+	static Channel* Find(const ChannelManager* cm, const std::string& channel);
 };
