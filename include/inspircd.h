@@ -455,7 +455,9 @@ public:
 	 * @param str2 The second string to compare.
 	 * @return True if the strings are equivalent; otherwise, false.
 	 */
-	static bool TimingSafeCompare(const std::string& str1, const std::string& str2);
+	static bool TimingSafeCompare(const std::string& str1, const std::string& str2) {
+		return InspIRCd_TimingSafeCompare(str1.c_str(), str1.length(), str2.c_str(), str2.length());
+	}
 
 	/** Updates the current cached time. Don't call this unless you have reason to do so. */
 	void UpdateTime();
