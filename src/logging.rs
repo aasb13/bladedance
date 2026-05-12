@@ -154,7 +154,7 @@ pub unsafe extern "C" fn rust_log_filemethod_destroy(handle: *mut std::os::raw::
 pub unsafe extern "C" fn rust_log_filemethod_on_log(
     handle: *mut std::os::raw::c_void,
     time: i64,
-    level: u8,
+    _level: u8,
     type_str: *const c_char,
     type_length: usize,
     message: *const c_char,
@@ -271,7 +271,7 @@ pub unsafe extern "C" fn rust_log_filemethod_tick(handle: *mut std::os::raw::c_v
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_log_debug_method_on_log(
     time: i64,
-    level: u8,
+    _level: u8,
     type_str: *const c_char,
     type_length: usize,
     message: *const c_char,

@@ -48,6 +48,15 @@ extern "C" void rust_user_fill_cached_user_host(User* user);
 extern "C" void rust_user_fill_cached_real_user_host(User* user);
 extern "C" void rust_user_fill_cached_mask(User* user);
 extern "C" void rust_user_fill_cached_real_mask(User* user);
+extern "C" size_t rust_user_get_real_host(const User* user, const uint8_t** out, size_t* len);
+extern "C" size_t rust_user_get_real_user(const User* user, const uint8_t** out, size_t* len);
+extern "C" size_t rust_user_get_real_name(const User* user, const uint8_t** out, size_t* len);
+extern "C" size_t rust_user_get_displayed_host(const User* user, const uint8_t** out, size_t* len);
+extern "C" size_t rust_user_get_displayed_user(const User* user, const uint8_t** out, size_t* len);
+extern "C" size_t rust_user_get_ban_user(const User* user, const uint8_t** out, size_t* len);
+extern "C" bool rust_user_is_fully_connected(const User* user);
+extern "C" bool rust_user_is_away(const User* user);
+extern "C" bool rust_user_is_oper(const User* user);
 extern "C" bool rust_user_shares_channel_with(const User* user, User* other);
 
 ClientProtocol::MessageList LocalUser::sendmsglist;

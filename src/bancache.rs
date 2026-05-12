@@ -26,7 +26,7 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
-use std::ffi::{c_char, c_void, CString};
+use std::ffi::{c_char, c_void};
 use std::ptr;
 
 use crate::stringutils::{StdString, StdString_Destroy};
@@ -85,7 +85,7 @@ pub struct BanCacheManager {
 }
 
 fn log_bancache_line(message: &str) {
-    let tag = b"BANCACHE";
+    let _tag = b"BANCACHE";
     let msg = message.as_bytes();
     unsafe {
         rust_log_manager_write(3, // debug level

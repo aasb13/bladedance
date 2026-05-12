@@ -10,7 +10,7 @@
 #![allow(non_snake_case)]
 #![allow(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::{c_char, CString};
+use std::ffi::{c_char, CString, c_void};
 use std::os::raw::c_uchar;
 use std::ptr;
 use std::slice;
@@ -103,19 +103,362 @@ pub struct AwayState {
     pub time: i64,          // 8 bytes
 }
 
-fn get_connected(&self) -> u8 { (self.bitfield & 0b111) as u8 }
-fn set_connected(&mut self, v: u8) { self.bitfield = (self.bitfield & !0b111) | (v as u32); }
-fn get_quitting(&self) -> bool { ((self.bitfield >> 3) & 1) != 0 }
-fn set_quitting(&mut self, v: bool) {
-    if v {
-        self.bitfield |= 1 << 3;
-    } else {
-        self.bitfield &= !(1 << 3);
+impl User {
+    /// Gets the connection state (connected field from bitfield)
+    pub fn get_connected(&self) -> u8 { (self.bitfield & 0b111) as u8 }
+    
+    /// Sets the connection state (connected field in bitfield)
+    pub fn set_connected(&mut self, v: u8) { self.bitfield = (self.bitfield & !0b111) | (v as u32); }
+    
+    /// Gets the quitting flag from bitfield
+    pub fn get_quitting(&self) -> bool { ((self.bitfield >> 3) & 1) != 0 }
+    
+    /// Sets the quitting flag in bitfield
+    pub fn set_quitting(&mut self, v: bool) {
+        if v {
+            self.bitfield |= 1 << 3;
+        } else {
+            self.bitfield &= !(1 << 3);
+        }
     }
+    
+    /// Gets the unique username flag from bitfield
+    pub fn get_uniqueusername(&self) -> bool { ((self.bitfield >> 4) & 1) != 0 }
+    
+    /// Gets the user type from bitfield
+    pub fn get_usertype(&self) -> u8 { ((self.bitfield >> 5) & 0b11) as u8 }
+    
+    /// Gets the cached address as bytes
+    pub fn get_cached_address_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.cached_address.data.is_null() || self.cached_address.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.cached_address.data, self.cached_address.length)
+        }
+    }
+    
+    /// Gets the cached user address as bytes
+    pub fn get_cached_useraddress_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.cached_useraddress.data.is_null() || self.cached_useraddress.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.cached_useraddress.data, self.cached_useraddress.length)
+        }
+    }
+    
+    /// Gets the cached user host as bytes
+    pub fn get_cached_userhost_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.cached_userhost.data.is_null() || self.cached_userhost.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.cached_userhost.data, self.cached_userhost.length)
+        }
+    }
+    
+    /// Gets the cached real user host as bytes
+    pub fn get_cached_realuserhost_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.cached_realuserhost.data.is_null() || self.cached_realuserhost.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.cached_realuserhost.data, self.cached_realuserhost.length)
+        }
+    }
+    
+    /// Gets the cached mask as bytes
+    pub fn get_cached_mask_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.cached_mask.data.is_null() || self.cached_mask.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.cached_mask.data, self.cached_mask.length)
+        }
+    }
+    
+    /// Gets the cached real mask as bytes
+    pub fn get_cached_realmask_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.cached_realmask.data.is_null() || self.cached_realmask.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.cached_realmask.data, self.cached_realmask.length)
+        }
+    }
+    
+    /// Gets the display host as bytes
+    pub fn get_displayhost_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.displayhost.data.is_null() || self.displayhost.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.displayhost.data, self.displayhost.length)
+        }
+    }
+    
+    /// Gets the real host as bytes
+    pub fn get_realhost_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.realhost.data.is_null() || self.realhost.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.realhost.data, self.realhost.length)
+        }
+    }
+    
+    /// Gets the real name as bytes
+    pub fn get_realname_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.realname.data.is_null() || self.realname.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.realname.data, self.realname.length)
+        }
+    }
+    
+    /// Gets the display user as bytes
+    pub fn get_displayuser_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.displayuser.data.is_null() || self.displayuser.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.displayuser.data, self.displayuser.length)
+        }
+    }
+    
+    /// Gets the real user as bytes
+    pub fn get_realuser_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.realuser.data.is_null() || self.realuser.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.realuser.data, self.realuser.length)
+        }
+    }
+    
+    /// Gets the nick as bytes
+    pub fn get_nick_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.nick.data.is_null() || self.nick.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.nick.data, self.nick.length)
+        }
+    }
+    
+    /// Gets the UUID as bytes
+    pub fn get_uuid_bytes(&self) -> &[u8] {
+        unsafe {
+            if self.uuid.data.is_null() || self.uuid.length == 0 {
+                return &[];
+            }
+            std::slice::from_raw_parts(self.uuid.data, self.uuid.length)
+        }
+    }
+    
+    /// Gets the modes value
+    pub fn get_modes(&self) -> u64 { self.modes }
+    
+    /// Gets the nick changed timestamp
+    pub fn get_nickchanged(&self) -> i64 { self.nickchanged }
+    
+    /// Gets the signon timestamp
+    pub fn get_signon(&self) -> i64 { self.signon }
+    
+    /// Gets the snomasks value
+    pub fn get_snomasks(&self) -> u64 { self.snomasks }
+    
+    /// Gets the channels pointer
+    pub fn get_chans(&self) -> *mut std::ffi::c_void { self.chans }
+    
+    /// Gets the server pointer
+    pub fn get_server(&self) -> *mut std::ffi::c_void { self.server }
+    
+    /// Gets the oper object pointer
+    pub fn get_oper_obj(&self) -> *mut std::ffi::c_void { self.oper_obj }
+    
+    /// Gets the oper control pointer
+    pub fn get_oper_ctrl(&self) -> *mut std::ffi::c_void { self.oper_ctrl }
+    
+    /// Sets the cached user address (user@host format)
+    pub fn set_cached_useraddress(&mut self, user_at_host: &[u8]) {
+        unsafe {
+            user_ffi_user_set_cached_useraddress(self, user_at_host.as_ptr(), user_at_host.len());
+        }
+    }
+    
+    /// Sets the cached user host (user@host format)
+    pub fn set_cached_userhost(&mut self, user_at_host: &[u8]) {
+        unsafe {
+            user_ffi_user_set_cached_userhost(self, user_at_host.as_ptr(), user_at_host.len());
+        }
+    }
+    
+    /// Sets the cached real user host (user@rhost format)
+    pub fn set_cached_realuserhost(&mut self, user_at_host: &[u8]) {
+        unsafe {
+            user_ffi_user_set_cached_realuserhost(self, user_at_host.as_ptr(), user_at_host.len());
+        }
+    }
+    
+    /// Sets the cached mask (nick!user@host format)
+    pub fn set_cached_mask(&mut self, nick_user_host: &[u8]) {
+        unsafe {
+            user_ffi_user_set_cached_mask(self, nick_user_host.as_ptr(), nick_user_host.len());
+        }
+    }
+    
+    /// Sets the cached real mask (nick!user@rhost format)
+    pub fn set_cached_realmask(&mut self, nick_user_host: &[u8]) {
+        unsafe {
+            user_ffi_user_set_cached_realmask(self, nick_user_host.as_ptr(), nick_user_host.len());
+        }
+    }
+    
+    /// Checks if a specific mode character is set
+    pub fn is_mode_set(&self, mode_char: u8) -> bool {
+        let mh = unsafe { user_ffi_find_user_mode_char(mode_char) };
+        if mh.is_null() {
+            return false;
+        }
+        let mode_id = unsafe { user_ffi_modehandler_id(mh) };
+        unsafe { user_ffi_user_mode_id_is_set(self, mode_id) }
+    }
+    
+    /// Checks if a specific notice mask character is set
+    pub fn is_notice_mask_set(&self, sm: u8) -> bool {
+        if !snomask_char_is_valid(sm) {
+            return false;
+        }
+        unsafe { user_ffi_user_notice_mask_bit(self, sm) }
+    }
+    
+    // usertype is const; you wouldn't have a setter in Rust, but it's set in the constructor.
 }
-fn get_uniqueusername(&self) -> bool { ((self.bitfield >> 4) & 1) != 0 }
-fn get_usertype(&self) -> u8 { ((self.bitfield >> 5) & 0b11) as u8 }
-// usertype is const; you wouldn't have a setter in Rust, but it's set in the constructor.
+
+// Extern "C" functions for C++ to call
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_get_real_host(u: *mut User, out: *mut *const u8, len: *mut usize) -> usize {
+    if u.is_null() || out.is_null() || len.is_null() {
+        return 0;
+    }
+    let user_ref = &*u;
+    let bytes = user_ref.get_realhost_bytes();
+    *out = bytes.as_ptr();
+    *len = bytes.len();
+    bytes.len()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_get_real_user(u: *mut User, out: *mut *const u8, len: *mut usize) -> usize {
+    if u.is_null() || out.is_null() || len.is_null() {
+        return 0;
+    }
+    let user_ref = &*u;
+    let bytes = user_ref.get_realuser_bytes();
+    *out = bytes.as_ptr();
+    *len = bytes.len();
+    bytes.len()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_get_real_name(u: *mut User, out: *mut *const u8, len: *mut usize) -> usize {
+    if u.is_null() || out.is_null() || len.is_null() {
+        return 0;
+    }
+    let user_ref = &*u;
+    let bytes = user_ref.get_realname_bytes();
+    *out = bytes.as_ptr();
+    *len = bytes.len();
+    bytes.len()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_get_displayed_host(u: *mut User, out: *mut *const u8, len: *mut usize) -> usize {
+    if u.is_null() || out.is_null() || len.is_null() {
+        return 0;
+    }
+    let user_ref = &*u;
+    let bytes = user_ref.get_displayhost_bytes();
+    *out = bytes.as_ptr();
+    *len = bytes.len();
+    bytes.len()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_get_displayed_user(u: *mut User, out: *mut *const u8, len: *mut usize) -> usize {
+    if u.is_null() || out.is_null() || len.is_null() {
+        return 0;
+    }
+    let user_ref = &*u;
+    let bytes = user_ref.get_displayuser_bytes();
+    *out = bytes.as_ptr();
+    *len = bytes.len();
+    bytes.len()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_get_ban_user(u: *mut User, out: *mut *const u8, len: *mut usize) -> usize {
+    if u.is_null() || out.is_null() || len.is_null() {
+        return 0;
+    }
+    let user_ref = &*u;
+    // For ban user, we need nick!user@host format
+    let nick = user_ref.get_nick_bytes();
+    let real_user = user_ref.get_realuser_bytes();
+    let host = user_ref.get_realhost_bytes();
+    let ban_user = fmt_nick_user_host(&nick, &real_user, &host);
+    *out = ban_user.as_ptr();
+    *len = ban_user.len();
+    ban_user.len()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_is_fully_connected(u: *mut User) -> bool {
+    if u.is_null() {
+        return false;
+    }
+    let user_ref = &*u;
+    user_ref.get_connected() >= 3
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_is_away(u: *mut User) -> bool {
+    if u.is_null() {
+        return false;
+    }
+    let user_ref = &*u;
+    user_ref.away.has_value != 0
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_is_oper(u: *mut User) -> bool {
+    if u.is_null() {
+        return false;
+    }
+    let User_ref = &*u;
+    !User_ref.oper_obj.is_null()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_is_notice_mask_set(u: *const User, sm: u8) -> bool {
+    if u.is_null() {
+        return false;
+    }
+    let User_ref = &*u;
+    User_ref.is_notice_mask_set(sm)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn user_ffi_is_mode_set(u: *mut User, m: u8) -> bool {
+    if u.is_null() {
+        return false;
+    }
+    let User_ref = &*u;
+    User_ref.is_mode_set(m)
+}
 
 const MAX_USERMODE_HANDLERS: usize = 512;
 const MODE_PARAM_BUF: usize = 8192;

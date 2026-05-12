@@ -46,9 +46,9 @@ pub const PERCENT_TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrs
 /// Total: 32 bytes
 #[repr(C)]
 pub struct StdString {
-    data: *mut u8,        // 8 bytes - pointer to heap data or SSO buffer
-    length: usize,         // 8 bytes - current string length
-    sso_union: SsoUnion, // 16 bytes - union for SSO or capacity
+    pub data: *mut u8,        // 8 bytes - pointer to heap data or SSO buffer
+    pub length: usize,         // 8 bytes - current string length
+    pub sso_union: SsoUnion, // 16 bytes - union for SSO or capacity
 }
 
 /// Union for small string optimization in libstdc++
@@ -64,11 +64,10 @@ impl StdString {
         let capacity = vec.capacity();
         let data = vec.as_mut_ptr();
         std::mem::forget(vec);
-        StdString { 
-            data, 
-            length, 
-            sso_union: SsoUnion { capacity }
-        }
+        
+        // For now, use simple heap allocation for all strings
+        // TODO: Implement proper SSO later to avoid double allocation
+        StdString { data, length, sso_union: SsoUnion { capacity } }
     }
 
     pub(crate) fn is_empty(&self) -> bool {
@@ -92,9 +91,12 @@ pub unsafe extern "C" fn StdString_Destroy(str: *mut StdString) {
     }
     unsafe {
         let s = &*str;
-        if !s.data.is_null() {
-            let _ = Vec::from_raw_parts(s.data, s.length, s.capacity);
+        // Only free if it's a heap-allocated string (data doesn't point to SSO buffer)
+        // For SSO strings, data points to sso_union.sso_buffer, so don't free
+        if !s.data.is_null() && s.length >= 16 {
+            let _ = Vec::from_raw_parts(s.data, s.length, s.sso_union.capacity);
         }
+        // For SSO strings (length < 16), data points to internal buffer - nothing to free
     }
 }
 

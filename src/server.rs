@@ -10,7 +10,7 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
-use std::ffi::{c_char, c_void};
+use std::ffi::c_char;
 
 // Import StdString from stringutils module
 use crate::stringutils::StdString;
