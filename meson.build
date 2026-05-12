@@ -92,11 +92,9 @@ core_src_list = files(
 
 rust_manifest = meson.project_source_root() / 'src' / 'rust' / 'Cargo.toml'
 rust_lib_rs = meson.project_source_root() / 'src' / 'rust' / 'lib.rs'
-rust_logging_rs = meson.project_source_root() / 'src' / 'rust' / 'logging.rs'
 rust_core_rs_files = files(
   'src/rust/Cargo.toml',
   'src/rust/lib.rs',
-  'src/rust/logging.rs',
   'src/rust/Cargo.lock',
   'src/rust_core.rs',
   'src/stringutils.rs',
@@ -110,6 +108,7 @@ rust_core_rs_files = files(
   'src/modulemanager.rs',
   'src/users.rs',
   'src/server.rs',
+  'src/logging.rs',
   'src/coremods/core_info/cmd_admin.rs',
 )
 rust_targetdir = meson.current_build_dir() / 'cargo'

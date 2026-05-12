@@ -28,6 +28,9 @@ mod wildcard;
 #[path = "../modulemanager.rs"]
 mod modulemanager;
 
+#[path = "../modules.rs"]
+mod modules;
+
 #[path = "../users.rs"]
 mod users;
 
@@ -35,8 +38,6 @@ mod users;
 mod server;
 
 #[path = "../logging.rs"]
-mod logging_ffi;
-
 mod logging;
 
 #[path = "../coremods/core_info/cmd_admin.rs"]
