@@ -6,12 +6,10 @@ if [ ! -d build ]; then
 fi
 
 # Build Rust library first
-cd src/rust
-cargo build --release
-cd ../..
+cargo build --release --manifest-path src/rust/Cargo.toml --target-dir build/cargo
 
 # Copy the updated Rust library to build directory
-cp src/rust/target/release/librust_core.a build/librust_core.a
+cp build/cargo/release/librust_core.a build/librust_core.a
 
 # Build the main project
 meson compile -C build

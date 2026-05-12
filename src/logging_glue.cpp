@@ -32,6 +32,18 @@ extern "C" {
 	StdString rust_log_filemethod_on_log(void* handle, time_t time, uint8_t level,
 		const char* type, size_t type_length, const char* message, size_t message_length);
 	void rust_log_filemethod_tick(void* handle);
+
+	// Manager functions
+	void rust_log_debug_method_on_log(time_t time, uint8_t level,
+		const char* type, size_t type_length, const char* message, size_t message_length);
+	void rust_log_manager_write(uint8_t level,
+		const char* type, size_t type_length, const char* message, size_t message_length);
+	void rust_log_manager_enable_debug_mode(bool forceprotodebug);
+	uint8_t rust_log_manager_check_level();
+	void rust_log_manager_add_logger(uint8_t level, void* method_handle, bool config);
+	void rust_log_manager_open_logs(bool requiremethods);
+	void rust_log_manager_close_logs();
+	uint8_t rust_log_manager_get_maxlevel();
 }
 
 const char* Log::LevelToString(Log::Level level)
@@ -51,11 +63,8 @@ class DebugLogMethod final
 public:
 	void OnLog(time_t time, Log::Level level, const std::string& type, const std::string& message) override
 	{
-		fmt::println("{} {}: {}",
-			fmt::styled(Time::ToString(time, "%d %b %H:%M:%S"), fmt::fg(fmt::terminal_color::yellow)),
-			fmt::styled(type, fmt::fg(fmt::terminal_color::green)),
-			message
-		);
+		rust_log_debug_method_on_log(time, static_cast<uint8_t>(level),
+			type.c_str(), type.length(), message.c_str(), message.length());
 	}
 };
 
@@ -68,6 +77,9 @@ Log::FileMethod::FileMethod(const std::string& n, unsigned long fl, Target targe
 	handle = rust_log_filemethod_create(name.c_str(), name.length(), flush, static_cast<uint8_t>(target));
 	if (!handle)
 		throw CoreException(INSP_FORMAT("Unable to create file logger for {}", name));
+
+	// Register with Rust manager - will be done at level NORMAL (2)
+	rust_log_manager_add_logger(2, handle, true);
 
 	if (flush > 1)
 		ServerInstance->Timers.AddTimer(this);
@@ -167,6 +179,9 @@ Log::Manager::Manager()
 
 void Log::Manager::CloseLogs()
 {
+	rust_log_manager_close_logs();
+	
+	// Also clean up C++ loggers
 	logging = true; // Prevent writing to dying loggers.
 	loggers.erase(std::remove_if(loggers.begin(), loggers.end(), [](const Info& info) { return info.config; }), loggers.end());
 	logging = false;
@@ -174,19 +189,11 @@ void Log::Manager::CloseLogs()
 
 void Log::Manager::EnableDebugMode()
 {
-	TokenList types = std::string("*");
-	MethodPtr method = std::make_shared<DebugLogMethod>();
-
-	if (ServerInstance->Config->CommandLine.forceprotodebug)
-	{
-		// If we are doing a protocol debug we need to warn users.
-		loggers.emplace_back(Level::RAWIO, std::move(types), std::move(method), false, &stdoutlog);
-		ServerInstance->Config->RawLog = true;
-	}
-	else
-	{
-		loggers.emplace_back(Level::DEBUG, std::move(types), std::move(method), false, &stdoutlog);
-	}
+	rust_log_manager_enable_debug_mode(ServerInstance->Config->CommandLine.forceprotodebug);
+	
+	// Update the maxlevel from Rust
+	maxlevel = static_cast<Level>(rust_log_manager_get_maxlevel());
+	ServerInstance->Config->RawLog = (maxlevel >= Level::RAWIO);
 }
 
 void Log::Manager::OpenLogs(bool requiremethods)
@@ -208,6 +215,7 @@ void Log::Manager::OpenLogs(bool requiremethods)
 		return;
 	}
 
+	// Parse configuration and create loggers
 	for (const auto& [_, tag] : ServerInstance->Config->ConfTags("log"))
 	{
 		const std::string methodstr = tag->getString("method", "file", 1);
@@ -238,40 +246,12 @@ void Log::Manager::OpenLogs(bool requiremethods)
 		loggers.emplace_back(level, std::move(types), method, true, engine);
 	}
 
-	if (requiremethods && caching)
-	{
-		// The server has finished starting up so we can write out any cached log messages.
-		logging = true;
-		for (auto& logger : loggers)
-		{
-			if (logger.dead || !logger.method->AcceptsCachedMessages())
-				continue; // Does not support logging.
-
-			for (const auto& message : cache)
-			{
-				if (!logger.Suitable(message.level, message.type))
-					continue;
-
-				try
-				{
-					logger.method->OnLog(message.time, message.level, message.type, message.message);
-				}
-				catch (const CoreException& err)
-				{
-					logger.dead = true;
-					logger.method.reset();
-					ServerInstance->SNO.WriteGlobalSno('a', "A logger threw an exception: {}", err.GetReason());
-					break;
-				}
-			}
-		}
-
-		cache.clear();
-		cache.shrink_to_fit();
-		caching = false;
-		logging = false;
-	}
-	CheckLevel();
+	// Call Rust to open logs and handle caching
+	rust_log_manager_open_logs(requiremethods);
+	
+	// Update maxlevel from Rust
+	maxlevel = static_cast<Level>(rust_log_manager_get_maxlevel());
+	ServerInstance->Config->RawLog = (maxlevel >= Level::RAWIO);
 }
 
 void Log::Manager::RegisterServices()
@@ -292,49 +272,13 @@ void Log::Manager::UnloadEngine(const Engine* engine)
 
 void Log::Manager::CheckLevel()
 {
-	// There might be a logger not from the config so we need to check this outside of the creation loop.
-	auto newmaxlevel = Level::LOWEST;
-	for (const auto& logger : loggers)
-	{
-		if (logger.level > newmaxlevel)
-			newmaxlevel = logger.level;
-	}
-
-	std::swap(maxlevel, newmaxlevel);
-	ServerInstance->Config->RawLog = (newmaxlevel >= Level::RAWIO);
-
-	Debug("LOG", "Changed maximum log level from {} to {}", LevelToString(newmaxlevel), LevelToString(maxlevel));
+	uint8_t newmaxlevel = rust_log_manager_check_level();
+	maxlevel = static_cast<Level>(newmaxlevel);
+	ServerInstance->Config->RawLog = (maxlevel >= Level::RAWIO);
 }
 
 void Log::Manager::Write(Level level, const std::string& type, const std::string& message)
 {
-	if (logging)
-		return; // Avoid log loops.
-
-	if (maxlevel < level && !caching)
-		return; // No loggers care about this message.
-
-	logging = true;
-	time_t time = ServerInstance->Time();
-	for (auto& logger : loggers)
-	{
-		if (!logger.Suitable(level, type))
-			continue;
-
-		try
-		{
-			logger.method->OnLog(time, level, type, message);
-		}
-		catch (const CoreException& err)
-		{
-			logger.dead = true;
-			logger.method.reset();
-			ServerInstance->SNO.WriteGlobalSno('a', "A logger threw an exception: {}", err.GetReason());
-			break;
-		}
-	}
-
-	if (caching)
-		cache.emplace_back(time, level, type, message);
-	logging = false;
+	rust_log_manager_write(static_cast<uint8_t>(level),
+		type.c_str(), type.length(), message.c_str(), message.length());
 }

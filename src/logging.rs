@@ -267,3 +267,312 @@ pub unsafe extern "C" fn rust_log_filemethod_tick(handle: *mut std::os::raw::c_v
     }
 }
 
+// DebugLogMethod functionality
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_log_debug_method_on_log(
+    time: i64,
+    level: u8,
+    type_str: *const c_char,
+    type_length: usize,
+    message: *const c_char,
+    message_length: usize,
+) {
+    let type_s = if type_str.is_null() || type_length == 0 {
+        ""
+    } else {
+        unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(type_str as *const u8, type_length)) }
+    };
+
+    let message_s = if message.is_null() || message_length == 0 {
+        ""
+    } else {
+        unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(message as *const u8, message_length)) }
+    };
+
+    let format_str = CString::new("%d %b %H:%M:%S").unwrap();
+    let mut buffer = [0u8; 64];
+    
+    unsafe {
+        let tm_ptr = localtime(&time);
+        if !tm_ptr.is_null() {
+            strftime(buffer.as_mut_ptr() as *mut c_char, buffer.len(), format_str.as_ptr(), tm_ptr);
+            let c_str = CStr::from_ptr(buffer.as_ptr() as *const c_char);
+            let time_str = c_str.to_string_lossy();
+            println!("{} {}: {}", time_str, type_s, message_s);
+        } else {
+            println!("{} {}: {}", time, type_s, message_s);
+        }
+    }
+}
+
+// Manager state and functions
+#[repr(C)]
+pub struct LoggerInfo {
+    level: u8,
+    method_handle: *mut std::os::raw::c_void,
+    config: bool,
+    dead: bool,
+}
+
+// Implement Send and Sync for LoggerInfo since we only use it in a single-threaded context
+unsafe impl Send for LoggerInfo {}
+unsafe impl Sync for LoggerInfo {}
+
+lazy_static::lazy_static! {
+    static ref LOG_MANAGER_STATE: Mutex<LogManagerState> = Mutex::new(LogManagerState::new());
+}
+
+pub struct LogManagerState {
+    loggers: Vec<LoggerInfo>,
+    maxlevel: u8,
+    logging: bool,
+    caching: bool,
+    cache: Vec<CachedMessage>,
+}
+
+impl LogManagerState {
+    fn new() -> Self {
+        Self {
+            loggers: Vec::new(),
+            maxlevel: 0, // Level::LOWEST
+            logging: false,
+            caching: true,
+            cache: Vec::new(),
+        }
+    }
+}
+
+#[repr(C)]
+pub struct CachedMessage {
+    time: i64,
+    level: u8,
+    type_str: *mut c_char,
+    type_length: usize,
+    message: *mut c_char,
+    message_length: usize,
+}
+
+// Implement Send and Sync for CachedMessage since we only use it in a single-threaded context
+unsafe impl Send for CachedMessage {}
+unsafe impl Sync for CachedMessage {}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_log_manager_write(
+    level: u8,
+    type_str: *const c_char,
+    type_length: usize,
+    message: *const c_char,
+    message_length: usize,
+) {
+    let type_s = if type_str.is_null() || type_length == 0 {
+        ""
+    } else {
+        unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(type_str as *const u8, type_length)) }
+    };
+
+    let message_s = if message.is_null() || message_length == 0 {
+        ""
+    } else {
+        unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(message as *const u8, message_length)) }
+    };
+
+    let mut state = LOG_MANAGER_STATE.lock().unwrap();
+    
+    if state.logging {
+        return; // Avoid log loops
+    }
+
+    if state.maxlevel < level && !state.caching {
+        return; // No loggers care about this message
+    }
+
+    state.logging = true;
+    
+    // Route to all suitable loggers
+    for logger in state.loggers.iter_mut() {
+        if logger.dead || logger.level < level {
+            continue;
+        }
+
+        // Call the appropriate log method based on the handle
+        if !logger.method_handle.is_null() {
+            let err = rust_log_filemethod_on_log(
+                logger.method_handle,
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs() as i64,
+                level,
+                type_str,
+                type_length,
+                message,
+                message_length,
+            );
+            
+            if !err.is_empty() {
+                logger.dead = true;
+            }
+        }
+    }
+
+    if state.caching {
+        // Cache the message
+        let type_copy = CString::new(type_s).unwrap();
+        let message_copy = CString::new(message_s).unwrap();
+        
+        let cached = CachedMessage {
+            time: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64,
+            level,
+            type_str: type_copy.into_raw(),
+            type_length: type_s.len(),
+            message: message_copy.into_raw(),
+            message_length: message_s.len(),
+        };
+        state.cache.push(cached);
+    }
+    
+    state.logging = false;
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_log_manager_enable_debug_mode(forceprotodebug: bool) {
+    let mut state = LOG_MANAGER_STATE.lock().unwrap();
+    
+    // Create a debug logger handle
+    let debug_handle = std::ptr::null_mut(); // Special handle for debug logging
+    let level = if forceprotodebug { 4 } else { 3 }; // RAWIO or DEBUG
+    
+    let logger = LoggerInfo {
+        level,
+        method_handle: debug_handle,
+        config: false,
+        dead: false,
+    };
+    
+    state.loggers.push(logger);
+    state.maxlevel = level;
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_log_manager_check_level() -> u8 {
+    let mut state = LOG_MANAGER_STATE.lock().unwrap();
+    
+    let mut newmaxlevel = 0; // Level::LOWEST
+    for logger in state.loggers.iter() {
+        if !logger.dead && logger.level > newmaxlevel {
+            newmaxlevel = logger.level;
+        }
+    }
+    
+    state.maxlevel = newmaxlevel;
+    newmaxlevel
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_log_manager_add_logger(
+    level: u8,
+    method_handle: *mut std::os::raw::c_void,
+    config: bool,
+) {
+    let mut state = LOG_MANAGER_STATE.lock().unwrap();
+    
+    let logger = LoggerInfo {
+        level,
+        method_handle,
+        config,
+        dead: false,
+    };
+    
+    state.loggers.push(logger);
+    
+    if level > state.maxlevel {
+        state.maxlevel = level;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_log_manager_open_logs(requiremethods: bool) {
+    let mut state = LOG_MANAGER_STATE.lock().unwrap();
+    
+    if requiremethods && state.caching {
+        state.logging = true;
+        
+        // Collect cached messages first to avoid borrowing issues
+        let cached_messages: Vec<CachedMessage> = state.cache.drain(..).collect();
+        
+        for cached in cached_messages {
+            let _type_str = unsafe { std::slice::from_raw_parts(cached.type_str as *const u8, cached.type_length) };
+            let _message_str = unsafe { std::slice::from_raw_parts(cached.message as *const u8, cached.message_length) };
+            
+            // Process loggers separately to avoid borrowing conflicts
+            let mut logger_ids_to_mark_dead = Vec::new();
+            
+            for (idx, logger) in state.loggers.iter_mut().enumerate() {
+                if logger.dead || logger.level < cached.level {
+                    continue;
+                }
+                
+                if !logger.method_handle.is_null() {
+                    let err = rust_log_filemethod_on_log(
+                        logger.method_handle,
+                        cached.time,
+                        cached.level,
+                        cached.type_str,
+                        cached.type_length,
+                        cached.message,
+                        cached.message_length,
+                    );
+                    
+                    if !err.is_empty() {
+                        logger_ids_to_mark_dead.push(idx);
+                    }
+                } else {
+                    // Debug logger
+                    rust_log_debug_method_on_log(
+                        cached.time,
+                        cached.level,
+                        cached.type_str,
+                        cached.type_length,
+                        cached.message,
+                        cached.message_length,
+                    );
+                }
+            }
+            
+            // Mark dead loggers
+            for idx in logger_ids_to_mark_dead {
+                if let Some(logger) = state.loggers.get_mut(idx) {
+                    logger.dead = true;
+                }
+            }
+            
+            // Free cached strings
+            unsafe {
+                let _ = CString::from_raw(cached.type_str);
+                let _ = CString::from_raw(cached.message);
+            }
+        }
+        
+        state.caching = false;
+        state.logging = false;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_log_manager_close_logs() {
+    let mut state = LOG_MANAGER_STATE.lock().unwrap();
+    
+    state.logging = true; // Prevent writing to dying loggers
+    state.loggers.retain(|logger| !logger.config);
+    state.logging = false;
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_log_manager_get_maxlevel() -> u8 {
+    let state = LOG_MANAGER_STATE.lock().unwrap();
+    state.maxlevel
+}
+
