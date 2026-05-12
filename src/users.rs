@@ -15,8 +15,6 @@ use std::os::raw::c_uchar;
 use std::ptr;
 use std::slice;
 
-type User = core::ffi::c_void;
-
 const MAX_USERMODE_HANDLERS: usize = 512;
 const MODE_PARAM_BUF: usize = 8192;
 

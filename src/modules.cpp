@@ -34,6 +34,12 @@
 #include "dynamic.h"
 #include "utility/map.h"
 
+extern "C" {
+	const char* service_provider_get_type_string(uint32_t service_type);
+	StdString module_get_property_string(uint32_t properties);
+	StdString module_manager_shrink_mod_name(const char* modname, size_t modname_length);
+}
+
 static insp::intrusive_list<dynamic_reference_base>* dynrefs = nullptr;
 
 void dynamic_reference_base::reset_all()
@@ -77,17 +83,10 @@ void Module::CompareLinkData(const LinkData& otherdata, LinkDataDiff& diffs)
 
 std::string Module::GetPropertyString() const
 {
-	// R = VF_CORE ("required")
-	// V = VF_VENDOR
-	// C = VF_COMMON
-	// O = VF_OPTCOMMON
-	// D = VF_DEPRECATED
-	std::string propstr("RVCOD");
-	size_t pos = 0;
-	for (int mult = VF_CORE; mult <= VF_LAST; mult *= 2, ++pos)
-		if (!(this->properties & mult))
-			propstr[pos] = '-';
-	return propstr;
+	StdString result = module_get_property_string(properties);
+	std::string cpp_result = result.to_std_string();
+	StdString_Destroy(&result);
+	return cpp_result;
 }
 
 std::string Module::GetVersion() const
@@ -200,22 +199,7 @@ void ServiceProvider::DisableAutoRegister()
 
 const char* ServiceProvider::GetTypeString() const
 {
-	switch (service)
-	{
-		case SERVICE_COMMAND:
-			return "command";
-		case SERVICE_MODE:
-			return "mode";
-		case SERVICE_METADATA:
-			return "metadata";
-		case SERVICE_IOHOOK:
-			return "iohook";
-		case SERVICE_DATA:
-			return "data service";
-		case SERVICE_CUSTOM:
-			return "module service";
-	}
-	return "unknown service";
+	return service_provider_get_type_string(service);
 }
 
 bool ModuleManager::Attach(Implementation i, Module* mod)
@@ -698,10 +682,10 @@ ServiceProvider* ModuleManager::FindService(ServiceType type, const std::string&
 
 std::string ModuleManager::ShrinkModName(const std::string& modname)
 {
-	const static size_t extlen = strlen(DLL_EXTENSION);
-	size_t startpos = modname.compare(0, 2, "m_", 2) ? 0 : 2;
-	size_t endpos = modname.length() < extlen || modname.compare(modname.length() - extlen, extlen, DLL_EXTENSION, extlen) ? 0 : extlen;
-	return modname.substr(startpos, modname.length() - endpos - startpos);
+	StdString result = module_manager_shrink_mod_name(modname.c_str(), modname.length());
+	std::string cpp_result = result.to_std_string();
+	StdString_Destroy(&result);
+	return cpp_result;
 }
 
 dynamic_reference_base::dynamic_reference_base(Module* Creator, const std::string& Name)

@@ -80,7 +80,6 @@ core_src_list = files(
   'src/timer.cpp',
   'src/usermanager_glue.cpp',
   'src/users_glue.cpp',
-  'src/users_ffi.cpp',
   'src/wildcard_glue.cpp',
   'src/xline.cpp',
 )
