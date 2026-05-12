@@ -214,6 +214,7 @@ static thread_local std::string tls_quitmsg;
 static thread_local std::string tls_operquitmsg;
 static thread_local std::string tls_scratch;
 
+INSP_RUST_FFI_IMPL_BEGIN
 extern "C" {
 
 void um_ffi_write_common_quit(User* user, const char* quitmsg, const char* operquitmsg)
@@ -808,3 +809,4 @@ size_t um_ffi_user_manager_rust_access_local_users_size(UserManager* um)
 }
 
 } // extern "C"
+INSP_RUST_FFI_IMPL_END

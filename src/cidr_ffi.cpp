@@ -8,6 +8,7 @@
 
 #include "inspircd.h"
 
+INSP_RUST_FFI_IMPL_BEGIN
 extern "C" bool cidr_ffi_match_wildcard_ascii(const char* a, const char* b)
 {
 	return InspIRCd::Match(std::string(a), std::string(b), ascii_case_insensitive_map);
@@ -27,3 +28,4 @@ extern "C" bool cidr_ffi_match_normalized(const char* address_copy, const char* 
 
 	return mask == mask2;
 }
+INSP_RUST_FFI_IMPL_END

@@ -21,30 +21,22 @@
 #include "clientprotocolmsg.h"
 #include "timeutils.h"
 
+#include <cstdint>
 #include <fmt/color.h>
+
+extern "C" {
+	const char* rust_log_level_to_string(uint8_t level);
+
+	void* rust_log_filemethod_create(const char* target, size_t target_length, unsigned long flush, uint8_t kind);
+	void rust_log_filemethod_destroy(void* handle);
+	StdString rust_log_filemethod_on_log(void* handle, time_t time, uint8_t level,
+		const char* type, size_t type_length, const char* message, size_t message_length);
+	void rust_log_filemethod_tick(void* handle);
+}
 
 const char* Log::LevelToString(Log::Level level)
 {
-	switch (level)
-	{
-		case Log::Level::CRITICAL:
-			return "critical";
-
-		case Log::Level::WARNING:
-			return "warning";
-
-		case Log::Level::NORMAL:
-			return "normal";
-
-		case Log::Level::DEBUG:
-			return "debug";
-
-		case Log::Level::RAWIO:
-			return "rawio";
-	}
-
-	// Should never happen.
-	return "unknown";
+	return rust_log_level_to_string(static_cast<uint8_t>(level));
 }
 
 void Log::NotifyRawIO(LocalUser* user, MessageType type)
@@ -67,55 +59,42 @@ public:
 	}
 };
 
-
-Log::FileMethod::FileMethod(const std::string& n, FILE* fh, unsigned long fl, bool ac)
+Log::FileMethod::FileMethod(const std::string& n, unsigned long fl, Target target)
 	: Timer(15*60, true)
-	, autoclose(ac)
-	, file(fh)
+	, handle(nullptr)
 	, flush(fl)
 	, name(n)
 {
+	handle = rust_log_filemethod_create(name.c_str(), name.length(), flush, static_cast<uint8_t>(target));
+	if (!handle)
+		throw CoreException(INSP_FORMAT("Unable to create file logger for {}", name));
+
 	if (flush > 1)
 		ServerInstance->Timers.AddTimer(this);
 }
 
 Log::FileMethod::~FileMethod()
 {
-	if (autoclose)
-		fclose(file);
+	rust_log_filemethod_destroy(handle);
+	handle = nullptr;
 }
 
 void Log::FileMethod::OnLog(time_t time, Level level, const std::string& type, const std::string& message)
 {
-	static time_t prevtime = 0;
-	static std::string timestr;
-	if (prevtime != time)
+	StdString err = rust_log_filemethod_on_log(handle, time, static_cast<uint8_t>(level),
+		type.c_str(), type.length(), message.c_str(), message.length());
+	if (!err.empty())
 	{
-		prevtime = time;
-		timestr = Time::ToString(prevtime);
+		const std::string errstr = err.to_std_string();
+		StdString_Destroy(&err);
+		throw CoreException(INSP_FORMAT("Unable to write to {}: {}", name, errstr));
 	}
-
-	fputs(timestr.c_str(), file);
-	fputs(" ", file);
-	fputs(type.c_str(), file);
-	fputs(": ", file);
-	fputs(message.c_str(), file);
-#if defined _WIN32
-	fputs("\r\n", file);
-#else
-	fputs("\n", file);
-#endif
-
-	if (!(++lines % flush))
-		fflush(file);
-
-	if (ferror(file))
-		throw CoreException(INSP_FORMAT("Unable to write to {}: {}", name, strerror(errno)));
+	StdString_Destroy(&err);
 }
 
 bool Log::FileMethod::Tick()
 {
-	fflush(file);
+	rust_log_filemethod_tick(handle);
 	return true;
 }
 
@@ -142,26 +121,19 @@ Log::MethodPtr Log::FileEngine::Create(const std::shared_ptr<ConfigTag>& tag)
 		throw CoreException("<log:target> must be specified for file logger at " + tag->source.str());
 
 	const std::string fulltarget = ServerInstance->Config->Paths.PrependLog(Time::ToString(ServerInstance->Time(), target.c_str()));
-	auto* fh = fopen(fulltarget.c_str(), "a");
-	if (!fh)
-	{
-		throw CoreException(INSP_FORMAT("Unable to open {} for file logger at {}: {}", fulltarget,
-			tag->source.str(), strerror(errno)));
-	}
-
 	const unsigned long flush = tag->getNum<unsigned long>("flush", 20, 1);
-	return std::make_shared<FileMethod>(fulltarget, fh, flush, true);
+	return std::make_shared<FileMethod>(fulltarget, flush, Log::FileMethod::Target::FILE);
 }
 
-Log::StreamEngine::StreamEngine(Module* Creator, const std::string& Name, FILE* fh)
+Log::StreamEngine::StreamEngine(Module* Creator, const std::string& Name, Log::FileMethod::Target t)
 	: Engine(Creator, Name)
-	, file(fh)
+	, target(t)
 {
 }
 
 Log::MethodPtr Log::StreamEngine::Create(const std::shared_ptr<ConfigTag>& tag)
 {
-	return std::make_shared<FileMethod>(name, file, 1, false);
+	return std::make_shared<FileMethod>(name, 1, target);
 }
 
 Log::Manager::CachedMessage::CachedMessage(time_t ts, Level l, const std::string& t, const std::string& m)
@@ -188,8 +160,8 @@ bool Log::Manager::Info::Suitable(Level l, const std::string& t) const
 
 Log::Manager::Manager()
 	: filelog(nullptr)
-	, stderrlog(nullptr, "stderr", stderr)
-	, stdoutlog(nullptr, "stdout", stdout)
+	, stderrlog(nullptr, "stderr", Log::FileMethod::Target::STDERR)
+	, stdoutlog(nullptr, "stdout", Log::FileMethod::Target::STDOUT)
 {
 }
 

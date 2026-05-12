@@ -50,6 +50,7 @@ void SnomaskRustAccess::Send(char letter, const std::string& desc, const std::st
 	Snomask::Send(letter, desc, msg);
 }
 
+INSP_RUST_FFI_IMPL_BEGIN
 extern "C" {
 
 void snomask_ffi_description_set(SnomaskManager* mgr, size_t slot, const char* text)
@@ -140,3 +141,4 @@ void snomask_ffi_send_global_notice(char letter, const char* text)
 }
 
 } // extern "C"
+INSP_RUST_FFI_IMPL_END

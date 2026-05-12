@@ -696,18 +696,6 @@ ServiceProvider* ModuleManager::FindService(ServiceType type, const std::string&
 	}
 }
 
-std::string ModuleManager::ExpandModName(const std::string& modname)
-{
-	const static size_t extlen = strlen(DLL_EXTENSION);
-	std::string fullname;
-	if (modname.compare(0, 5, "core_") != 0 && modname.compare(0, 2, "m_") != 0)
-		fullname.append("m_");
-	fullname.append(modname);
-	if (modname.length() < extlen || modname.compare(modname.size() - extlen, extlen, DLL_EXTENSION) != 0)
-		fullname.append(DLL_EXTENSION);
-	return fullname;
-}
-
 std::string ModuleManager::ShrinkModName(const std::string& modname)
 {
 	const static size_t extlen = strlen(DLL_EXTENSION);

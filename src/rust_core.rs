@@ -11,3 +11,8 @@ mod usermanager;
 mod cidr;
 mod channelmanager;
 mod snomasks;
+mod wildcard;
+mod logging;
+mod modulemanager;
+mod users;
+mod server;

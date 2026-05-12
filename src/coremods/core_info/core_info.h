@@ -98,7 +98,11 @@ public:
 	std::string admindesc;
 	std::string adminemail;
 	CommandAdmin(Module* parent);
+	~CommandAdmin();
 	CmdResult Handle(User* user, const Params& parameters) override;
+
+private:
+	void* rust_instance;
 };
 
 class CommandCommands final

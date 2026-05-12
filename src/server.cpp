@@ -26,6 +26,12 @@
 
 #include "inspircd.h"
 
+// Rust function declarations
+extern "C" {
+    struct StdString;
+    StdString rust_generate_sid(const char* servername, size_t servername_length, const char* serverdesc, size_t serverdesc_length);
+}
+
 void InspIRCd::HandleSignal(sig_atomic_t signal)
 {
 	switch (signal)
@@ -69,17 +75,15 @@ void InspIRCd::Rehash(const std::string& uuid)
 
 std::string UIDGenerator::GenerateSID(const std::string& servername, const std::string& serverdesc)
 {
-	unsigned int sid = 0;
-
-	for (const auto chr : servername)
-		sid = 5 * sid + chr;
-
-	for (const auto chr : serverdesc)
-		sid = 5 * sid + chr;
-
-	std::string sidstr = ConvToStr(sid % 1000);
-	sidstr.insert(0, 3 - sidstr.length(), '0');
-	return sidstr;
+	// Use Rust implementation instead of C++
+	StdString result = rust_generate_sid(servername.c_str(), servername.length(), serverdesc.c_str(), serverdesc.length());
+	
+	if (result.data) {
+		return std::string(result.data, result.length);
+	}
+	
+	// Fallback to "000" if Rust fails
+	return "000";
 }
 
 void UIDGenerator::IncrementUID(unsigned int pos)

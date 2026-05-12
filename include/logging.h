@@ -19,6 +19,11 @@
 
 #pragma once
 
+#include <cstdint>
+#include <cstdio>
+#include <memory>
+#include <string>
+
 namespace Log
 {
 	class Method;
@@ -98,11 +103,8 @@ class CoreExport Log::FileMethod final
 	, public Timer
 {
 private:
-	/** Whether to autoclose the file on exit. */
-	bool autoclose;
-
-	/** The file to which the log is written. */
-	FILE* file;
+	/** Opaque pointer to the Rust implementation. */
+	void* handle = nullptr;
 
 	/** How often the file stream should be flushed. */
 	const unsigned long flush;
@@ -114,7 +116,19 @@ private:
 	const std::string name;
 
 public:
-	FileMethod(const std::string& n, FILE* fh, unsigned long fl, bool ac);
+	/** The target the file method writes to. */
+	enum class Target
+		: uint8_t
+	{
+		/** Write to a path specified by the name. */
+		FILE = 0,
+		/** Write to standard output (name is for error messages). */
+		STDOUT = 1,
+		/** Write to standard error (name is for error messages). */
+		STDERR = 2,
+	};
+
+	FileMethod(const std::string& n, unsigned long fl, Target target);
 	~FileMethod() override;
 
 	/** @copydoc Log::Method::AcceptsCachedMessages */
@@ -160,10 +174,10 @@ class CoreExport Log::StreamEngine final
 	: public Engine
 {
 private:
-	FILE* file;
+	Log::FileMethod::Target target;
 
 public:
-	StreamEngine(Module* Creator, const std::string& Name, FILE* fh);
+	StreamEngine(Module* Creator, const std::string& Name, Log::FileMethod::Target t);
 
 	/** @copydoc Log::Engine::Create */
 	MethodPtr Create(const std::shared_ptr<ConfigTag>& tag) override;

@@ -74,7 +74,7 @@ pub unsafe extern "C" fn rust_match_cidr(
     rust_match_cidr_str(&address, &cidr_mask, match_with_username)
 }
 
-fn rust_match_cidr_str(address: &str, cidr_mask: &str, match_with_username: bool) -> bool {
+pub(crate) fn rust_match_cidr_str(address: &str, cidr_mask: &str, match_with_username: bool) -> bool {
     let (address_copy, cidr_copy) = if match_with_username {
         /* The caller is trying to match username@<mask>/bits.
          * Chop off the username@ portion, use match() on it

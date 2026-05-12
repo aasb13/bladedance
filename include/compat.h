@@ -60,3 +60,16 @@
 # define DllExport __attribute__ ((visibility ("default")))
 # define CoreExport __attribute__ ((visibility ("default")))
 #endif
+
+/**
+ * Surround C++ definitions of symbols called from the Rust staticlib when that
+ * library is also linked into loadable modules: those modules resolve these
+ * against the main binary, so they must not be hidden by -fvisibility=hidden.
+ */
+#if defined(__GNUC__)
+# define INSP_RUST_FFI_IMPL_BEGIN _Pragma("GCC visibility push(default)")
+# define INSP_RUST_FFI_IMPL_END _Pragma("GCC visibility pop")
+#else
+# define INSP_RUST_FFI_IMPL_BEGIN
+# define INSP_RUST_FFI_IMPL_END
+#endif

@@ -1033,6 +1033,7 @@ public:
 	 */
 	ServiceList* NewServices;
 
+	
 	/** Expands the name of a module by prepending "m_" and appending ".so".
 	 * No-op if the name is already expanded.
 	 * @param modname Module name to expand

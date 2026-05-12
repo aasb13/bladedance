@@ -22,9 +22,11 @@
 
 #include "inspircd.h"
 
+INSP_RUST_FFI_IMPL_BEGIN
 extern "C" {
     time_t ServerInstance_Time() { return ServerInstance->Time(); }
     void LogManager_Debug(const char* tag, const char* message) {
         ServerInstance->Logs.Debug(tag, "%s", message);
     }
 }
+INSP_RUST_FFI_IMPL_END

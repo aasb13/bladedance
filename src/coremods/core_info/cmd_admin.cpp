@@ -25,33 +25,91 @@
 #include "inspircd.h"
 #include "core_info.h"
 
-enum
-{
-	// From RFC 1459.
-	RPL_ADMINME = 256,
-	RPL_ADMINLOC1 = 257,
-	RPL_ADMINLOC2  = 258,
-	RPL_ADMINEMAIL = 259,
-};
+// Rust function declarations
+extern "C" {
+    struct StdString;
+    void* CommandAdmin_Create();
+    void CommandAdmin_Destroy(void* ptr);
+    void CommandAdmin_SetAdminName(void* ptr, const char* name, size_t name_length);
+    void CommandAdmin_SetAdminDescription(void* ptr, const char* desc, size_t desc_length);
+    void CommandAdmin_SetAdminEmail(void* ptr, const char* email, size_t email_length);
+    StdString CommandAdmin_HandleAdmin(void* ptr, int user_level, const char* server_name, size_t server_name_length);
+}
 
 CommandAdmin::CommandAdmin(Module* parent)
 	: ServerTargetCommand(parent, "ADMIN")
+	, rust_instance(nullptr)
 {
 	penalty = 2000;
 	syntax = { "[<servername>]" };
+	
+	// Create Rust instance
+	rust_instance = CommandAdmin_Create();
+}
+
+CommandAdmin::~CommandAdmin()
+{
+	// Destroy Rust instance
+	if (rust_instance)
+		CommandAdmin_Destroy(rust_instance);
 }
 
 CmdResult CommandAdmin::Handle(User* user, const Params& parameters)
 {
-    if (GetUserLevel(user) > 0)
-    {
-        user->WriteRemoteNumeric(RPL_ADMINME, ServerInstance->Config->GetServerName(), "Administrative info");
-		user->WriteRemoteNumeric(RPL_ADMINLOC1, adminname);
-		user->WriteRemoteNumeric(RPL_ADMINLOC2, "Contact via /MSG when online");
-    }
-    else
-    {
-        user->WriteRemoteNumeric(RPL_ADMINME, ServerInstance->Config->GetServerName(), "User level of above 0 is required to execute this command");
-    }
-    return CmdResult::SUCCESS;
+	if (!rust_instance)
+		return CmdResult::FAILURE;
+
+	// Call Rust implementation
+	StdString result = CommandAdmin_HandleAdmin(
+		rust_instance,
+		GetUserLevel(user),
+		ServerInstance->Config->GetServerName().c_str(),
+		ServerInstance->Config->GetServerName().length()
+	);
+
+	if (result.data && result.length > 0)
+	{
+		// Split the response by newlines and send each line as numeric
+		std::string response(result.data, result.length);
+		size_t pos = 0;
+		size_t newline_pos;
+		
+		while ((newline_pos = response.find('\n', pos)) != std::string::npos) {
+			std::string line = response.substr(pos, newline_pos - pos);
+			
+			// Parse numeric and message from line like "256 servername :message"
+			size_t space_pos = line.find(' ');
+			if (space_pos != std::string::npos) {
+				size_t msg_pos = line.find(" :", space_pos);
+				if (msg_pos != std::string::npos) {
+					std::string numeric_str = line.substr(0, space_pos);
+					std::string server_name = line.substr(space_pos + 1, msg_pos - space_pos - 1);
+					std::string message = line.substr(msg_pos + 2);
+					
+					unsigned int numeric = std::stoul(numeric_str);
+					user->WriteRemoteNumeric(numeric, server_name, message);
+				}
+			}
+			pos = newline_pos + 1;
+		}
+		
+		// Send the last line if there's no trailing newline
+		if (pos < response.length()) {
+			std::string line = response.substr(pos);
+			size_t space_pos = line.find(' ');
+			if (space_pos != std::string::npos) {
+				size_t msg_pos = line.find(" :", space_pos);
+				if (msg_pos != std::string::npos) {
+					std::string numeric_str = line.substr(0, space_pos);
+					std::string server_name = line.substr(space_pos + 1, msg_pos - space_pos - 1);
+					std::string message = line.substr(msg_pos + 2);
+					
+					unsigned int numeric = std::stoul(numeric_str);
+					user->WriteRemoteNumeric(numeric, server_name, message);
+				}
+			}
+		}
+	}
+	
+	return CmdResult::SUCCESS;
 }

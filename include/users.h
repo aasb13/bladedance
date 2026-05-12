@@ -319,9 +319,13 @@ public:
  * connection is stored here primarily, from the user's socket ID (file descriptor) through to the
  * user's nickname and hostname.
  */
+struct UserRustAccess;
+
 class CoreExport User
 	: public Extensible
 {
+	friend struct UserRustAccess;
+
 private:
 	/** Cached value for GetAddress. */
 	std::string cached_address;
@@ -1026,3 +1030,26 @@ inline void User::SetMode(const ModeHandler* mh, bool value)
 	if (mh && mh->GetId() != ModeParser::MODEID_MAX)
 		modes[mh->GetId()] = value;
 }
+
+/** Private cache/string helpers for the Rust users module (implemented in users_ffi.cpp). */
+struct CoreExport UserRustAccess
+{
+	static void InvalidateCache(User* u);
+
+	static void SetCachedUserAddress(User* u, const uint8_t* data, size_t len);
+	static void SetCachedUserHost(User* u, const uint8_t* data, size_t len);
+	static void SetCachedRealUserHost(User* u, const uint8_t* data, size_t len);
+	static void SetCachedMask(User* u, const uint8_t* data, size_t len);
+	static void SetCachedRealMask(User* u, const uint8_t* data, size_t len);
+
+	static void ReadRealUser(const User* u, const uint8_t** out, size_t* len);
+	static void ReadCachedAddress(User* u, const uint8_t** out, size_t* len);
+	static void ReadDisplayedUser(const User* u, const uint8_t** out, size_t* len);
+	static void ReadDisplayedHost(const User* u, const uint8_t** out, size_t* len);
+	static void ReadRealHost(const User* u, const uint8_t** out, size_t* len);
+	static void ReadNick(const User* u, const uint8_t** out, size_t* len);
+
+	static bool ModeIdIsSet(const User* u, unsigned int id);
+	static bool NoticeMaskBit(const User* u, unsigned char sm);
+	static bool SharesChannelWith(const User* u, User* other);
+};

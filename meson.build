@@ -69,9 +69,9 @@ core_src_list = files(
   'src/inspircd.cpp',
   'src/listensocket.cpp',
   'src/listmode.cpp',
-  'src/logging.cpp',
+  'src/logging_glue.cpp',
   'src/mode.cpp',
-  'src/modulemanager.cpp',
+  'src/modulemanager_glue.cpp',
   'src/modules.cpp',
   'src/server.cpp',
   'src/snomasks_glue.cpp',
@@ -84,18 +84,45 @@ core_src_list = files(
   'src/timer.cpp',
   'src/usermanager_glue.cpp',
   'src/usermanager_ffi.cpp',
-  'src/users.cpp',
-  'src/wildcard.cpp',
+  'src/users_glue.cpp',
+  'src/users_ffi.cpp',
+  'src/wildcard_glue.cpp',
   'src/xline.cpp',
 )
 
-rust_srcs = files(
+rust_manifest = meson.project_source_root() / 'src' / 'rust' / 'Cargo.toml'
+rust_lib_rs = meson.project_source_root() / 'src' / 'rust' / 'lib.rs'
+rust_logging_rs = meson.project_source_root() / 'src' / 'rust' / 'logging.rs'
+rust_core_rs_files = files(
+  'src/rust/Cargo.toml',
+  'src/rust/lib.rs',
+  'src/rust/logging.rs',
+  'src/rust/Cargo.lock',
   'src/rust_core.rs',
-  # 'src/rust/wildcard.rs',  # future
+  'src/stringutils.rs',
+  'src/bancache.rs',
+  'src/usermanager.rs',
+  'src/cidr.rs',
+  'src/channelmanager.rs',
+  'src/snomasks.rs',
+  'src/wildcard.rs',
+  'src/logging.rs',
+  'src/modulemanager.rs',
+  'src/users.rs',
+  'src/server.rs',
+  'src/coremods/core_info/cmd_admin.rs',
 )
-
-rust_lib = static_library('rust_core', rust_srcs,
-  rust_crate_type: 'staticlib',
+rust_targetdir = meson.current_build_dir() / 'cargo'
+rust_lib = custom_target('rust_core',
+  output: 'librust_core.a',
+  depend_files: rust_core_rs_files,
+  command: [
+    'sh', '-c',
+    'cargo build --manifest-path "$1" --release --target-dir "$2" && cp "$2/release/librust_core.a" "$3"',
+    'cargo', rust_manifest, rust_targetdir, '@OUTPUT@',
+  ],
+  build_by_default: true,
+  console: true,
 )
 
 if core_src_list.length() == 0
@@ -107,8 +134,7 @@ core_src_list += meson.source_root() / 'src/socketengines' / (socket_engine + '.
 inspircd = executable('inspircd', core_src_list,
   include_directories: inc,
   dependencies: [fmt_dep, dl_dep, pthread_dep],
-  link_args: '-rdynamic',
-  link_with: rust_lib,
+  link_args: ['-rdynamic', '-Wl,--whole-archive', rust_lib.full_path(), '-Wl,--no-whole-archive'],
   export_dynamic: true,
   install: true,
   install_dir: get_option('bindir')
@@ -131,13 +157,25 @@ foreach cm_dir : coremod_dirs
     check: false
   ).stdout().strip().split('\n')
   if cm_srcs.length() > 0 and cm_srcs[0] != ''
-    shared_module(cm_name, cm_srcs,
-      name_prefix: '',
-      include_directories: inc,
-      cpp_args: ['-DMODNAME="' + cm_name + '"'],
-      install: true,
-      install_dir: 'modules'
-    )
+    if cm_name == 'core_info'
+      # ADMIN command FFI lives in the Rust staticlib; link it into this module.
+      shared_module(cm_name, cm_srcs,
+        name_prefix: '',
+        include_directories: inc,
+        cpp_args: ['-DMODNAME="' + cm_name + '"'],
+        link_args: ['-Wl,--whole-archive', rust_lib.full_path(), '-Wl,--no-whole-archive'],
+        install: true,
+        install_dir: 'modules'
+      )
+    else
+      shared_module(cm_name, cm_srcs,
+        name_prefix: '',
+        include_directories: inc,
+        cpp_args: ['-DMODNAME="' + cm_name + '"'],
+        install: true,
+        install_dir: 'modules'
+      )
+    endif
   endif
 endforeach
 
@@ -153,6 +191,7 @@ foreach cm_file : coremod_standalone
     continue
   endif
   cm_name = cm_file.split('/')[-1].split('.')[0]
+
   shared_module(cm_name, cm_file,
     name_prefix: '',
     include_directories: inc,

@@ -33,41 +33,42 @@
 #include "utility/string.h"
 #include "xline.h"
 
+extern "C" std::size_t rust_users_normalize_addr_display(const unsigned char* inp, std::size_t in_len,
+	unsigned char* out, std::size_t out_cap);
+extern "C" std::size_t rust_users_filter_irc_line(const unsigned char* inp, std::size_t in_len,
+	unsigned char* out, std::size_t out_cap);
+
+extern "C" bool rust_user_is_notice_mask_set(const User* user, unsigned char sm);
+extern "C" bool rust_user_is_mode_set(User* user, unsigned char m);
+extern "C" char* rust_user_get_mode_letters(User* user, bool includeparams);
+extern "C" void rust_users_free_c_string(char* p);
+extern "C" void rust_user_invalidate_cache(User* user);
+extern "C" void rust_user_fill_cached_user_address(User* user);
+extern "C" void rust_user_fill_cached_user_host(User* user);
+extern "C" void rust_user_fill_cached_real_user_host(User* user);
+extern "C" void rust_user_fill_cached_mask(User* user);
+extern "C" void rust_user_fill_cached_real_mask(User* user);
+extern "C" bool rust_user_shares_channel_with(const User* user, User* other);
+
 ClientProtocol::MessageList LocalUser::sendmsglist;
 
 bool User::IsNoticeMaskSet(unsigned char sm) const
 {
-	if (!SnomaskManager::IsSnomask(sm))
-		return false;
-	return (snomasks[sm-65]);
+	return rust_user_is_notice_mask_set(this, sm);
 }
 
 bool User::IsModeSet(unsigned char m) const
 {
-	ModeHandler* mh = ServerInstance->Modes.FindMode(m, MODETYPE_USER);
-	return (mh && modes[mh->GetId()]);
+	return rust_user_is_mode_set(const_cast<User*>(this), m);
 }
 
 std::string User::GetModeLetters(bool includeparams) const
 {
-	std::string ret(1, '+');
-	std::string params;
-
-	for (const auto& [_, mh] : ServerInstance->Modes.GetModes(MODETYPE_USER))
-	{
-		if (!IsModeSet(mh))
-			continue;
-
-		ret.push_back(mh->GetModeChar());
-		if ((includeparams) && (mh->NeedsParam(true)))
-		{
-			const std::string val = mh->GetUserParameter(this);
-			if (!val.empty())
-				params.append(1, ' ').append(val);
-		}
-	}
-
-	ret += params;
+	char* raw = rust_user_get_mode_letters(const_cast<User*>(this), includeparams);
+	if (!raw)
+		return "+";
+	std::string ret(raw);
+	rust_users_free_c_string(raw);
 	return ret;
 }
 
@@ -98,15 +99,16 @@ const std::string& User::GetAddress()
 {
 	if (cached_address.empty())
 	{
-		cached_address = client_sa.addr();
-
-		// If the user is connecting from an IPv4 address like ::1 we
-		// need to partially expand the address to avoid issues with
-		// the IRC wire format.
-		if (cached_address[0] == ':')
-			cached_address.insert(cached_address.begin(), 1, '0');
-
-		cached_address.shrink_to_fit();
+		const std::string raw = client_sa.addr();
+		std::string normalized(raw.size() + 2, '\0');
+		const std::size_t n = rust_users_normalize_addr_display(
+			reinterpret_cast<const unsigned char*>(raw.data()),
+			raw.size(),
+			reinterpret_cast<unsigned char*>(normalized.data()),
+			normalized.size());
+		normalized.resize(n);
+		normalized.shrink_to_fit();
+		cached_address = std::move(normalized);
 	}
 
 	return cached_address;
@@ -115,20 +117,14 @@ const std::string& User::GetAddress()
 const std::string& User::GetUserAddress()
 {
 	if (cached_useraddress.empty())
-	{
-		cached_useraddress = INSP_FORMAT("{}@{}", GetRealUser(), GetAddress());
-		cached_useraddress.shrink_to_fit();
-	}
+		rust_user_fill_cached_user_address(this);
 
 	return cached_useraddress;
 }
 const std::string& User::GetUserHost()
 {
 	if (cached_userhost.empty())
-	{
-		cached_userhost = INSP_FORMAT("{}@{}", GetDisplayedUser(), GetDisplayedHost());
-		cached_userhost.shrink_to_fit();
-	}
+		rust_user_fill_cached_user_host(this);
 
 	return cached_userhost;
 }
@@ -136,10 +132,7 @@ const std::string& User::GetUserHost()
 const std::string& User::GetRealUserHost()
 {
 	if (cached_realuserhost.empty())
-	{
-		cached_realuserhost = INSP_FORMAT("{}@{}", GetRealUser(), GetRealHost());
-		cached_realuserhost.shrink_to_fit();
-	}
+		rust_user_fill_cached_real_user_host(this);
 
 	return cached_realuserhost;
 }
@@ -147,10 +140,7 @@ const std::string& User::GetRealUserHost()
 const std::string& User::GetMask()
 {
 	if (cached_mask.empty())
-	{
-		cached_mask = INSP_FORMAT("{}!{}@{}", nick, GetDisplayedUser(), GetDisplayedHost());
-		cached_mask.shrink_to_fit();
-	}
+		rust_user_fill_cached_mask(this);
 
 	return cached_mask;
 }
@@ -158,10 +148,7 @@ const std::string& User::GetMask()
 const std::string& User::GetRealMask()
 {
 	if (cached_realmask.empty())
-	{
-		cached_realmask = INSP_FORMAT("{}!{}@{}", nick, GetRealUser(), GetRealHost());
-		cached_realmask.shrink_to_fit();
-	}
+		rust_user_fill_cached_real_mask(this);
 
 	return cached_realmask;
 }
@@ -247,20 +234,15 @@ void UserIOHandler::OnDataReady()
 
 		// We've found a line! Clean it up and move it to the line buffer.
 		line.reserve(eolpos);
-		for (qpos = 0; qpos < eolpos; ++qpos)
-		{
-			char c = recvq[qpos];
-			switch (c)
-			{
-				case '\0':
-					c = ' ';
-					break;
-				case '\r':
-					continue;
-			}
+		line.resize(eolpos);
+		const std::size_t linelen = rust_users_filter_irc_line(
+			reinterpret_cast<const unsigned char*>(recvq.data()),
+			eolpos,
+			reinterpret_cast<unsigned char*>(line.data()),
+			line.size());
+		line.resize(linelen);
 
-			line.push_back(c);
-		}
+		qpos = eolpos;
 
 		// just found a newline. Terminate the string, and pull it out of recvq
 		recvq.erase(0, eolpos + 1);
@@ -491,13 +473,7 @@ void LocalUser::FullConnect()
 
 void User::InvalidateCache()
 {
-	/* Invalidate cache */
-	cached_address.clear();
-	cached_useraddress.clear();
-	cached_userhost.clear();
-	cached_realuserhost.clear();
-	cached_mask.clear();
-	cached_realmask.clear();
+	rust_user_invalidate_cache(this);
 }
 
 bool User::ChangeNick(const std::string& newnick, time_t newts)
@@ -891,12 +867,7 @@ void User::WriteRemoteNumeric(const Numeric::Numeric& numeric)
  */
 bool User::SharesChannelWith(User* other) const
 {
-	for (const auto* memb : chans)
-	{
-		if (memb->chan->HasUser(other))
-			return true;
-	}
-	return false;
+	return rust_user_shares_channel_with(this, other);
 }
 
 void User::ChangeRealName(const std::string& real)
