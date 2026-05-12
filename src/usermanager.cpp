@@ -208,7 +208,7 @@ void UserManager::AddUser(int socket, ListenSocket* via, const irc::sockets::soc
 
 			// IMPORTANT: we don't check XLineQuitPublic here because the only
 			// person who might see the ban at this point is the affected user.
-			this->QuitUser(New, b->Reason);
+			this->QuitUser(New, b->Reason.to_std_string());
 			return;
 		}
 		else

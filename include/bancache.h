@@ -25,6 +25,26 @@
 
 #pragma once
 
+#include "stringutils.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** C-compatible wrapper functions for Rust integration */
+time_t ServerInstance_Time();
+void LogManager_Debug(const char* tag, const char* message);
+void* BanCacheManager_Create();
+void BanCacheManager_Destroy(void* ptr);
+void* BanCacheManager_AddHit(void* ptr, const char* ip, const char* type_str, const char* reason, time_t seconds);
+void* BanCacheManager_GetHit(void* ptr, const char* ip);
+void BanCacheManager_RemoveEntries(void* ptr, const char* type_str, bool positive);
+bool BanCacheHit_IsPositive(void* ptr);
+
+#ifdef __cplusplus
+}
+#endif
+
 /** Stores a cached ban entry.
  * Each ban has one of these hashed in a hash_map to make for faster removal
  * of already-banned users in the case that they try to reconnect. As no wildcard
@@ -37,31 +57,30 @@ class CoreExport BanCacheHit final
 public:
 	/** Type of cached ban
 	 */
-	std::string Type;
+	StdString Type;
 	/** Reason, shown as quit message
 	 */
-	std::string Reason;
+	StdString Reason;
 	/** Time that the ban expires at
 	 */
 	time_t Expiry;
 
-	BanCacheHit(const std::string& type, const std::string& reason, time_t seconds);
+	BanCacheHit() = delete;
+	BanCacheHit(const BanCacheHit&) = delete;
+	BanCacheHit& operator=(const BanCacheHit&) = delete;
 
-	bool IsPositive() const { return (!Reason.empty()); }
+	bool IsPositive() const { return !Reason.empty(); }
 };
 
 /** A manager for ban cache, which allocates and deallocates and checks cached bans.
  */
 class CoreExport BanCacheManager final
 {
-	/** A container of ban cache items.
-	 */
-	typedef std::unordered_map<std::string, BanCacheHit*> BanCacheHash;
-
-	BanCacheHash BanHash;
-	bool RemoveIfExpired(BanCacheHash::iterator& it);
+	void* ptr; // opaque Rust pointer
 
 public:
+	BanCacheManager() : ptr(BanCacheManager_Create()) {}
+	~BanCacheManager() { BanCacheManager_Destroy(ptr); }
 
 	/** Creates and adds a Ban Cache item.
 	 * @param ip The IP the item is for.
@@ -69,14 +88,18 @@ public:
 	 * @param reason The reason for the ban. Left .empty() if it's a negative match.
 	 * @param seconds Number of seconds before nuking the bancache entry, the default is a day. This might seem long, but entries will be removed as G-lines/etc expire.
 	 */
-	BanCacheHit* AddHit(const std::string& ip, const std::string& type, const std::string& reason, time_t seconds = 0);
-	BanCacheHit* GetHit(const std::string& ip);
+	BanCacheHit* AddHit(const std::string& ip, const std::string& type, const std::string& reason, time_t seconds = 0) {
+		return (BanCacheHit*)BanCacheManager_AddHit(ptr, ip.c_str(), type.c_str(), reason.c_str(), seconds);
+	}
+	BanCacheHit* GetHit(const std::string& ip) {
+		return (BanCacheHit*)BanCacheManager_GetHit(ptr, ip.c_str());
+	}
 
 	/** Removes all entries of a given type, either positive or negative. Returns the number of hits removed.
 	 * @param type The type of bancache entries to remove (e.g. 'G')
 	 * @param positive Remove either positive (true) or negative (false) hits.
 	 */
-	void RemoveEntries(const std::string& type, bool positive);
-
-	~BanCacheManager();
+	void RemoveEntries(const std::string& type, bool positive) {
+		BanCacheManager_RemoveEntries(ptr, type.c_str(), positive);
+	}
 };

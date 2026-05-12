@@ -1,7 +1,8 @@
-project('privirc', 'cpp',
+project('privirc', 'cpp', 'rust',
   version: '4.10.1',
   default_options: [
-    'cpp_std=c++17',
+    'cpp_std=c++26',
+    'rust_std=2024',
     'warning_level=3',
     'buildtype=release',
     'prefix=/home/dr/inspircd/run',
@@ -28,8 +29,7 @@ add_project_arguments(
 fmt_dep     = dependency('fmt', required: true)
 dl_dep      = dependency('dl', required: false)
 pthread_dep = dependency('threads')
-mongoc_dep  = dependency('libmongoc-1.0', required: false)
-bson_dep    = dependency('libbson-1.0', required: false)
+mongoc_dep  = dependency('mongoc2', required: false)
 sqlite3_dep = dependency('sqlite3', required: false)
 argon2_dep   = dependency('libargon2', required: false)
 ssl_dep      = dependency('openssl', required: false)
@@ -50,7 +50,7 @@ socket_engine = get_option('socketengine')
 
 # ── Core executable ─────────────────────────────────────
 core_src_list = files(
-  'src/bancache.cpp',
+  'src/bancache_shim.cpp',
   'src/base.cpp',
   'src/channelmanager.cpp',
   'src/channels.cpp',
@@ -76,13 +76,22 @@ core_src_list = files(
   'src/socket.cpp',
   'src/socketengine.cpp',
   'src/streamsocket.cpp',
-  'src/stringutils.cpp',
+  # 'src/stringutils.cpp',
   'src/thread.cpp',
   'src/timer.cpp',
   'src/usermanager.cpp',
   'src/users.cpp',
   'src/wildcard.cpp',
   'src/xline.cpp',
+)
+
+rust_srcs = files(
+  'src/rust_core.rs',
+  # 'src/rust/wildcard.rs',  # future
+)
+
+rust_lib = static_library('rust_core', rust_srcs,
+  rust_crate_type: 'staticlib',
 )
 
 if core_src_list.length() == 0
@@ -95,6 +104,7 @@ inspircd = executable('inspircd', core_src_list,
   include_directories: inc,
   dependencies: [fmt_dep, dl_dep, pthread_dep],
   link_args: '-rdynamic',
+  link_with: rust_lib,
   export_dynamic: true,
   install: true,
   install_dir: get_option('bindir')
@@ -150,7 +160,7 @@ endforeach
 
 # ── External modules (src/modules/) ─────────────────────
 ext_mod_files = files(
-    'src/modules/m_abbreviation.cpp',
+  'src/modules/m_abbreviation.cpp',
   'src/modules/m_account.cpp',
   'src/modules/m_alias.cpp',
   'src/modules/m_allowinvite.cpp',
@@ -340,11 +350,11 @@ foreach src_file : ext_mod_files
   mod_deps = []
   mod_includes = inc
   if mod_name == 'm_gateway'
-    if not mongoc_dep.found() or not bson_dep.found()
+    if not mongoc_dep.found()
       warning('MongoDB libraries not found — skipping m_gateway')
       continue
     endif
-    mod_deps = [mongoc_dep, bson_dep]
+    mod_deps = [mongoc_dep]
   endif  
   if mod_name == 'm_mysql'
     mod_deps = [dependency('mariadb', required: true)]
