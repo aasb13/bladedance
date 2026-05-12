@@ -15,6 +15,108 @@ use std::os::raw::c_uchar;
 use std::ptr;
 use std::slice;
 
+use crate::stringutils::StdString;
+
+// Assumes: StdString defined elsewhere (must be 32 bytes on this system:
+// data ptr (8), size (8), capacity (8), plus 8 bytes for SSO/small string optimization).
+// vtable pointer is 8 bytes.
+
+#[repr(C)]
+pub struct User {
+    // Base class Extensible: vtable pointer at offset 0.
+    pub vtable: *const c_void,   // 8 bytes
+
+    // Private fields (from users.h, in order)
+    pub cached_address: StdString,       // offset 8,  32 bytes
+    pub cached_useraddress: StdString,   // offset 40, 32 bytes
+    pub cached_userhost: StdString,      // offset 72, 32 bytes
+    pub cached_realuserhost: StdString,  // offset 104, 32 bytes
+    pub cached_mask: StdString,          // offset 136, 32 bytes
+    pub cached_realmask: StdString,      // offset 168, 32 bytes
+    pub displayhost: StdString,          // offset 200, 32 bytes
+    pub realhost: StdString,             // offset 232, 32 bytes
+    pub realname: StdString,             // offset 264, 32 bytes
+    pub displayuser: StdString,          // offset 296, 32 bytes
+    pub realuser: StdString,             // offset 328, 32 bytes
+
+    // modes: ModeParser::ModeStatus (std::bitset<64>)
+    // Represented as a u64, same as snomasks. Alignment 8.
+    pub modes: u64,                      // offset 360, 8 bytes
+
+    // nickchanged: time_t (i64)
+    pub nickchanged: i64,                // offset 368, 8 bytes
+
+    // signon: time_t (i64)
+    pub signon: i64,                     // offset 376, 8 bytes
+
+    // client_sa: irc::sockets::sockaddrs (112 bytes, verified with C++ test)
+    pub client_sa: [u8; 112],            // offset 384, 112 bytes
+
+    // nick: std::string (32 bytes)
+    pub nick: StdString,                 // offset 496, 32 bytes
+
+    // uuid: const std::string (32 bytes)
+    pub uuid: StdString,                 // offset 528, 32 bytes
+
+    // snomasks: std::bitset<64> (u64)
+    pub snomasks: u64,                   // offset 560, 8 bytes
+
+    // chans: ChanList (intrusive list)
+    // InspIRCd intrusive list stores a pointer to the first member/head.
+    // That's 8 bytes.
+    pub chans: *mut c_void,              // offset 568, 8 bytes
+
+    // server: Server* (8 bytes)
+    pub server: *mut c_void,             // offset 576, 8 bytes
+
+    // away: std::optional<AwayState>
+    // std::optional<T> is typically { bool has_value; union { T value; }; }
+    // AwayState contains two fields: std::string message (32 bytes) and time_t time (8 bytes).
+    // That's 40 bytes, plus the bool flag and padding to align to 8 bytes = 48 bytes total.
+    pub away: AwayOptional,              // custom struct below
+
+    // oper: std::shared_ptr<OperAccount>
+    // Shared ptr is two pointers: object ptr (8) and control block ptr (8).
+    pub oper_obj: *mut c_void,
+    pub oper_ctrl: *mut c_void,
+
+    // Bitfield members: connected:3, quitting:1, uniqueusername:1 (bool), usertype:2 (const)
+    // All packed into a single unsigned int (4 bytes). Use u32 and access via bit ops.
+    pub bitfield: u32,
+}
+
+/// Manual std::optional<AwayState> layout placeholder.
+/// std::optional<T> is typically { bool has_value; union { T value; }; }
+/// AwayState contains std::string message (32 bytes) and time_t time (8 bytes) = 40 bytes.
+/// With bool flag (1 byte) + padding (7 bytes) to align to 8 bytes = 48 bytes total.
+#[repr(C)]
+pub struct AwayOptional {
+    pub has_value: u8,      // bool
+    // padding to align the AwayState (align 8)
+    pub _pad: [u8; 7],
+    pub value: AwayState,   // the actual away data
+}
+
+#[repr(C)]
+pub struct AwayState {
+    pub message: StdString, // 32 bytes
+    pub time: i64,          // 8 bytes
+}
+
+fn get_connected(&self) -> u8 { (self.bitfield & 0b111) as u8 }
+fn set_connected(&mut self, v: u8) { self.bitfield = (self.bitfield & !0b111) | (v as u32); }
+fn get_quitting(&self) -> bool { ((self.bitfield >> 3) & 1) != 0 }
+fn set_quitting(&mut self, v: bool) {
+    if v {
+        self.bitfield |= 1 << 3;
+    } else {
+        self.bitfield &= !(1 << 3);
+    }
+}
+fn get_uniqueusername(&self) -> bool { ((self.bitfield >> 4) & 1) != 0 }
+fn get_usertype(&self) -> u8 { ((self.bitfield >> 5) & 0b11) as u8 }
+// usertype is const; you wouldn't have a setter in Rust, but it's set in the constructor.
+
 const MAX_USERMODE_HANDLERS: usize = 512;
 const MODE_PARAM_BUF: usize = 8192;
 

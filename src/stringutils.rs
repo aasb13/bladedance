@@ -33,13 +33,29 @@ pub const HEX_TABLE_LOWER: &[u8] = b"0123456789abcdef";
 pub const HEX_TABLE_UPPER: &[u8] = b"0123456789ABCDEF";
 pub const PERCENT_TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~";
 
-/// C++ compatible std::string struct with the exact same layout:
-/// a struct containing a pointer to heap-allocated data, a size_t length, and a size_t capacity.
+/// C++ compatible std::string struct with the exact same layout (32 bytes):
+/// This matches libstdc++ basic_string<char> layout on 64-bit:
+/// struct {
+///     pointer __data_;     // 8 bytes
+///     size_type __size_;   // 8 bytes  
+///     union {
+///         value_type __data_[16];  // 16 bytes (15 chars + null)
+///         size_type __cap_;        // 8 bytes
+///     } __u_;              // 16 bytes
+/// };
+/// Total: 32 bytes
 #[repr(C)]
 pub struct StdString {
-    data: *mut u8,
-    length: usize,
-    capacity: usize,
+    data: *mut u8,        // 8 bytes - pointer to heap data or SSO buffer
+    length: usize,         // 8 bytes - current string length
+    sso_union: SsoUnion, // 16 bytes - union for SSO or capacity
+}
+
+/// Union for small string optimization in libstdc++
+#[repr(C)]
+pub union SsoUnion {
+    sso_buffer: [u8; 16], // 15 chars + null terminator for small strings
+    capacity: usize,        // capacity for heap-allocated strings
 }
 
 impl StdString {
@@ -48,7 +64,11 @@ impl StdString {
         let capacity = vec.capacity();
         let data = vec.as_mut_ptr();
         std::mem::forget(vec);
-        StdString { data, length, capacity }
+        StdString { 
+            data, 
+            length, 
+            sso_union: SsoUnion { capacity }
+        }
     }
 
     pub(crate) fn is_empty(&self) -> bool {
