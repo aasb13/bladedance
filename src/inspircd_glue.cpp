@@ -53,6 +53,10 @@
 # include <process.h>
 #endif
 
+extern "C" {
+    void inspircd_async_init();
+}
+
 __attribute__((visibility("default"), used, retain)) std::function<int(User*)> GetUserLevel = [](User*) { return 0; };
 
 InspIRCd* ServerInstance = nullptr;
@@ -64,7 +68,6 @@ InspIRCd* ServerInstance = nullptr;
  * e.g. for national character support.
  */
 const unsigned char* national_case_insensitive_map = ascii_case_insensitive_map;
-
 namespace
 {
 	[[noreturn]]
@@ -529,6 +532,8 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	fmt::println("");
 
 	TryBindPorts();
+
+	inspircd_async_init();
 
 	this->Modules.LoadAll();
 	try

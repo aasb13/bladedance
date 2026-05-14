@@ -10,8 +10,9 @@ RustModuleWrapper::RustModuleWrapper(const RustModuleVtable* vtable_ptr, void* r
 }
 
 RustModuleWrapper::~RustModuleWrapper() {
-    if (vtable && vtable->destroy)
-        vtable->destroy(rust_handle);
+    if (!vtable) return;
+    if (!vtable->destroy) return;
+    vtable->destroy(rust_handle);
 }
 
 void RustModuleWrapper::init() {

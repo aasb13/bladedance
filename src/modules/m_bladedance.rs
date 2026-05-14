@@ -10,6 +10,20 @@ use rust_core::users::User;
 use rust_core::account::AccountAPI;
 use rust_core::logging::log;
 
+unsafe extern "C" {
+    fn inspircd_async_get_handle() -> *const std::ffi::c_void;
+    fn rust_log_manager_write(level: i32, module: *const i8, message: *const i8);
+}
+
+#[inline]
+fn core_handle() -> Option<tokio::runtime::Handle> {
+    unsafe {
+        let p = inspircd_async_get_handle();
+        if p.is_null() { return None; }
+        Some((*(p as *const tokio::runtime::Handle)).clone())
+    }
+}
+
 // VTable structure for C++ wrapper
 #[repr(C)]
 struct RustModuleVtable {
@@ -157,9 +171,11 @@ impl Module for ModuleBladedance {
             let uri = config_guard.mongo_uri.clone();
             drop(config_guard);
             
-            // Initialize database in a blocking context
-            let rt = tokio::runtime::Runtime::new()?;
-            rt.block_on(self.initialize_database(&uri))?;
+            if let Some(h) = core_handle() {
+                h.block_on(self.initialize_database(&uri))?;
+            } else {
+                return Err("Core async runtime not initialized".into());
+            }
         }
 
         Ok(())
@@ -215,32 +231,23 @@ pub static inspircd_module_version: [u8; 7] = *b"4.10.1\0";
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_module_init(handle: *mut std::ffi::c_void) {
     if handle.is_null() {
-        log(1, "m_bladedance", "rust_module_init called with null handle");
+        log(1, "m_bladedance", "m_bladedance: rust_module_init called with null handle");
         return;
     }
     let module = unsafe { &mut *(handle as *mut ModuleBladedance) };
     let uri = module.config.lock().unwrap().mongo_uri.clone();
 
-    let rt = match tokio::runtime::Runtime::new() {
-        Ok(rt) => rt,
-        Err(e) => {
-            log(1, "m_bladedance", &format!("tokio runtime error: {}", e));
-            return;
-        }
-    };
-
-    match rt.block_on(module.initialize_database(&uri)) {
-        Ok(_) => {
-            log(2, "m_bladedance", &format!("MongoDB connected to {}", uri));
+    match core_handle() {
+        Some(h) => match h.block_on(module.initialize_database(&uri)) {
+            Ok(_) => log(2, "m_bladedance", &format!("MongoDB connected to {}", uri)),
+            Err(e) => log(1, "m_bladedance", &format!("MongoDB connection failed: {}", e)),
         },
-        Err(e) => {
-            log(1, "m_bladedance", &format!("MongoDB connection failed: {}", e));
-        }
+        None => log(1, "m_bladedance", "Core async runtime not available"),
     }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_module_read_config(handle: *mut std::ffi::c_void) {
+pub extern "C" fn rust_module_read_config(_handle: *mut std::ffi::c_void) {
     // Config re-read if needed
 }
 
