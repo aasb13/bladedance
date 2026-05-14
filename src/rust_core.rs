@@ -17,6 +17,7 @@ pub mod configreader;
 pub mod dynamic;
 pub mod hashcomp;
 pub mod inspircd;
+pub mod helperfuncs;
 
 #[path = "coremods/core_info/cmd_admin.rs"] 
 mod cmd_admin;

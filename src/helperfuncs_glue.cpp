@@ -36,6 +36,19 @@
 #include "utility/string.h"
 #include "xline.h"
 
+extern "C" {
+	// Rust FFI functions
+	int helperfuncs_duration_try_from(const char* str, uint64_t* duration);
+	uint64_t helperfuncs_duration_from(const char* str);
+	int helperfuncs_duration_is_valid(const char* duration);
+	char* helperfuncs_duration_to_string(uint64_t duration);
+	char* helperfuncs_duration_to_long_string(uint64_t duration, int brief);
+	char* helperfuncs_time_to_string(int64_t curtime, const char* format, int utc);
+	void helperfuncs_strip_color(char* line);
+	void helperfuncs_process_colors(char* line);
+	void helperfuncs_free_string(char* ptr);
+}
+
 bool InspIRCd::CheckPassword(const std::string& password, const std::string& passwordhash, const std::string& value)
 {
 	ModResult res;
@@ -93,52 +106,9 @@ bool InspIRCd::IsValidMask(const std::string& mask)
 
 void InspIRCd::StripColor(std::string& line)
 {
-	for (size_t idx = 0; idx < line.length(); )
-	{
-		switch (line[idx])
-		{
-			case '\x02': // Bold
-			case '\x1D': // Italic
-			case '\x11': // Monospace
-			case '\x16': // Reverse
-			case '\x1E': // Strikethrough
-			case '\x1F': // Underline
-			case '\x0F': // Reset
-				line.erase(idx, 1);
-				break;
-
-			case '\x03': // Color
-			{
-				auto start = idx;
-				while (++idx < line.length() && idx - start < 6)
-				{
-					const auto chr = line[idx];
-					if (chr != ',' && (chr < '0' || chr > '9'))
-						break;
-				}
-				line.erase(start, idx - start);
-				idx = start;
-				break;
-			}
-			case '\x04': // Hex Color
-			{
-				auto start = idx;
-				while (++idx < line.length() && idx - start < 14)
-				{
-					const auto chr = line[idx];
-					if (chr != ',' && (chr < '0' || chr > '9') && (chr < 'A' || chr > 'F') && (chr < 'a' || chr > 'f'))
-						break;
-				}
-				line.erase(start, idx - start);
-				idx = start;
-				break;
-			}
-
-			default: // Non-formatting character.
-				idx++;
-				break;
-		}
-	}
+	// Call Rust implementation
+	helperfuncs_strip_color(line.data());
+	line.resize(strlen(line.data()));
 }
 
 void InspIRCd::ProcessColors(std::vector<std::string>& input)
@@ -149,102 +119,9 @@ void InspIRCd::ProcessColors(std::vector<std::string>& input)
 
 void InspIRCd::ProcessColors(std::string& line)
 {
-	static const insp::flat_map<std::string::value_type, std::string> formats = {
-		{ '\\', "\\"   }, // Escape
-		{ '{',  "{"    }, // Escape
-		{ '}',  "}"    }, // Escape
-		{ 'b',  "\x02" }, // Bold
-		{ 'c',  "\x03" }, // Color
-		{ 'h',  "\x04" }, // Hex Color
-		{ 'i',  "\x1D" }, // Italic
-		{ 'm',  "\x11" }, // Monospace
-		{ 'r',  "\x16" }, // Reverse
-		{ 's',  "\x1E" }, // Strikethrough
-		{ 'u',  "\x1F" }, // Underline
-		{ 'x',  "\x0F" }, // Reset
-	};
-	static const insp::flat_map<std::string, uint8_t, irc::insensitive_swo> colors = {
-		{ "white",       0  },
-		{ "black",       1  },
-		{ "blue",        2  },
-		{ "green",       3  },
-		{ "red",         4  },
-		{ "brown",       5  },
-		{ "magenta",     6  },
-		{ "orange",      7  },
-		{ "yellow",      8  },
-		{ "light green", 9  },
-		{ "cyan",        10 },
-		{ "light cyan",  11 },
-		{ "light blue",  12 },
-		{ "pink",        13 },
-		{ "gray",        14 },
-		{ "grey",        14 },
-		{ "light gray",  15 },
-		{ "light grey",  15 },
-		{ "default",     99 },
-	};
-
-	for (size_t idx = 0; idx < line.length(); )
-	{
-		if (line[idx] != '\\')
-		{
-			// Regular character.
-			idx++;
-			continue;
-		}
-
-		auto start = idx;
-		if (++idx >= line.length())
-			continue; // Stray \ at the end of the string; skip.
-
-		const auto chr = line[idx];
-		const auto it = formats.find(chr);
-		if (it == formats.end())
-			continue; // Unknown escape, skip.
-
-		line.replace(start, 2, it->second);
-		idx = start + it->second.length();
-
-		if (chr != 'c')
-			continue; // Only colors can have values.
-
-		start = idx;
-		if (idx >= line.length() || line[idx] != '{')
-			continue; // No color value.
-
-		const auto fgend = line.find_first_of(",}", idx + 1);
-		if (fgend == std::string::npos)
-		{
-			// Malformed color value, strip.
-			line.erase(start);
-			break;
-		}
-
-		size_t bgend = std::string::npos;
-		if (line[fgend] == ',')
-		{
-			bgend = line.find_first_of('}', fgend + 1);
-			if (bgend == std::string::npos)
-			{
-				// Malformed color value, strip.
-				line.erase(start);
-				break;
-			}
-		}
-
-		const auto fg = colors.find(line.substr(start + 1, fgend - start - 1));
-		auto tmp = ConvToStr(fg == colors.end() ? 99 : fg->second);
-		if (bgend != std::string::npos)
-		{
-			const auto bg = colors.find(line.substr(fgend + 1, bgend - fgend - 1));
-			tmp.push_back(',');
-			tmp.append(ConvToStr(bg == colors.end() ? 99 : bg->second));
-		}
-
-		const auto end = bgend == std::string::npos ? fgend : bgend;
-		line.replace(start, end - start + 1, tmp);
-	}
+	// Call Rust implementation
+	helperfuncs_process_colors(line.data());
+	line.resize(strlen(line.data()));
 }
 
 /* true for valid nickname, false else */
@@ -378,252 +255,55 @@ namespace
 	constexpr const auto SECONDS_PER_AVG_YEAR = SECONDS_PER_YEAR + (SECONDS_PER_HOUR * 6);
 }
 
-/** A lookup table of values for multiplier characters used by
- * Duration::{Try,}From(). In this lookup table, the indexes for
- * the ascii values 'm' and 'M' have the value '60', the indexes
- * for the ascii values 'D' and 'd' have a value of '86400', etc.
- */
-static constexpr unsigned int duration_multi[] =
-{
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, SECONDS_PER_DAY, 0, 0, 0, SECONDS_PER_HOUR, 0, 0, 0, 0, SECONDS_PER_MINUTE, 0, 0,
-	0, 0, 0, 1, 0, 0, 0, SECONDS_PER_WEEK, 0, SECONDS_PER_AVG_YEAR, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, SECONDS_PER_DAY, 0, 0, 0, SECONDS_PER_HOUR, 0, 0, 0, 0, SECONDS_PER_MINUTE, 0, 0,
-	0, 0, 0, 1,	0, 0, 0, SECONDS_PER_WEEK, 0, SECONDS_PER_AVG_YEAR, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
-
 bool Duration::TryFrom(const std::string& str, unsigned long& duration)
 {
-	unsigned long total = 0;
-	unsigned long subtotal = 0;
-
-	/* Iterate each item in the string, looking for number or multiplier */
-	for (const auto chr : str)
+	uint64_t rust_duration;
+	if (helperfuncs_duration_try_from(str.c_str(), &rust_duration))
 	{
-		/* Found a number, queue it onto the current number */
-		if (chr >= '0' && chr <= '9')
-		{
-			subtotal = (subtotal * 10) + (chr - '0');
-		}
-		else
-		{
-			/* Found something that's not a number, find out how much
-			 * it multiplies the built up number by, multiply the total
-			 * and reset the built up number.
-			 */
-			unsigned int multiplier = duration_multi[static_cast<unsigned char>(chr)];
-			if (multiplier == 0)
-				return false;
-
-			total += subtotal * multiplier;
-
-			/* Next subtotal please */
-			subtotal = 0;
-		}
+		duration = static_cast<unsigned long>(rust_duration);
+		return true;
 	}
-	/* Any trailing values built up are treated as raw seconds */
-	duration = total + subtotal;
-	return true;
+	return false;
 }
 
 unsigned long Duration::From(const std::string& str)
 {
-	unsigned long out = 0;
-	Duration::TryFrom(str, out);
-	return out;
+	return static_cast<unsigned long>(helperfuncs_duration_from(str.c_str()));
 }
 
 bool Duration::IsValid(const std::string& duration)
 {
-	for (const auto c : duration)
-	{
-		if (((c >= '0') && (c <= '9')))
-			continue;
-
-		if (!duration_multi[static_cast<unsigned char>(c)])
-			return false;
-	}
-	return true;
+	return helperfuncs_duration_is_valid(duration.c_str()) != 0;
 }
 
 std::string Duration::ToString(unsigned long duration)
 {
-	if (duration == 0)
+	char* result = helperfuncs_duration_to_string(static_cast<uint64_t>(duration));
+	if (!result)
 		return "0s";
-
-	std::string ret;
-
-	const auto years = (duration / SECONDS_PER_YEAR);
-	if (years)
-	{
-		ret = INSP_FORMAT("{}y", years);
-		duration -= (years * SECONDS_PER_YEAR);
-	}
-
-	const auto weeks = (duration / SECONDS_PER_WEEK);
-	if (weeks)
-	{
-		ret += INSP_FORMAT("{}w", weeks);
-		duration -= (weeks * SECONDS_PER_WEEK);
-	}
-
-	const auto days = (duration / SECONDS_PER_DAY);
-	if (days)
-	{
-		ret += INSP_FORMAT("{}d", days);
-		duration -= (days * SECONDS_PER_DAY);
-	}
-
-	const auto hours = (duration / SECONDS_PER_HOUR);
-	if (hours)
-	{
-		ret += INSP_FORMAT("{}h", hours);
-		duration -= (hours * SECONDS_PER_HOUR);
-	}
-
-	const auto minutes = (duration / SECONDS_PER_MINUTE);
-	if (minutes)
-	{
-		ret += INSP_FORMAT("{}m", minutes);
-		duration -= (minutes * SECONDS_PER_MINUTE);
-	}
-
-	if (duration)
-		ret += INSP_FORMAT("{}s", duration);
-
-	return ret;
+	std::string str(result);
+	helperfuncs_free_string(result);
+	return str;
 }
+
 std::string Duration::ToLongString(unsigned long duration, bool brief)
 {
-	if (duration == 0)
+	char* result = helperfuncs_duration_to_long_string(static_cast<uint64_t>(duration), brief ? 1 : 0);
+	if (!result)
 		return "0 seconds";
-
-	if (brief)
-	{
-		// This will get inlined when compiled with optimisations.
-		auto nearest = [](unsigned long seconds, unsigned long roundto) {
-			if ((seconds % roundto) <= (roundto / 2))
-				return seconds - (seconds % roundto);
-			return seconds - (seconds % roundto) + roundto;
-		};
-
-		// In order to get a shorter result we round to the nearest period.
-		if (duration >= SECONDS_PER_YEAR)
-			duration = nearest(duration, SECONDS_PER_DAY); // Nearest day if its more than a year
-		else if (duration >= SECONDS_PER_DAY)
-			duration = nearest(duration, SECONDS_PER_HOUR); // Nearest hour if its more than a day
-		else if (duration >= SECONDS_PER_HOUR)
-			duration = nearest(duration, SECONDS_PER_MINUTE); // Nearest minute if its more than an hour
-	}
-
-	std::string ret;
-
-	const auto years = (duration / SECONDS_PER_YEAR);
-	if (years)
-	{
-		ret = INSP_FORMAT("{} {}", years, years == 1 ? "year" : "years");
-		duration -= (years * SECONDS_PER_YEAR);
-	}
-
-	const auto weeks = (duration / SECONDS_PER_WEEK);
-	if (weeks)
-	{
-		ret += ret.empty() ? "" : ", ";
-		ret += INSP_FORMAT("{} {}", weeks, weeks == 1 ? "week" : "weeks");
-		duration -= (weeks * SECONDS_PER_WEEK);
-	}
-
-	const auto days = (duration / SECONDS_PER_DAY);
-	if (days)
-	{
-		ret += ret.empty() ? "" : ", ";
-		ret += INSP_FORMAT("{} {}", days, days == 1 ? "day" : "days");
-		duration -= (days * SECONDS_PER_DAY);
-	}
-
-	const auto hours = (duration / SECONDS_PER_HOUR);
-	if (hours)
-	{
-		ret += ret.empty() ? "" : ", ";
-		ret += INSP_FORMAT("{} {}", hours, hours == 1 ? "hour" : "hours");
-		duration -= (hours * SECONDS_PER_HOUR);
-	}
-
-	const auto minutes = (duration / SECONDS_PER_MINUTE);
-	if (minutes)
-	{
-		ret += ret.empty() ? "" : ", ";
-		ret += INSP_FORMAT("{} {}", minutes, minutes == 1 ? "minute" : "minutes");
-		duration -= (minutes * SECONDS_PER_MINUTE);
-	}
-
-	if (duration)
-	{
-		ret += ret.empty() ? "" : ", ";
-		ret += INSP_FORMAT("{} {}", duration, duration == 1 ? "second" : "seconds");
-	}
-
-	const auto first_comma = ret.find(',');
-	const auto last_comma = ret.rfind(',');
-	if (first_comma != std::string::npos)
-	{
-		if (first_comma == last_comma)
-		{
-			// BEFORE: 1 minute, 2 seconds
-			// AFTER:  1 minute and 2 seconds
-			ret.replace(last_comma, 1, " and");
-		}
-		else
-		{
-			// BEFORE: 1 hour, 2 minutes, 3 seconds
-			// AFTER:  1 hour, 2 minutes, and 3 seconds
-			ret.insert(last_comma + 1, " and");
-		}
-	}
-	return ret;
+	std::string str(result);
+	helperfuncs_free_string(result);
+	return str;
 }
 
 std::string Time::ToString(time_t curtime, const char* format, bool utc)
 {
-#ifdef _WIN32
-	if (curtime < 0)
-		curtime = 0;
-#endif
-
-	struct tm* timeinfo = utc ? gmtime(&curtime) : localtime(&curtime);
-	if (!timeinfo)
-	{
-		curtime = 0;
-		timeinfo = localtime(&curtime);
-	}
-
-	// If the calculated year exceeds four digits or is less than the year 1000,
-	// the behavior of asctime() is undefined
-	if (timeinfo->tm_year + 1900 > 9999)
-		timeinfo->tm_year = 9999 - 1900;
-	else if (timeinfo->tm_year + 1900 < 1000)
-		timeinfo->tm_year = 0;
-
-	// This is the default format used by asctime without the terminating new line.
-	if (!format)
-		format = Time::DEFAULT_SHORT;
-
-	char buffer[512];
-	if (!strftime(buffer, sizeof(buffer), format, timeinfo))
-		buffer[0] = '\0';
-
-	return buffer;
+	char* result = helperfuncs_time_to_string(static_cast<int64_t>(curtime), format, utc ? 1 : 0);
+	if (!result)
+		return "";
+	std::string str(result);
+	helperfuncs_free_string(result);
+	return str;
 }
 
 std::string InspIRCd::GenRandomStr(size_t length) const
