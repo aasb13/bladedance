@@ -34,7 +34,6 @@
 #include <iostream>
 
 #include <fmt/color.h>
-#include <lyra/lyra.hpp>
 
 #include "inspircd.h"
 #include "timeutils.h"
@@ -55,6 +54,55 @@
 
 extern "C" {
     void inspircd_async_init();
+
+    // Rust FFI functions
+    char* inspircd_expand_path(const char* path);
+    void inspircd_check_root();
+    void inspircd_void_signal_handler();
+    void inspircd_free_string(char* ptr);
+
+    struct ParseOptionsResult {
+        char* config_path;
+        bool debug;
+        bool nofork;
+        bool writelog;
+        bool writepid;
+        bool runasroot;
+        bool forceprotodebug;
+        bool should_exit;
+        int exit_code;
+    };
+
+    ParseOptionsResult inspircd_parse_options(int argc, char** argv, const char* default_config);
+
+    // C++ helper functions called from Rust
+    extern "C" CoreExport void inspircd_ffi_exit(int code) {
+        ServerInstance->Exit(code);
+    }
+
+    extern "C" CoreExport void inspircd_ffi_println(const char* msg) {
+        if (msg) fmt::println("{}", msg);
+    }
+
+    extern "C" CoreExport void inspircd_ffi_eprintln(const char* msg) {
+        if (msg) fmt::println(stderr, "{}", msg);
+    }
+
+    extern "C" CoreExport int inspircd_ffi_isatty(int fd) {
+#ifdef _WIN32
+        return 0;
+#else
+        return isatty(fd);
+#endif
+    }
+
+    extern "C" CoreExport void inspircd_ffi_sleep(int seconds) {
+#ifdef _WIN32
+        Sleep(seconds * 1000);
+#else
+        sleep(seconds);
+#endif
+    }
 }
 
 __attribute__((visibility("default"), used, retain)) std::function<int(User*)> GetUserLevel = [](User*) { return 0; };
@@ -70,27 +118,7 @@ namespace
 	// Warns a user running as root that they probably shouldn't.
 	void CheckRoot()
 	{
-#ifndef _WIN32
-		if (getegid() != 0 && geteuid() != 0)
-			return;
-
-		fmt::println("{} You have started as root. Running as root is generally not required", fmt::styled("Warning!", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::red)));
-		fmt::println("and may allow an attacker to gain access to your system if they find a way to");
-		fmt::println("exploit your IRC server.");
-		fmt::println("");
-		if (isatty(fileno(stdout)))
-		{
-			fmt::println("InspIRCd will start in 30 seconds. If you are sure that you need to run as root");
-			fmt::println("then you can pass the {} option to disable this wait.", fmt::styled("--runasroot", fmt::emphasis::bold));
-			sleep(30);
-		}
-		else
-		{
-			fmt::println("If you are sure that you need to run as root then you can pass the {}", fmt::styled("--runasroot", fmt::emphasis::bold));
-			fmt::println("option to disable this error.");
-			ServerInstance->Exit(EXIT_FAILURE);
-		}
-#endif
+		inspircd_check_root();
 	}
 
 	// Collects performance statistics for the STATS command.
@@ -193,15 +221,13 @@ namespace
 	// Expands a path relative to the current working directory.
 	std::string ExpandPath(const char* path)
 	{
-#ifdef _WIN32
-		TCHAR configPath[MAX_PATH + 1];
-		if (GetFullPathName(path, MAX_PATH, configPath, nullptr) > 0)
-			return configPath;
-#else
-		char configPath[PATH_MAX + 1];
-		if (realpath(path, configPath))
-			return configPath;
-#endif
+		char* expanded = inspircd_expand_path(path);
+		if (expanded)
+		{
+			std::string result(expanded);
+			inspircd_free_string(expanded);
+			return result;
+		}
 		return path;
 	}
 
@@ -262,72 +288,31 @@ namespace
 	void ParseOptions()
 	{
 		std::string config = ServerInstance->Config->Paths.PrependConfig("inspircd.conf");
-		bool do_debug = false;
-		bool do_help = false;
-		bool do_nofork = false;
-		bool do_nolog = false;
-		bool do_nopid = false;
-		bool do_protocoldebug = false;
-		bool do_runasroot = false;
-		bool do_version = false;
+		ParseOptionsResult result = inspircd_parse_options(
+			ServerInstance->Config->CommandLine.argc,
+			ServerInstance->Config->CommandLine.argv,
+			config.c_str()
+		);
 
-		auto cli = lyra::cli()
-			| lyra::opt(config, "FILE")
-				["-c"]["--config"]
-				("The location of the main config file.")
-			| lyra::opt(do_debug)
-				["-d"]["--debug"]
-				("Start in debug mode.")
-			| lyra::opt(do_nofork)
-				["-F"]["--nofork"]
-				("Disable forking into the background.")
-			| lyra::opt(do_help)
-				["-h"]["--help"]
-				("Show help and exit.")
-			| lyra::opt(do_nolog)
-				["-L"]["--nolog"]
-				("Disable writing logs to disk.")
-			| lyra::opt(do_protocoldebug)
-				["-p"]["--protocoldebug"]
-				("Start in protocol debug mode.")
-			| lyra::opt(do_nopid)
-				["-P"]["--nopid"]
-				("Disable writing the pid file.")
-			| lyra::opt(do_runasroot)
-				["-r"]["--runasroot"]
-				("Allow starting as root (not recommended).")
-			| lyra::opt(do_version)
-				["-v"]["--version"]
-				("Show version and exit.");
-
-		auto result = cli.parse({ServerInstance->Config->CommandLine.argc, ServerInstance->Config->CommandLine.argv});
-		if (!result)
+		if (result.should_exit)
 		{
-			fmt::println(stderr, "{} {}", fmt::styled("Error:", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::red)), result.message());
-			ServerInstance->Exit(EXIT_FAILURE);
-		}
-
-		if (do_help)
-		{
-			std::cout << cli << std::endl;
-			ServerInstance->Exit(EXIT_SUCCESS);
-		}
-
-		if (do_version)
-		{
-			fmt::println(INSPIRCD_VERSION);
-			ServerInstance->Exit(EXIT_SUCCESS);
+			if (result.config_path)
+				inspircd_free_string(result.config_path);
+			ServerInstance->Exit(result.exit_code);
 		}
 
 		// Store the relevant parsed arguments
-		if (!config.empty())
-			ServerInstance->ConfigFileName = ExpandPath(config.c_str());
-		ServerInstance->Config->CommandLine.forcedebug = do_debug || do_protocoldebug;
-		ServerInstance->Config->CommandLine.forceprotodebug = do_protocoldebug;
-		ServerInstance->Config->CommandLine.nofork = ServerInstance->Config->CommandLine.forcedebug || do_nofork;
-		ServerInstance->Config->CommandLine.runasroot = do_runasroot;
-		ServerInstance->Config->CommandLine.writelog = !do_nolog;
-		ServerInstance->Config->CommandLine.writepid = !do_nopid;
+		if (result.config_path)
+		{
+			ServerInstance->ConfigFileName = result.config_path;
+			// Don't free config_path as it's now owned by ConfigFileName
+		}
+		ServerInstance->Config->CommandLine.forcedebug = result.debug || result.forceprotodebug;
+		ServerInstance->Config->CommandLine.forceprotodebug = result.forceprotodebug;
+		ServerInstance->Config->CommandLine.nofork = result.nofork;
+		ServerInstance->Config->CommandLine.runasroot = result.runasroot;
+		ServerInstance->Config->CommandLine.writelog = result.writelog;
+		ServerInstance->Config->CommandLine.writepid = result.writepid;
 	}
 
 	// Sets handlers for various process signals.
@@ -376,7 +361,7 @@ namespace
 	// Required for returning the proper value of EXIT_SUCCESS for the parent process.
 	void VoidSignalHandler(int)
 	{
-		exit(EXIT_SUCCESS);
+		inspircd_void_signal_handler();
 	}
 }
 

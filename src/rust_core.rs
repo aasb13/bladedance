@@ -15,6 +15,8 @@ pub mod traits;
 pub mod account;
 pub mod configreader;
 pub mod dynamic;
+pub mod hashcomp;
+pub mod inspircd;
 
 #[path = "coremods/core_info/cmd_admin.rs"] 
 mod cmd_admin;

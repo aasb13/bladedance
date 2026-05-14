@@ -58,7 +58,6 @@ unsafe extern "C" {
         libname_length: usize,
     ) -> *mut c_void;
     
-    fn dynamic_ffi_get_last_error() -> *mut c_char;
     fn dynamic_ffi_free_error_string(ptr: *mut c_char);
     
     fn dynamic_ffi_format_version_error(
@@ -104,7 +103,7 @@ impl DLLManager {
         // Load the library
         match unsafe { libloading::Library::new(name) } {
             Ok(lib) => manager.handle = Some(lib),
-            Err(_) => manager.retrieve_last_error(),
+            Err(e) => manager.error = e.to_string(),
         }
 
         manager
@@ -188,10 +187,6 @@ impl DLLManager {
             )
         };
 
-        if module_ptr.is_null() {
-            self.retrieve_last_error();
-        }
-
         Some(module_ptr)
     }
 
@@ -250,33 +245,16 @@ impl DLLManager {
 
         if module_ptr.is_null() {
             self.error = format!("Failed to initialize module {}", self.libname);
+            None
+        } else {
+            Some(module_ptr)
         }
-
-        Some(module_ptr)
     }
 
     /// Retrieves the value of the specified symbol
     pub fn get_symbol(&self, name: &str) -> Option<*const c_void> {
         let lib = self.handle.as_ref()?;
         unsafe { lib.get::<*const c_void>(name.as_bytes()).ok().map(|s| *s) }
-    }
-
-    /// Retrieves the last error from the OS
-    fn retrieve_last_error(&mut self) {
-        unsafe {
-            let error_ptr = dynamic_ffi_get_last_error();
-            if !error_ptr.is_null() {
-                let error_cstr = CStr::from_ptr(error_ptr);
-                self.error = error_cstr.to_string_lossy().into_owned();
-                
-                // Clean up newlines in error message
-                self.error = self.error.replace('\r', " ").replace('\n', " ");
-                
-                dynamic_ffi_free_error_string(error_ptr);
-            } else {
-                self.error = "Unknown error".to_string();
-            }
-        }
     }
 
     /// Returns the last error message

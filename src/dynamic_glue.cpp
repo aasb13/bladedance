@@ -46,32 +46,6 @@ extern "C" CoreExport void* dynamic_ffi_create_rust_module_wrapper(
     return new RustModuleWrapper(vtable_ptr, rust_handle, name);
 }
 
-extern "C" CoreExport char* dynamic_ffi_get_last_error()
-{
-#ifndef _WIN32
-    const char* errmsg = dlerror();
-    if (errmsg)
-    {
-        g_error_string = errmsg;
-    }
-    else
-    {
-        g_error_string = "Unknown error";
-    }
-#else
-    g_error_string = GetErrorMessage(GetLastError());
-    SetLastError(ERROR_SUCCESS);
-#endif
-
-    // Clean up newlines
-    for (size_t pos = 0; ((pos = g_error_string.find_first_of("\r\n", pos)) != std::string::npos); )
-        g_error_string[pos] = ' ';
-
-    char* result = new char[g_error_string.length() + 1];
-    std::strcpy(result, g_error_string.c_str());
-    return result;
-}
-
 extern "C" CoreExport void dynamic_ffi_free_error_string(char* ptr)
 {
     if (ptr)
