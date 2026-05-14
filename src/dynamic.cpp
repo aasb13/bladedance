@@ -29,6 +29,7 @@
 
 #include "inspircd.h"
 #include "dynamic.h"
+#include "rust_module.h"
 
 DLLManager::DLLManager(const std::string& name)
 	: libname(name)
@@ -74,6 +75,32 @@ Module* DLLManager::CallInit()
 	{
 		err.assign(libname + " is not a module (no ABI symbol)");
 		return nullptr;
+	}
+
+	if (*abi == RUST_MODULE_ABI)
+	{
+		// Get the vtable symbol
+		const RustModuleVtable* vtable = GetSymbol<const RustModuleVtable>("rust_module_vtable");
+		if (!vtable)
+		{
+			err.assign(libname + " is not a Rust module (no vtable symbol)");
+			return nullptr;
+		}
+
+		// Get the init function
+		union
+		{
+			void* vptr;
+			void* (*fptr)();
+		};
+		vptr = GetSymbol(MODULE_STR_INIT);
+		if (!vptr)
+		{
+			err.assign(libname + " is not a Rust module (no init symbol)");
+			return nullptr;
+		}
+		void* rust_handle = (*fptr)();
+		return new RustModuleWrapper(vtable, rust_handle, libname);
 	}
 	else if (*abi != MODULE_ABI)
 	{

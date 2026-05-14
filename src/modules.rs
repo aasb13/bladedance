@@ -95,7 +95,7 @@ pub unsafe extern "C" fn module_manager_shrink_mod_name(modname: *const c_char, 
         return StdString::from_vec(Vec::new());
     }
     
-    let modname_slice = std::slice::from_raw_parts(modname as *const u8, modname_length);
+    let modname_slice = unsafe { std::slice::from_raw_parts(modname as *const u8, modname_length) };
     let modname_str = String::from_utf8_lossy(modname_slice);
     
     // Remove "m_" prefix if present

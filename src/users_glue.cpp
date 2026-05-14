@@ -28,6 +28,7 @@
  */
 
 
+#include "compat.h"
 #include "inspircd.h"
 #include "clientprotocolevent.h"
 #include "utility/string.h"
@@ -58,6 +59,13 @@ extern "C" bool rust_user_is_fully_connected(const User* user);
 extern "C" bool rust_user_is_away(const User* user);
 extern "C" bool rust_user_is_oper(const User* user);
 extern "C" bool rust_user_shares_channel_with(const User* user, User* other);
+
+extern "C" CoreExport void user_ffi_write_remote_notice(User* user, const char* message) {
+	if (!user || !message) {
+		return;
+	}
+	user->WriteRemoteNotice(std::string(message));
+}
 
 ClientProtocol::MessageList LocalUser::sendmsglist;
 

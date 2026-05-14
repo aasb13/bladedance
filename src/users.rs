@@ -85,6 +85,11 @@ pub struct User {
     pub bitfield: u32,
 }
 
+// SAFETY: The User struct is safe to send across threads because all raw pointers
+// are only accessed through unsafe FFI calls that are thread-safe in the C++ core
+unsafe impl Send for User {}
+unsafe impl Sync for User {}
+
 /// Manual std::optional<AwayState> layout placeholder.
 /// std::optional<T> is typically { bool has_value; union { T value; }; }
 /// AwayState contains std::string message (32 bytes) and time_t time (8 bytes) = 40 bytes.
@@ -336,6 +341,19 @@ impl User {
     }
     
     // usertype is const; you wouldn't have a setter in Rust, but it's set in the constructor.
+
+    /// Write a remote notice to the user
+    pub fn write_remote_notice(&self, message: &str) {
+        unsafe {
+            let message_cstring = CString::new(message).unwrap_or_else(|_| CString::new("").unwrap());
+            user_ffi_write_remote_notice(self as *const User as *mut User, message_cstring.as_ptr());
+        }
+    }
+
+    /// Check if user is an IRC operator
+    pub fn is_oper(&self) -> bool {
+        !self.oper_obj.is_null()
+    }
 }
 
 // Extern "C" functions for C++ to call
@@ -465,6 +483,7 @@ const MODE_PARAM_BUF: usize = 8192;
 
 unsafe extern "C" {
     fn user_ffi_invalidate_cache(u: *mut User);
+    fn user_ffi_write_remote_notice(u: *mut User, message: *const c_char);
 
     fn user_ffi_user_read_real_user(u: *const User, out: *mut *const u8, len: *mut usize);
     fn user_ffi_user_read_cached_address(u: *mut User, out: *mut *const u8, len: *mut usize);

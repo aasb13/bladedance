@@ -10,7 +10,7 @@ use tracing::info;
 
 use crate::stringutils::StdString;
 
-type time_t = i64;
+type TimeT = i64;
 
 #[repr(C)]
 struct tm {
@@ -26,7 +26,7 @@ struct tm {
 }
 
 unsafe extern "C" {
-    fn localtime(timer: *const time_t) -> *mut tm;
+    fn localtime(timer: *const TimeT) -> *mut tm;
     fn strftime(s: *mut c_char, maxsize: usize, format: *const c_char, timeptr: *const tm) -> usize;
 }
 
@@ -394,20 +394,22 @@ pub unsafe extern "C" fn rust_log_manager_write(
             continue;
         }
 
-        // Call the appropriate log method based on the handle
-        if !logger.method_handle.is_null() {
-            let err = rust_log_filemethod_on_log(
-                logger.method_handle,
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs() as i64,
-                level,
-                type_str,
-                type_length,
-                message,
-                message_length,
-            );
+         // Call the appropriate log method based on the handle
+         if !logger.method_handle.is_null() {
+             let err = unsafe {
+                 rust_log_filemethod_on_log(
+                     logger.method_handle,
+                     std::time::SystemTime::now()
+                         .duration_since(std::time::UNIX_EPOCH)
+                         .unwrap()
+                         .as_secs() as i64,
+                     level,
+                     type_str,
+                     type_length,
+                     message,
+                     message_length,
+                 )
+             };
             
             if !err.is_empty() {
                 logger.dead = true;
@@ -507,40 +509,44 @@ pub unsafe extern "C" fn rust_log_manager_open_logs(requiremethods: bool) {
             let _type_str = unsafe { std::slice::from_raw_parts(cached.type_str as *const u8, cached.type_length) };
             let _message_str = unsafe { std::slice::from_raw_parts(cached.message as *const u8, cached.message_length) };
             
-            // Process loggers separately to avoid borrowing conflicts
-            let mut logger_ids_to_mark_dead = Vec::new();
-            
-            for (idx, logger) in state.loggers.iter_mut().enumerate() {
-                if logger.dead || logger.level < cached.level {
-                    continue;
-                }
-                
-                if !logger.method_handle.is_null() {
-                    let err = rust_log_filemethod_on_log(
-                        logger.method_handle,
-                        cached.time,
-                        cached.level,
-                        cached.type_str,
-                        cached.type_length,
-                        cached.message,
-                        cached.message_length,
-                    );
-                    
-                    if !err.is_empty() {
-                        logger_ids_to_mark_dead.push(idx);
-                    }
-                } else {
-                    // Debug logger
-                    rust_log_debug_method_on_log(
-                        cached.time,
-                        cached.level,
-                        cached.type_str,
-                        cached.type_length,
-                        cached.message,
-                        cached.message_length,
-                    );
-                }
-            }
+             // Process loggers separately to avoid borrowing conflicts
+             let mut logger_ids_to_mark_dead = Vec::new();
+             
+             for (idx, logger) in state.loggers.iter_mut().enumerate() {
+                 if logger.dead || logger.level < cached.level {
+                     continue;
+                 }
+                 
+                 if !logger.method_handle.is_null() {
+                     let err = unsafe {
+                         rust_log_filemethod_on_log(
+                             logger.method_handle,
+                             cached.time,
+                             cached.level,
+                             cached.type_str,
+                             cached.type_length,
+                             cached.message,
+                             cached.message_length,
+                         )
+                     };
+                     
+                     if !err.is_empty() {
+                         logger_ids_to_mark_dead.push(idx);
+                     }
+                 } else {
+                     // Debug logger
+                     unsafe {
+                         rust_log_debug_method_on_log(
+                             cached.time,
+                             cached.level,
+                             cached.type_str,
+                             cached.type_length,
+                             cached.message,
+                             cached.message_length,
+                         );
+                     }
+                 }
+             }
             
             // Mark dead loggers
             for idx in logger_ids_to_mark_dead {
@@ -576,3 +582,15 @@ pub unsafe extern "C" fn rust_log_manager_get_maxlevel() -> u8 {
     state.maxlevel
 }
 
+/// Convenience wrapper for Rust modules to log messages
+pub fn log(level: u8, log_type: &str, message: &str) {
+    unsafe {
+        rust_log_manager_write(
+            level,
+            log_type.as_ptr() as *const i8,
+            log_type.len(),
+            message.as_ptr() as *const i8,
+            message.len(),
+        );
+    }
+}

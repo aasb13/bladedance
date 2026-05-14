@@ -10,6 +10,7 @@ project('privirc', 'cpp', 'rust',
 )
 
 fs = import('fs')
+rust_lib_path = meson.current_build_dir() / 'librust_core.a'
 
 # ── Compiler flags (matches old CORECXXFLAGS) ───────────
 add_project_arguments(
@@ -29,7 +30,6 @@ add_project_arguments(
 fmt_dep     = dependency('fmt', required: true)
 dl_dep      = dependency('dl', required: false)
 pthread_dep = dependency('threads')
-mongoc_dep  = dependency('mongoc2', required: false)
 sqlite3_dep = dependency('sqlite3', required: false)
 argon2_dep   = dependency('libargon2', required: false)
 ssl_dep      = dependency('openssl', required: false)
@@ -74,48 +74,15 @@ core_src_list = files(
   'src/socket.cpp',
   'src/socketengine.cpp',
   'src/streamsocket.cpp',
-  # 'src/stringutils.cpp',
   'src/thread.cpp',
   'src/timer_glue.cpp',
   'src/usermanager_glue.cpp',
   'src/users_glue.cpp',
   'src/wildcard_glue.cpp',
   'src/xline.cpp',
-)
-
-rust_manifest = meson.project_source_root() / 'src' / 'rust' / 'Cargo.toml'
-rust_core_rs_files = files(
-  'src/rust/Cargo.toml',
-  'src/rust/Cargo.lock',
-  'src/rust_core.rs',
-  'src/stringutils.rs',
-  'src/bancache.rs',
-  'src/usermanager.rs',
-  'src/cidr.rs',
-  'src/channelmanager.rs',
-  'src/snomasks.rs',
-  'src/wildcard.rs',
-  'src/logging.rs',
-  'src/modulemanager.rs',
-  'src/users.rs',
-  'src/server.rs',
-  'src/logging.rs',
-  'src/timer.rs',
-  'src/helperfuncs.rs',
-  'src/inspircd.rs',
-  'src/coremods/core_info/cmd_admin.rs',
-)
-rust_targetdir = meson.current_build_dir() / 'cargo'
-rust_lib = custom_target('rust_core',
-  output: 'librust_core.a',
-  depend_files: rust_core_rs_files,
-  command: [
-    'sh', '-c',
-    'cargo build --manifest-path "$1" --release --target-dir "$2" && cp "$2/release/librust_core.a" "$3"',
-    'cargo', rust_manifest, rust_targetdir, '@OUTPUT@',
-  ],
-  build_by_default: true,
-  console: true,
+  'src/rust_module.cpp',
+  'src/command_ffi.cpp',
+  'src/account_glue.cpp',
 )
 
 if core_src_list.length() == 0
@@ -127,11 +94,12 @@ core_src_list += meson.source_root() / 'src/socketengines' / (socket_engine + '.
 inspircd = executable('inspircd', core_src_list,
   include_directories: inc,
   dependencies: [fmt_dep, dl_dep, pthread_dep],
-  link_args: ['-rdynamic', '-Wl,--whole-archive', rust_lib.full_path(), '-Wl,--no-whole-archive'],
+  link_args: ['-rdynamic', '-Wl,--whole-archive', rust_lib_path, '-Wl,--no-whole-archive'],
   export_dynamic: true,
   install: true,
   install_dir: get_option('bindir')
 )
+
 
 # ── Core modules (subdirectories) ───────────────────────
 coremod_dirs = run_command(
@@ -156,7 +124,7 @@ foreach cm_dir : coremod_dirs
         name_prefix: '',
         include_directories: inc,
         cpp_args: ['-DMODNAME="' + cm_name + '"'],
-        link_args: ['-Wl,--whole-archive', rust_lib.full_path(), '-Wl,--no-whole-archive'],
+        link_args: ['-Wl,--whole-archive', rust_lib_path, '-Wl,--no-whole-archive'],
         install: true,
         install_dir: 'modules'
       )
@@ -250,7 +218,6 @@ ext_mod_files = files(
   'src/modules/m_dnsbl.cpp',
   'src/modules/m_exemptchanops.cpp',
   'src/modules/m_filter.cpp',
-  'src/modules/m_gateway.cpp',
   'src/modules/m_geoban.cpp',
   'src/modules/m_geoclass.cpp',
   'src/modules/m_geo_maxmind.cpp',
@@ -376,6 +343,7 @@ ext_mod_files = files(
   'src/modules/m_watch.cpp',
   'src/modules/m_websocket.cpp',
   'src/modules/m_xline_db.cpp',
+  'src/modules/m_gateway.cpp',
 )
 
 foreach src_file : ext_mod_files
@@ -385,13 +353,6 @@ foreach src_file : ext_mod_files
   mod_name = fs.name(src_file).split('/')[-1].split('.')[0]
   mod_deps = []
   mod_includes = inc
-  if mod_name == 'm_gateway'
-    if not mongoc_dep.found()
-      warning('MongoDB libraries not found — skipping m_gateway')
-      continue
-    endif
-    mod_deps = [mongoc_dep]
-  endif  
   if mod_name == 'm_mysql'
     mod_deps = [dependency('mariadb', required: true)]
   endif

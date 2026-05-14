@@ -31,7 +31,6 @@
 
 use std::collections::BTreeMap;
 use std::ffi::c_void;
-use std::ptr;
 
 // Type definitions for C++ compatibility
 type time_t = i64;
@@ -222,45 +221,45 @@ pub extern "C" fn timer_rust_create_timer(secs_from_now: u64, repeating: bool, c
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_destroy_timer(timer: *mut Timer) {
     if !timer.is_null() {
-        let _ = Box::from_raw(timer);
+        let _ = unsafe { Box::from_raw(timer) };
     }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_get_trigger(timer: *const Timer) -> time_t {
-    (*timer).get_trigger()
+    unsafe { (*timer).get_trigger() }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_set_trigger(timer: *mut Timer, nexttrigger: time_t) {
-    (*timer).set_trigger(nexttrigger);
+    unsafe { (*timer).set_trigger(nexttrigger) };
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_get_interval(timer: *const Timer) -> u64 {
-    (*timer).get_interval()
+    unsafe { (*timer).get_interval() }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_set_interval(timer: *mut Timer, newinterval: u64, restart: bool) {
-    (*timer).set_interval(newinterval, restart);
+    unsafe { (*timer).set_interval(newinterval, restart) };
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_get_repeat(timer: *const Timer) -> bool {
-    (*timer).get_repeat()
+    unsafe { (*timer).get_repeat() }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_cancel_repeat(timer: *mut Timer) {
-    (*timer).cancel_repeat();
+    unsafe { (*timer).cancel_repeat() };
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_tick_timers() {
     let manager_ptr = get_timer_manager();
     if !manager_ptr.is_null() {
-        (*manager_ptr).tick_timers();
+        unsafe { (*manager_ptr).tick_timers() };
     }
 }
 
@@ -268,7 +267,7 @@ pub unsafe extern "C" fn timer_rust_tick_timers() {
 pub unsafe extern "C" fn timer_rust_add_timer(timer: *mut Timer) {
     let manager_ptr = get_timer_manager();
     if !manager_ptr.is_null() {
-        (*manager_ptr).add_timer(timer);
+        unsafe { (*manager_ptr).add_timer(timer) };
     }
 }
 
@@ -276,6 +275,6 @@ pub unsafe extern "C" fn timer_rust_add_timer(timer: *mut Timer) {
 pub unsafe extern "C" fn timer_rust_del_timer(cpp_timer: *mut c_void) {
     let manager_ptr = get_timer_manager();
     if !manager_ptr.is_null() {
-        (*manager_ptr).del_timer(cpp_timer);
+        unsafe { (*manager_ptr).del_timer(cpp_timer) };
     }
 }

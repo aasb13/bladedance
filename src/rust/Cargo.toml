@@ -4,11 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "rlib"]
 path = "../rust_core.rs"
 
 [dependencies]
 tracing = "0.1"
 tracing-subscriber = "0.3"
 lazy_static = "1.4"
+mongodb = "3.1"
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
 

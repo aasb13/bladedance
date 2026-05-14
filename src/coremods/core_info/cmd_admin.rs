@@ -63,6 +63,9 @@ impl CommandAdmin {
             response_lines.push(format!("{} {} :Administrative info", RPL_ADMINME, server_name));
             response_lines.push(format!("{} {} :{}", RPL_ADMINLOC1, server_name, self.adminname));
             response_lines.push(format!("{} {} :Contact via /MSG when online", RPL_ADMINLOC2, server_name));
+            if !self.adminemail.is_empty() {
+                response_lines.push(format!("{} {} :{}", RPL_ADMINEMAIL, server_name, self.adminemail));
+            }
         } else {
             // User is not an operator, show access denied message
             response_lines.push(format!("{} {} :User level of above 0 is required to execute this command", RPL_ADMINME, server_name));
