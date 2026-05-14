@@ -46,8 +46,9 @@ extern "C" {
 void Timer::SetInterval(unsigned long newinterval, bool restart)
 {
     secs = newinterval;
-    if (!restart)
+    if (!restart) {
         return;
+    }
 
     ServerInstance->Timers.DelTimer(this);
     SetTrigger(ServerInstance->Time() + newinterval);
@@ -64,29 +65,28 @@ Timer::Timer(unsigned long secs_from_now, bool repeating)
 
 Timer::~Timer()
 {
-    if (GetTrigger())
+    if (GetTrigger()) {
         ServerInstance->Timers.DelTimer(this);
+    }
     
     // Destroy Rust timer instance
-    if (rust_timer)
+    if (rust_timer) {
         timer_rust_destroy_timer(rust_timer);
+    }
 }
 
 void TimerManager::TickTimers()
 {
-    // Delegate to Rust implementation
     timer_rust_tick_timers();
 }
 
 void TimerManager::DelTimer(Timer* t)
 {
-    // Delegate to Rust implementation
     timer_rust_del_timer(t);
 }
 
 void TimerManager::AddTimer(Timer* t)
 {
-    // Delegate to Rust implementation
     timer_rust_add_timer(t->rust_timer);
 }
 

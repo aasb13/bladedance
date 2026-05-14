@@ -20,7 +20,6 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use crate::users::User;
 
-/// Account API for interacting with user accounts
 #[derive(Debug, Clone)]
 pub struct AccountAPI;
 
@@ -29,7 +28,6 @@ impl AccountAPI {
         Self
     }
 
-    /// Get the account name for a user
     pub fn get_account_name(&self, user: &User) -> Option<String> {
         unsafe {
             let account_ptr = account_ffi_get_account_name(user as *const User as *mut User);
@@ -68,7 +66,6 @@ impl AccountAPI {
     }
 }
 
-/// Account details structure
 #[derive(Debug, Clone)]
 pub struct AccountDetails {
     pub name: String,

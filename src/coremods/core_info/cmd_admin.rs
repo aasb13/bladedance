@@ -15,7 +15,6 @@ const RPL_ADMINLOC1: u32 = 257;
 const RPL_ADMINLOC2: u32 = 258;
 const RPL_ADMINEMAIL: u32 = 259;
 
-/// CommandAdmin structure to hold admin information
 pub struct CommandAdmin {
     adminname: String,
     admindesc: String,
@@ -23,7 +22,6 @@ pub struct CommandAdmin {
 }
 
 impl CommandAdmin {
-    /// Creates a new CommandAdmin instance
     pub fn new() -> Self {
         CommandAdmin {
             adminname: String::new(),
@@ -32,29 +30,18 @@ impl CommandAdmin {
         }
     }
 
-    /// Sets the admin name from configuration
     pub fn set_admin_name(&mut self, name: &str) {
         self.adminname = name.to_string();
     }
 
-    /// Sets the admin description from configuration  
     pub fn set_admin_description(&mut self, desc: &str) {
         self.admindesc = desc.to_string();
     }
 
-    /// Sets the admin email from configuration
     pub fn set_admin_email(&mut self, email: &str) {
         self.adminemail = email.to_string();
     }
 
-    /// Handles the ADMIN command
-    /// 
-    /// # Arguments
-    /// * `user_level` - The user's access level (0 = normal user, >0 = operator)
-    /// * `server_name` - The server name
-    /// 
-    /// # Returns
-    /// A tuple of (success, response_lines) where response_lines contains the admin info
     pub fn handle_admin(&self, user_level: i32, server_name: &str) -> (bool, Vec<String>) {
         let mut response_lines = Vec::new();
 

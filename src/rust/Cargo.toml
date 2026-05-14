@@ -15,4 +15,5 @@ mongodb = "3.1"
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1"
+libloading = "0.8"
 

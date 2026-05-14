@@ -1,21 +1,3 @@
-/*
- * InspIRCd -- Internet Relay Chat Daemon
- *
- *   Trait definitions for Rust modules
- *
- * This file is part of InspIRCd.  InspIRCd is free software: you can
- * redistribute it and/or modify it under terms of the GNU General Public
- * License as published by Free Software Foundation, version 2.
- *
- * This program is distributed in hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 use async_trait::async_trait;
 use crate::users::User;
 

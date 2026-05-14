@@ -1,29 +1,3 @@
-/*
- * InspIRCd -- Internet Relay Chat Daemon
- *
- *   Copyright (C) 2021 Dominic Hamon
- *   Copyright (C) 2017, 2021-2024 Sadie Powell <sadie@witchery.services>
- *   Copyright (C) 2014 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
- *   Copyright (C) 2010 Craig Edwards <brain@inspircd.org>
- *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2009 Uli Schlachter <psychon@znc.in>
- *   Copyright (C) 2007 Robin Burchell <robin+git@viroteck.net>
- *   Copyright (C) 2007 Dennis Friis <peavey@inspircd.org>
- *
- * This file is part of InspIRCd.  InspIRCd is free software: you can
- * redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, version 2.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 use std::ffi::{c_char, CString};
 use crate::stringutils::StdString;
 
@@ -43,9 +17,6 @@ pub const VF_OPTCOMMON: u32 = 8;
 pub const VF_DEPRECATED: u32 = 16;
 pub const VF_LAST: u32 = VF_DEPRECATED;
 
-/// Returns the string representation of a service type.
-/// @param service_type The service type.
-/// @return The string representation of the service type.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn service_provider_get_type_string(service_type: u32) -> *const c_char {
     let type_str = match service_type {
@@ -60,9 +31,6 @@ pub unsafe extern "C" fn service_provider_get_type_string(service_type: u32) -> 
     CString::new(type_str).unwrap().into_raw()
 }
 
-/// Returns the property string for a module based on its property flags.
-/// @param properties The module property flags.
-/// @return The property string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn module_get_property_string(properties: u32) -> StdString {
     // R = VF_CORE ("required")
@@ -85,10 +53,6 @@ pub unsafe extern "C" fn module_get_property_string(properties: u32) -> StdStrin
     StdString::from_vec(propstr)
 }
 
-/// Shrinks a module name by removing the "m_" prefix and ".so" extension.
-/// @param modname The module name to shrink.
-/// @param modname_length The length of the module name.
-/// @return The shrunk module name.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn module_manager_shrink_mod_name(modname: *const c_char, modname_length: usize) -> StdString {
     if modname.is_null() || modname_length == 0 {

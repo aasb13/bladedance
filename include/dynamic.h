@@ -43,18 +43,11 @@ private:
 	/** The last error string. */
 	std::string err;
 
-	/** The module library handle. */
-#ifdef _WIN32
-	HMODULE lib = static_cast<HMODULE>(INVALID_HANDLE_VALUE);
-#else
-	void* lib = nullptr;
-#endif
-
 	/** The filename of the module library. */
 	const std::string libname;
 
-	/** Sets the last error string. */
-	void RetrieveLastError();
+	/** The Rust DLLManager handle. */
+	void* rust_handle;
 
 public:
 	/** Attempts to load the specified module.
@@ -95,3 +88,12 @@ public:
 	/** Retrieves the filename of the underlying shared library. */
 	const std::string& LibraryName() const { return libname; }
 };
+
+// External Rust FFI functions
+extern "C" void* DLLManager_Create(const char* name, size_t name_length);
+extern "C" void DLLManager_Destroy(void* ptr);
+extern "C" void* DLLManager_CallInit(void* ptr);
+extern "C" const void* DLLManager_GetSymbol(void* ptr, const char* name);
+extern "C" char* DLLManager_LastError(void* ptr);
+extern "C" char* DLLManager_LibraryName(void* ptr);
+extern "C" void DLLManager_FreeString(char* ptr);

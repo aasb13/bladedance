@@ -1,10 +1,3 @@
-/*
- * InspIRCd -- Internet Relay Chat Daemon
- *
- *   Crate root for the core staticlib. Meson passes only a single .rs file to
- *   rustc; additional modules are wired via `mod` here.
- */
-
 pub mod stringutils;
 pub mod bancache;
 pub mod usermanager;
@@ -21,6 +14,7 @@ pub mod server;
 pub mod traits;
 pub mod account;
 pub mod configreader;
+pub mod dynamic;
 
 #[path = "coremods/core_info/cmd_admin.rs"] 
 mod cmd_admin;

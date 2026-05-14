@@ -33,17 +33,6 @@ pub const HEX_TABLE_LOWER: &[u8] = b"0123456789abcdef";
 pub const HEX_TABLE_UPPER: &[u8] = b"0123456789ABCDEF";
 pub const PERCENT_TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~";
 
-/// C++ compatible std::string struct with the exact same layout (32 bytes):
-/// This matches libstdc++ basic_string<char> layout on 64-bit:
-/// struct {
-///     pointer __data_;     // 8 bytes
-///     size_type __size_;   // 8 bytes  
-///     union {
-///         value_type __data_[16];  // 16 bytes (15 chars + null)
-///         size_type __cap_;        // 8 bytes
-///     } __u_;              // 16 bytes
-/// };
-/// Total: 32 bytes
 #[repr(C)]
 pub struct StdString {
     pub data: *mut u8,        // 8 bytes - pointer to heap data or SSO buffer
@@ -51,7 +40,6 @@ pub struct StdString {
     pub sso_union: SsoUnion, // 16 bytes - union for SSO or capacity
 }
 
-/// Union for small string optimization in libstdc++
 #[repr(C)]
 pub union SsoUnion {
     sso_buffer: [u8; 16], // 15 chars + null terminator for small strings
@@ -65,8 +53,6 @@ impl StdString {
         let data = vec.as_mut_ptr();
         std::mem::forget(vec);
         
-        // For now, use simple heap allocation for all strings
-        // TODO: Implement proper SSO later to avoid double allocation
         StdString { data, length, sso_union: SsoUnion { capacity } }
     }
 
@@ -82,8 +68,6 @@ impl StdString {
     }
 }
 
-/// Destroys a StdString and frees its data pointer.
-/// @param str The StdString to destroy.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn StdString_Destroy(str: *mut StdString) {
     if str.is_null() {
@@ -91,21 +75,12 @@ pub unsafe extern "C" fn StdString_Destroy(str: *mut StdString) {
     }
     unsafe {
         let s = &*str;
-        // Only free if it's a heap-allocated string (data doesn't point to SSO buffer)
-        // For SSO strings, data points to sso_union.sso_buffer, so don't free
         if !s.data.is_null() && s.length >= 16 {
             let _ = Vec::from_raw_parts(s.data, s.length, s.sso_union.capacity);
         }
-        // For SSO strings (length < 16), data points to internal buffer - nothing to free
     }
 }
 
-/// Encodes a byte array using percent encoding.
-/// @param data The byte array to encode from.
-/// @param length The length of the byte array.
-/// @param table The table of characters that do not require escaping.
-/// @param upper Whether to use upper or lower case.
-/// @return The encoded form of the specified data.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Percent_Encode(
     data: *const c_void,
@@ -131,10 +106,8 @@ pub unsafe extern "C" fn Percent_Encode(
 
     for &chr in udata {
         if table.contains(&chr) {
-            // The character is on the safe list; push it as is.
             buffer.push(chr);
         } else {
-            // The character is not on the safe list; percent encode it.
             buffer.push(b'%');
             buffer.push(hex_table[(chr >> 4) as usize]);
             buffer.push(hex_table[(chr & 15) as usize]);
@@ -144,10 +117,6 @@ pub unsafe extern "C" fn Percent_Encode(
     StdString::from_vec(buffer)
 }
 
-/// Decodes a percent-encoded byte array.
-/// @param data The byte array to decode from.
-/// @param length The length of the byte array.
-/// @return The decoded form of the specified data.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Percent_Decode(data: *const c_void, length: usize) -> StdString {
     // Preallocate the output buffer to avoid constant reallocations.
@@ -158,7 +127,6 @@ pub unsafe extern "C" fn Percent_Decode(data: *const c_void, length: usize) -> S
     let mut idx = 0;
     while idx < length {
         if cdata[idx] == b'%' {
-            // Percent encoding encodes two octets into 1-2 characters.
             idx += 1;
             let octet1 = if idx < length {
                 (cdata[idx] as char).to_ascii_uppercase() as u8
@@ -186,12 +154,6 @@ pub unsafe extern "C" fn Percent_Decode(data: *const c_void, length: usize) -> S
     StdString::from_vec(buffer)
 }
 
-/// Encodes a byte array using hexadecimal encoding.
-/// @param data The byte array to encode from.
-/// @param length The length of the byte array.
-/// @param table The index table to use for encoding.
-/// @param separator If non-zero then the character to separate hexadecimal digits with.
-/// @return The encoded form of the specified data.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Hex_Encode(
     data: *const c_void,
@@ -225,12 +187,6 @@ pub unsafe extern "C" fn Hex_Encode(
     StdString::from_vec(buffer)
 }
 
-/// Decodes a hexadecimal-encoded byte array.
-/// @param data The byte array to decode from.
-/// @param length The length of the byte array.
-/// @param separator If non-zero then the character hexadecimal digits are separated with.
-/// @param table The index table to use for decoding.
-/// @return The decoded form of the specified data.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Hex_Decode(
     data: *const c_void,
@@ -247,7 +203,6 @@ pub unsafe extern "C" fn Hex_Decode(
         }
     };
 
-    // The size of each hex segment.
     let segment = if separator != 0 { 3 } else { 2 };
 
     // Preallocate the output buffer to avoid constant reallocations.
@@ -257,7 +212,6 @@ pub unsafe extern "C" fn Hex_Decode(
 
     let mut idx = 0;
     while idx + 1 < length {
-        // Attempt to find the octets in the table.
         let table1 = table.iter().position(|&c| c == cdata[idx]);
         let table2 = table.iter().position(|&c| c == cdata[idx + 1]);
 
@@ -270,12 +224,6 @@ pub unsafe extern "C" fn Hex_Decode(
     StdString::from_vec(buffer)
 }
 
-/// Encodes a byte array using Base64.
-/// @param data The byte array to encode from.
-/// @param length The length of the byte array.
-/// @param table The index table to use for encoding.
-/// @param padding If non-zero then the character to pad encoded strings with.
-/// @return The encoded form of the specified data.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Base64_Encode(
     data: *const c_void,
@@ -300,7 +248,6 @@ pub unsafe extern "C" fn Base64_Encode(
 
     let mut idx = 0;
     while idx < length {
-        // Base64 encodes three octets into four characters.
         let octet1 = if idx < length { udata[idx] } else { 0 };
         idx += 1;
         let octet2 = if idx < length { udata[idx] } else { 0 };
@@ -318,13 +265,11 @@ pub unsafe extern "C" fn Base64_Encode(
 
     let padding_count: [usize; 3] = [0, 2, 1];
     if padding != 0 {
-        // Replace any trailing characters with padding.
         for i in 0..padding_count[length % 3] {
             let pos = buffer.len() - 1 - i;
             buffer[pos] = padding as u8;
         }
     } else {
-        // Remove any trailing characters.
         let remove_count = padding_count[length % 3];
         let new_len = buffer.len() - remove_count;
         buffer.truncate(new_len);
@@ -333,11 +278,6 @@ pub unsafe extern "C" fn Base64_Encode(
     StdString::from_vec(buffer)
 }
 
-/// Decodes a Base64-encoded byte array.
-/// @param data The byte array to decode from.
-/// @param length The length of the byte array.
-/// @param table The index table to use for decoding.
-/// @return The decoded form of the specified data.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Base64_Decode(
     data: *const c_void,
@@ -363,14 +303,11 @@ pub unsafe extern "C" fn Base64_Decode(
     let cdata = unsafe { slice::from_raw_parts(data as *const u8, length) };
 
     for &chr in cdata {
-        // Attempt to find the octet in the table.
         if let Some(pos) = table.iter().position(|&c| c == chr) {
-            // Add the bits for this octet to the active buffer.
             current_bits = (current_bits << 6) | (pos as u32);
             seen_bits += 6;
 
             if seen_bits >= 8 {
-                // We have seen an entire octet; add it to the buffer.
                 seen_bits -= 8;
                 buffer.push(((current_bits >> seen_bits) & 0xFF) as u8);
             }
@@ -380,13 +317,6 @@ pub unsafe extern "C" fn Base64_Decode(
     StdString::from_vec(buffer)
 }
 
-/// Replaces template variables like %foo% within a string.
-/// @param str The string to template from.
-/// @param str_length The length of the string.
-/// @param vars_data Array of variable name pointers.
-/// @param vars_values Array of variable value pointers.
-/// @param vars_count Number of variables.
-/// @return The specified string with all variables replaced within it.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Template_Replace(
     str: *const c_char,
@@ -423,7 +353,6 @@ pub unsafe extern "C" fn Template_Replace(
         }
 
         if endidx - idx == 1 {
-            // foo%%bar is an escape of foo%bar
             out.push(b'%');
             idx = endidx + 1;
             continue;
@@ -455,12 +384,6 @@ pub unsafe extern "C" fn Template_Replace(
     StdString::from_vec(out)
 }
 
-/// Timing-safe comparison of two strings to prevent timing attacks.
-/// @param one First string data.
-/// @param one_length Length of first string.
-/// @param two Second string data.
-/// @param two_length Length of second string.
-/// @return True if the strings are equal, false otherwise.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn InspIRCd_TimingSafeCompare(
     one: *const c_char,
@@ -483,17 +406,12 @@ pub unsafe extern "C" fn InspIRCd_TimingSafeCompare(
     diff == 0
 }
 
-/// Opaque TokenList struct for C FFI.
 #[repr(C)]
 pub struct TokenList {
     permissive: bool,
     tokens: HashSet<String>,
 }
 
-/// Creates a new TokenList from a space-separated token list string.
-/// @param tokenlist The space-separated token list.
-/// @param tokenlist_length The length of the token list string.
-/// @return A new TokenList instance.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn TokenList_New(tokenlist: *const c_char, tokenlist_length: usize) -> *mut TokenList {
     let mut list = Box::new(TokenList {
@@ -510,8 +428,6 @@ pub unsafe extern "C" fn TokenList_New(tokenlist: *const c_char, tokenlist_lengt
     Box::into_raw(list)
 }
 
-/// Destroys a TokenList instance.
-/// @param list The TokenList to destroy.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn TokenList_Destroy(list: *mut TokenList) {
     if !list.is_null() {
@@ -521,10 +437,6 @@ pub unsafe extern "C" fn TokenList_Destroy(list: *mut TokenList) {
     }
 }
 
-/// Adds a space-separated list of tokens to the TokenList.
-/// @param list The TokenList instance.
-/// @param tokenlist The space-separated token list.
-/// @param tokenlist_length The length of the token list string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn TokenList_AddList(list: *mut TokenList, tokenlist: *const c_char, tokenlist_length: usize) {
     if list.is_null() || tokenlist.is_null() {
@@ -533,10 +445,8 @@ pub unsafe extern "C" fn TokenList_AddList(list: *mut TokenList, tokenlist: *con
     let list = unsafe { &mut *list };
     let data = unsafe { slice::from_raw_parts(tokenlist as *const u8, tokenlist_length) };
 
-    // Space-separated token stream
     let mut pos = 0;
     while pos < data.len() {
-        // Skip leading spaces
         while pos < data.len() && (data[pos] == b' ' || data[pos] == b'\t') {
             pos += 1;
         }
@@ -566,10 +476,6 @@ pub unsafe extern "C" fn TokenList_AddList(list: *mut TokenList, tokenlist: *con
     }
 }
 
-/// Adds a token to the TokenList.
-/// @param list The TokenList instance.
-/// @param token The token to add.
-/// @param token_length The length of the token.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn TokenList_Add(list: *mut TokenList, token: *const c_char, token_length: usize) {
     if list.is_null() || token.is_null() {
@@ -584,7 +490,6 @@ pub unsafe extern "C" fn TokenList_Add(list: *mut TokenList, token: *const c_cha
         return;
     }
 
-    // If the token is a wildcard entry then permissive mode has been enabled.
     if token_str == "*" {
         list.permissive = true;
         list.tokens.clear();
@@ -594,8 +499,6 @@ pub unsafe extern "C" fn TokenList_Add(list: *mut TokenList, token: *const c_cha
     // Store token in lowercase for case-insensitive comparison (matches irc::insensitive_swo).
     let token_lower = token_str.to_lowercase();
 
-    // If we are in permissive mode then remove the token from the token list.
-    // Otherwise, add it to the token list.
     if list.permissive {
         list.tokens.remove(&token_lower);
     } else {
@@ -603,8 +506,6 @@ pub unsafe extern "C" fn TokenList_Add(list: *mut TokenList, token: *const c_cha
     }
 }
 
-/// Clears all tokens from the TokenList.
-/// @param list The TokenList instance.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn TokenList_Clear(list: *mut TokenList) {
     if list.is_null() {
@@ -615,11 +516,6 @@ pub unsafe extern "C" fn TokenList_Clear(list: *mut TokenList) {
     list.tokens.clear();
 }
 
-/// Checks if a token is contained in the TokenList.
-/// @param list The TokenList instance.
-/// @param token The token to check.
-/// @param token_length The length of the token.
-/// @return True if the token is contained, false otherwise.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn TokenList_Contains(list: *const TokenList, token: *const c_char, token_length: usize) -> bool {
     if list.is_null() || token.is_null() {
@@ -630,26 +526,17 @@ pub unsafe extern "C" fn TokenList_Contains(list: *const TokenList, token: *cons
     let token_str = String::from_utf8_lossy(data);
     let token_lower = token_str.to_lowercase();
 
-    // If we are in permissive mode and the token is in the list
-    // then we don't have it.
     if list.permissive && list.tokens.contains(&token_lower) {
         return false;
     }
 
-    // If we are not in permissive mode and the token is not in
-    // the list then we don't have it.
     if !list.permissive && !list.tokens.contains(&token_lower) {
         return false;
     }
 
-    // We have the token!
     true
 }
 
-/// Removes a token from the TokenList.
-/// @param list The TokenList instance.
-/// @param token The token to remove.
-/// @param token_length The length of the token.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn TokenList_Remove(list: *mut TokenList, token: *const c_char, token_length: usize) {
     if list.is_null() || token.is_null() {
@@ -664,7 +551,6 @@ pub unsafe extern "C" fn TokenList_Remove(list: *mut TokenList, token: *const c_
         return;
     }
 
-    // If the token is a wildcard entry then permissive mode has been disabled.
     if token_str == "*" {
         list.permissive = false;
         list.tokens.clear();
@@ -674,8 +560,6 @@ pub unsafe extern "C" fn TokenList_Remove(list: *mut TokenList, token: *const c_
     // Store token in lowercase for case-insensitive comparison (matches irc::insensitive_swo).
     let token_lower = token_str.to_lowercase();
 
-    // If we are in permissive mode then add the token to the token list.
-    // Otherwise, remove it from the token list.
     if list.permissive {
         list.tokens.insert(token_lower);
     } else {
@@ -683,9 +567,6 @@ pub unsafe extern "C" fn TokenList_Remove(list: *mut TokenList, token: *const c_
     }
 }
 
-/// Converts the TokenList to a string representation.
-/// @param list The TokenList instance.
-/// @return The string representation of the TokenList.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn TokenList_ToString(list: *const TokenList) -> StdString {
     if list.is_null() {
@@ -694,8 +575,6 @@ pub unsafe extern "C" fn TokenList_ToString(list: *const TokenList) -> StdString
     let list = unsafe { &*list };
 
     if list.permissive {
-        // If the token list is in permissive mode then the tokens are a list
-        // of disallowed tokens.
         let mut buffer = String::from("*");
         for token in &list.tokens {
             buffer.push_str(" -");
@@ -703,8 +582,6 @@ pub unsafe extern "C" fn TokenList_ToString(list: *const TokenList) -> StdString
         }
         StdString::from_vec(buffer.into_bytes())
     } else {
-        // If the token list is not in permissive mode then the token list is just
-        // a list of allowed tokens.
         let mut buffer = String::new();
         let mut first = true;
         for token in &list.tokens {
@@ -718,10 +595,6 @@ pub unsafe extern "C" fn TokenList_ToString(list: *const TokenList) -> StdString
     }
 }
 
-/// Compares two TokenLists for equality.
-/// @param one The first TokenList.
-/// @param two The second TokenList.
-/// @return True if the TokenLists are equal, false otherwise.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn TokenList_Equals(one: *const TokenList, two: *const TokenList) -> bool {
     if one.is_null() || two.is_null() {
@@ -730,17 +603,14 @@ pub unsafe extern "C" fn TokenList_Equals(one: *const TokenList, two: *const Tok
     let one = unsafe { &*one };
     let two = unsafe { &*two };
 
-    // Both sets must be in the same mode to be equal.
     if one.permissive != two.permissive {
         return false;
     }
 
-    // Both sets must be the same size to be equal.
     if one.tokens.len() != two.tokens.len() {
         return false;
     }
 
-    // Both sets must contain the same tokens to be equal.
     for token in &one.tokens {
         if !two.tokens.contains(token) {
             return false;
