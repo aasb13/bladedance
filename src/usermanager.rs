@@ -1,32 +1,3 @@
-/*
- * InspIRCd -- Internet Relay Chat Daemon
- *
- *   Copyright (C) 2019 iwalkalone <iwalkalone69@gmail.com>
- *   Copyright (C) 2013-2016, 2018 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2013, 2018-2025 Sadie Powell <sadie@witchery.services>
- *   Copyright (C) 2013, 2015 Adam <Adam@anope.org>
- *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
- *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
- *   Copyright (C) 2008-2009 Craig Edwards <brain@inspircd.org>
- *   Copyright (C) 2008 Robin Burchell <robin+git@viroteck.net>
- *
- * This file is part of InspIRCd.  InspIRCd is free software: you can
- * redistribute it and/or modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation, version 2.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-#![allow(non_snake_case)]
-#![allow(clippy::not_unsafe_ptr_arg_deref)]
-#![allow(unsafe_op_in_unsafe_fn)]
-
 use std::ffi::{c_char, c_int, c_void, CStr, CString};
 use std::ptr;
 

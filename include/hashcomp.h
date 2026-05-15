@@ -120,10 +120,18 @@ namespace irc
 		/** If set then GetToken() can return an empty string
 		 */
 		bool allow_empty;
+		/** Pointer to Rust implementation
+		 */
+		struct SepStream;
+		SepStream* rust_stream = nullptr;
 	public:
 		/** Create a sepstream and fill it with the provided data
 		 */
 		sepstream(const std::string& source, char separator, bool allowempty = false);
+
+		/** Destructor
+		 */
+		~sepstream();
 
 		/** Fetch the next token from the stream
 		 * @param token The next token from the stream is placed here

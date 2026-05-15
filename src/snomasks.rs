@@ -1,6 +1,3 @@
-#![allow(non_snake_case)]
-#![allow(unsafe_op_in_unsafe_fn)]
-
 use std::ffi::{c_char, CString};
 use std::os::raw::c_void;
 

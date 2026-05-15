@@ -54,7 +54,7 @@ core_src_list = files(
   'src/channelmanager_glue.cpp',
   'src/channels.cpp',
   'src/cidr_glue.cpp',
-  'src/clientprotocol.cpp',
+  'src/clientprotocol_glue.cpp',
   'src/commands.cpp',
   'src/configparser.cpp',
   'src/configreader_glue.cpp',

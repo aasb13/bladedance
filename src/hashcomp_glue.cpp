@@ -26,6 +26,23 @@
 
 #include "inspircd.h"
 
+extern "C" {
+	// Rust FFI functions
+	int hashcomp_equals(const char* s1, const char* s2);
+	ssize_t hashcomp_find(const char* haystack, const char* needle);
+	int hashcomp_insensitive_swo_compare(const char* a, const char* b);
+	size_t hashcomp_insensitive_hash(const char* s);
+	
+	// SepStream FFI - use a different name to avoid conflict with C++ forward declaration
+	struct RustSepStream;
+	RustSepStream* hashcomp_sepstream_new(const char* source, unsigned char separator, bool allowempty);
+	bool hashcomp_sepstream_get_token(RustSepStream* stream, char** token);
+	char* hashcomp_sepstream_get_remaining(RustSepStream* stream);
+	bool hashcomp_sepstream_stream_end(RustSepStream* stream);
+	void hashcomp_sepstream_free(RustSepStream* stream);
+	void hashcomp_free_string(char* ptr);
+}
+
 /******************************************************
  *
  * The hash functions of InspIRCd are the centrepoint
@@ -82,83 +99,29 @@ const unsigned char ascii_case_insensitive_map[256] = {
 
 bool irc::equals(const std::string_view& s1, const std::string_view& s2)
 {
-	if (s1.size() != s2.size())
-		return false;
-
-	for (size_t idx = 0; idx < s1.length(); ++idx)
-	{
-		const unsigned char c1 = s1[idx];
-		const unsigned char c2 = s2[idx];
-		if (national_case_insensitive_map[c1] != national_case_insensitive_map[c2])
-			return false;
-	}
-
-	return true;
+	// Call Rust implementation
+	return hashcomp_equals(s1.data(), s2.data()) != 0;
 }
 
 size_t irc::find(const std::string_view& haystack, const std::string_view& needle)
 {
-	// The haystack can't contain the needle if it is smaller than it.
-	if (needle.length() > haystack.length())
+	// Call Rust implementation
+	ssize_t result = hashcomp_find(haystack.data(), needle.data());
+	if (result < 0)
 		return std::string::npos;
-
-	// The inner loop checks the characters between haystack_last and the end of the haystack.
-	size_t haystack_last = haystack.length() - needle.length();
-	for (size_t hpos = 0; hpos <= haystack_last; ++hpos)
-	{
-		// Check for the needle at the current haystack position.
-		bool found = true;
-		for (size_t npos = 0; npos < needle.length(); ++npos)
-		{
-			unsigned char unpos = needle[npos];
-			unsigned char uhpos = haystack[hpos + npos];
-			if (national_case_insensitive_map[unpos] != national_case_insensitive_map[uhpos])
-			{
-				// Uh-oh, characters at the current haystack position don't match.
-				found = false;
-				break;
-			}
-		}
-
-		// The entire needle was found in the haystack!
-		if (found)
-			return hpos;
-	}
-
-	// We didn't find anything.
-	return std::string::npos;
+	return static_cast<size_t>(result);
 }
 
 bool irc::insensitive_swo::operator()(const std::string& a, const std::string& b) const
 {
-	std::string::size_type asize = a.size();
-	std::string::size_type bsize = b.size();
-	std::string::size_type maxsize = std::min(asize, bsize);
-
-	for (std::string::size_type i = 0; i < maxsize; i++)
-	{
-		unsigned char A = national_case_insensitive_map[static_cast<unsigned char>(a[i])];
-		unsigned char B = national_case_insensitive_map[static_cast<unsigned char>(b[i])];
-		if (A > B)
-			return false;
-		else if (A < B)
-			return true;
-	}
-	return (asize < bsize);
+	// Call Rust implementation
+	return hashcomp_insensitive_swo_compare(a.c_str(), b.c_str()) != 0;
 }
 
 size_t irc::insensitive::operator()(const std::string& s) const
 {
-	/* XXX: NO DATA COPIES! :)
-	 * The hash function here is practically
-	 * a copy of the one in STL's hash_fun.h,
-	 * only with *x replaced with national_case_insensitive_map[*x].
-	 * This avoids a copy to use hash<const char*>
-	 */
-	size_t t = 0;
-	for (const auto c : s)
-		t = 5 * t + national_case_insensitive_map[static_cast<unsigned char>(c)];
-	return t;
+	// Call Rust implementation
+	return hashcomp_insensitive_hash(s.c_str());
 }
 
 irc::tokenstream::tokenstream(const std::string& msg, size_t start, size_t end)
@@ -214,46 +177,92 @@ irc::sepstream::sepstream(const std::string& source, char separator, bool allowe
 	: tokens(source)
 	, sep(separator)
 	, allow_empty(allowempty)
+	, rust_stream(reinterpret_cast<SepStream*>(hashcomp_sepstream_new(source.c_str(), separator, allowempty)))
 {
+}
+
+irc::sepstream::~sepstream()
+{
+	if (rust_stream)
+		hashcomp_sepstream_free(reinterpret_cast<RustSepStream*>(rust_stream));
 }
 
 bool irc::sepstream::GetToken(std::string& token)
 {
-	if (this->StreamEnd())
+	if (!rust_stream)
 	{
-		token.clear();
-		return false;
-	}
-
-	if (!this->allow_empty)
-	{
-		this->pos = this->tokens.find_first_not_of(this->sep, this->pos);
-		if (this->pos == std::string::npos)
+		// Fallback to C++ implementation if Rust stream not available
+		if (this->StreamEnd())
 		{
-			this->pos = this->tokens.length() + 1;
 			token.clear();
 			return false;
 		}
+
+		if (!this->allow_empty)
+		{
+			this->pos = this->tokens.find_first_not_of(this->sep, this->pos);
+			if (this->pos == std::string::npos)
+			{
+				this->pos = this->tokens.length() + 1;
+				token.clear();
+				return false;
+			}
+		}
+
+		size_t p = this->tokens.find(this->sep, this->pos);
+		if (p == std::string::npos)
+			p = this->tokens.length();
+
+		token.assign(tokens, this->pos, p - this->pos);
+		this->pos = p + 1;
+
+		return true;
 	}
 
-	size_t p = this->tokens.find(this->sep, this->pos);
-	if (p == std::string::npos)
-		p = this->tokens.length();
-
-	token.assign(tokens, this->pos, p - this->pos);
-	this->pos = p + 1;
-
-	return true;
+	// Call Rust implementation
+	char* rust_token = nullptr;
+	bool result = hashcomp_sepstream_get_token(reinterpret_cast<RustSepStream*>(rust_stream), &rust_token);
+	if (result && rust_token)
+	{
+		token = rust_token;
+		hashcomp_free_string(rust_token);
+	}
+	else
+	{
+		token.clear();
+	}
+	return result;
 }
 
 std::string irc::sepstream::GetRemaining()
 {
-	return !this->StreamEnd() ? this->tokens.substr(this->pos) : "";
+	if (!rust_stream)
+	{
+		// Fallback to C++ implementation
+		return !this->StreamEnd() ? this->tokens.substr(this->pos) : "";
+	}
+
+	// Call Rust implementation
+	char* remaining = hashcomp_sepstream_get_remaining(reinterpret_cast<RustSepStream*>(rust_stream));
+	if (remaining)
+	{
+		std::string result(remaining);
+		hashcomp_free_string(remaining);
+		return result;
+	}
+	return "";
 }
 
 bool irc::sepstream::StreamEnd()
 {
-	return this->pos > this->tokens.length();
+	if (!rust_stream)
+	{
+		// Fallback to C++ implementation
+		return this->pos > this->tokens.length();
+	}
+
+	// Call Rust implementation
+	return hashcomp_sepstream_stream_end(reinterpret_cast<RustSepStream*>(rust_stream));
 }
 
 irc::portparser::portparser(const std::string& source, bool allow_overlapped)

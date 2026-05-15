@@ -1,8 +1,3 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-#![allow(dead_code)]
-
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 
@@ -15,6 +10,7 @@ pub struct Timer {
     pub secs: u64,
     pub repeat: bool,
     pub cpp_timer: *mut c_void,
+    pub cpp_timer_valid: bool,
 }
 
 impl Timer {
@@ -24,6 +20,7 @@ impl Timer {
             secs: secs_from_now,
             repeat: repeating,
             cpp_timer,
+            cpp_timer_valid: true,
         }
     }
     pub fn get_trigger(&self) -> time_t {
@@ -73,13 +70,25 @@ impl TimerManager {
             timers_to_process.push((trigger_time, timer_ptr));
         }
         for (trigger_time, timer_ptr) in timers_to_process {
+            let timer = unsafe { &mut *timer_ptr };
+            let cpp_timer = timer.cpp_timer;
+            
             // Remove from map first (like original's erase(i++))
             self.timers.remove(&trigger_time);
             
-            let timer = unsafe { &mut *timer_ptr };
-            let should_continue = unsafe { timer_ffi_timer_tick(timer.cpp_timer) };
+            // Check if C++ Timer is still valid before calling Tick()
+            if !timer.cpp_timer_valid || cpp_timer.is_null() {
+                // C++ Timer was deleted elsewhere, clean up Rust wrapper
+                unsafe { timer_rust_destroy_timer(timer_ptr) };
+                continue;
+            }
+            
+            // Call Tick() on C++ timer - this may delete the C++ Timer object
+            let should_continue = unsafe { timer_ffi_timer_tick(cpp_timer) };
             
             if !should_continue {
+                // Timer deleted itself in Tick(), clean up Rust wrapper
+                unsafe { timer_rust_destroy_timer(timer_ptr) };
                 continue;
             }
             if timer.repeat {
@@ -112,6 +121,8 @@ impl TimerManager {
             if std::ptr::eq(rust_timer, timer_ptr) {
                 unsafe { (*timer_ptr).trigger = 0 };
                 self.timers.remove(&time);
+                // Clean up Rust wrapper to prevent memory leak
+                unsafe { timer_rust_destroy_timer(timer_ptr) };
                 break;
             }
         }
@@ -183,6 +194,13 @@ pub unsafe extern "C" fn timer_rust_get_repeat(timer: *const Timer) -> bool {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_cancel_repeat(timer: *mut Timer) {
     unsafe { (*timer).cancel_repeat() };
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn timer_rust_invalidate_cpp_timer(timer: *mut Timer) {
+    if !timer.is_null() {
+        unsafe { (*timer).cpp_timer_valid = false };
+    }
 }
 
 #[unsafe(no_mangle)]

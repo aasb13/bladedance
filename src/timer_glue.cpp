@@ -36,6 +36,7 @@ extern "C" {
     void timer_rust_set_interval(void* rust_timer, uint64_t newinterval, bool restart);
     bool timer_rust_get_repeat(const void* rust_timer);
     void timer_rust_cancel_repeat(void* rust_timer);
+    void timer_rust_invalidate_cpp_timer(void* rust_timer);
     void timer_rust_tick_timers();
     void timer_rust_add_timer(void* rust_timer);
     void timer_rust_del_timer(void* cpp_timer);
@@ -50,9 +51,8 @@ void Timer::SetInterval(unsigned long newinterval, bool restart)
         return;
     }
 
-    ServerInstance->Timers.DelTimer(this);
-    SetTrigger(ServerInstance->Time() + newinterval);
-    ServerInstance->Timers.AddTimer(this);
+    // Use Rust FFI to handle timer rescheduling instead of direct C++ calls
+    timer_rust_set_interval(rust_timer, newinterval, restart);
 }
 
 Timer::Timer(unsigned long secs_from_now, bool repeating)
@@ -65,12 +65,9 @@ Timer::Timer(unsigned long secs_from_now, bool repeating)
 
 Timer::~Timer()
 {
-    if (GetTrigger()) {
-        ServerInstance->Timers.DelTimer(this);
-    }
-    
-    // Destroy Rust timer instance
+    // Mark cpp_timer as invalid in Rust wrapper before destroying it
     if (rust_timer) {
+        timer_rust_invalidate_cpp_timer(rust_timer);
         timer_rust_destroy_timer(rust_timer);
     }
 }

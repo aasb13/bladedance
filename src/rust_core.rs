@@ -18,6 +18,8 @@ pub mod dynamic;
 pub mod hashcomp;
 pub mod inspircd;
 pub mod helperfuncs;
+pub mod xline;
+pub mod clientprotocol;
 
 #[path = "coremods/core_info/cmd_admin.rs"] 
 mod cmd_admin;

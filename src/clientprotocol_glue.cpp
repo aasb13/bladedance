@@ -20,6 +20,13 @@
 
 #include "inspircd.h"
 
+extern "C" {
+	// Rust FFI functions
+	char* clientprotocol_escape_tag(const char* value);
+	char* clientprotocol_unescape_tag(const char* value);
+	void clientprotocol_free_string(char* ptr);
+}
+
 ClientProtocol::Serializer::Serializer(Module* mod, const std::string& Name)
 	: DataProvider(mod, "serializer/" + Name)
 	, evprov(mod)
@@ -70,76 +77,28 @@ const ClientProtocol::SerializedMessage& ClientProtocol::Serializer::SerializeFo
 
 std::string ClientProtocol::Message::EscapeTag(const std::string& value)
 {
-	std::string ret;
-	ret.reserve(value.size());
-	for (const auto chr : value)
+	// Call Rust implementation
+	char* result = clientprotocol_escape_tag(value.c_str());
+	if (result)
 	{
-		switch (chr)
-		{
-			case ' ':
-				ret.append("\\s");
-				break;
-			case ';':
-				ret.append("\\:");
-				break;
-			case '\\':
-				ret.append("\\\\");
-				break;
-			case '\n':
-				ret.append("\\n");
-				break;
-			case '\r':
-				ret.append("\\r");
-				break;
-			default:
-				ret.push_back(chr);
-				break;
-		}
+		std::string str(result);
+		clientprotocol_free_string(result);
+		return str;
 	}
-	return ret;
+	return "";
 }
 
 std::string ClientProtocol::Message::UnescapeTag(const std::string& value)
 {
-	std::string ret;
-	ret.reserve(value.size());
-	for (std::string::const_iterator it = value.begin(); it != value.end(); ++it)
+	// Call Rust implementation
+	char* result = clientprotocol_unescape_tag(value.c_str());
+	if (result)
 	{
-		char chr = *it;
-		if (chr != '\\')
-		{
-			ret.push_back(chr);
-			continue;
-		}
-
-		it++;
-		if (it == value.end())
-			break;
-
-		chr = *it;
-		switch (chr)
-		{
-			case 's':
-				ret.push_back(' ');
-				break;
-			case ':':
-				ret.push_back(';');
-				break;
-			case '\\':
-				ret.push_back('\\');
-				break;
-			case 'n':
-				ret.push_back('\n');
-				break;
-			case 'r':
-				ret.push_back('\r');
-				break;
-			default:
-				ret.push_back(chr);
-				break;
-		}
+		std::string str(result);
+		clientprotocol_free_string(result);
+		return str;
 	}
-	return ret;
+	return "";
 }
 
 const ClientProtocol::SerializedMessage& ClientProtocol::Message::GetSerialized(const SerializedInfo& serializeinfo) const

@@ -31,6 +31,16 @@
 #include "timeutils.h"
 #include "xline.h"
 
+extern "C" {
+	// Rust FFI functions
+	struct RustUserHostPair {
+		char* user;
+		char* host;
+	};
+	RustUserHostPair xline_split_user_host(const char* user_and_host);
+	void xline_free_user_host(RustUserHostPair pair);
+}
+
 /** An XLineFactory specialized to generate GLine* pointers
  */
 class GLineFactory final
@@ -253,24 +263,26 @@ std::vector<std::string> XLineManager::GetAllTypes()
 
 UserHostPair XLineManager::SplitUserHost(const std::string& user_and_host)
 {
-	UserHostPair n = std::make_pair("*", "*");
-	std::string::size_type x = user_and_host.find('@');
-	if (x != std::string::npos)
-	{
-		n.second = user_and_host.substr(x + 1, user_and_host.length());
-		n.first = user_and_host.substr(0, x);
-		if (!n.first.length())
-			n.first.assign("*");
-		if (!n.second.length())
-			n.second.assign("*");
-	}
+	RustUserHostPair rust_pair = xline_split_user_host(user_and_host.c_str());
+	UserHostPair cpp_pair;
+	
+	if (rust_pair.user)
+		cpp_pair.first = rust_pair.user;
 	else
-	{
-		n.first.clear();
-		n.second = user_and_host;
-	}
-
-	return n;
+		cpp_pair.first = "*";
+	
+	if (rust_pair.host)
+		cpp_pair.second = rust_pair.host;
+	else
+		cpp_pair.second = "*";
+	
+	// Note: We don't free the Rust strings here because the C++ std::string
+	// constructor copies them. The Rust allocator will handle cleanup when
+	// the CString is dropped, but since we transferred ownership via into_raw,
+	// we need to free them manually.
+	xline_free_user_host(rust_pair);
+	
+	return cpp_pair;
 }
 
 // adds a line
