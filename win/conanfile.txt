@@ -28,5 +28,3 @@ pcre2/*:build_pcre2grep=False
 sqlite3/*:build_executable=False
 
 [generators]
-CMakeDeps
-CMakeToolchain
