@@ -27,7 +27,6 @@
 namespace Log
 {
 	class Method;
-	class FileMethod;
 
 	class Engine;
 	class FileEngine;
@@ -74,72 +73,47 @@ namespace Log
 	 * @param type The type of message to send.
 	 */
 	CoreExport void NotifyRawIO(LocalUser* user, MessageType type);
-}
 
-/** Base class for logging methods. */
-class CoreExport Log::Method
-{
-protected:
-	Method() = default;
-
-public:
-	virtual ~Method() = default;
-
-	/** Determines whether this logging method accepts cached messages. */
-	virtual bool AcceptsCachedMessages() const { return true; }
-
-	/** Writes a message to the logger.
-	 * @param time The time at which the message was logged.
-	 * @param level The level at which the log message was written.
-	 * @param type The component which wrote the log message.
-	 * @param message The message which was written to the log.
-	 */
-	virtual void OnLog(time_t time, Level level, const std::string& type, const std::string& message) = 0;
-};
-
-/** A logger that writes to a file stream. */
-class CoreExport Log::FileMethod final
-	: public Method
-	, public Timer
-{
-private:
-	/** Opaque pointer to the Rust implementation. */
-	void* handle = nullptr;
-
-	/** How often the file stream should be flushed. */
-	const unsigned long flush;
-
-	/** The number of lines which have been written since the file stream was created. */
-	unsigned long lines = 0;
-
-	/** The name the underlying file. */
-	const std::string name;
-
-public:
-	/** The target the file method writes to. */
-	enum class Target
-		: uint8_t
+	/** Base class for logging methods. */
+	class CoreExport Method
 	{
-		/** Write to a path specified by the name. */
-		FILE = 0,
-		/** Write to standard output (name is for error messages). */
-		STDOUT = 1,
-		/** Write to standard error (name is for error messages). */
-		STDERR = 2,
+	protected:
+		Method() = default;
+
+	public:
+		virtual ~Method() = default;
+
+		/** Determines whether this logging method accepts cached messages. */
+		virtual bool AcceptsCachedMessages() const { return true; }
+
+		/** Writes a message to the logger.
+		 * @param time The time at which the message was logged.
+		 * @param level The level at which the log message was written.
+		 * @param type The component which wrote the log message.
+		 * @param message The message which was written to the log.
+		 */
+		virtual void OnLog(time_t time, Level level, const std::string& type, const std::string& message) = 0;
 	};
 
-	FileMethod(const std::string& n, unsigned long fl, Target target);
-	~FileMethod() override;
+	/** A simple wrapper for Rust-created log methods. */
+	class CoreExport RustMethod final
+		: public Method
+	{
+	private:
+		/** Opaque pointer to the Rust implementation. */
+		void* handle = nullptr;
 
-	/** @copydoc Log::Method::AcceptsCachedMessages */
-	bool AcceptsCachedMessages() const override { return false; }
+	public:
+		RustMethod(void* h);
+		~RustMethod() override;
 
-	/** @copydoc Timer::Tick */
-	bool Tick() override;
+		/** @copydoc Method::AcceptsCachedMessages */
+		bool AcceptsCachedMessages() const override { return false; }
 
-	/** @copydoc Log::Method::OnLog */
-	void OnLog(time_t time, Level level, const std::string& type, const std::string& message) override;
-};
+		/** @copydoc Method::OnLog */
+		void OnLog(time_t time, Level level, const std::string& type, const std::string& message) override;
+	};
+}
 
 /** Base class for logging engines. */
 class CoreExport Log::Engine
@@ -173,11 +147,8 @@ public:
 class CoreExport Log::StreamEngine final
 	: public Engine
 {
-private:
-	Log::FileMethod::Target target;
-
 public:
-	StreamEngine(Module* Creator, const std::string& Name, Log::FileMethod::Target t);
+	StreamEngine(Module* Creator, const std::string& Name);
 
 	/** @copydoc Log::Engine::Create */
 	MethodPtr Create(const std::shared_ptr<ConfigTag>& tag) override;
@@ -226,7 +197,7 @@ private:
 		/** The engine which created this logger. */
 		const Engine* engine;
 
-		Info(Level l, TokenList t, MethodPtr m, bool c, const Engine* e) ATTR_NOT_NULL(6);
+		Info(Level l, TokenList t, MethodPtr m, bool c, const Engine* e);
 
 		/** Determines whether a message of the specified level and type should be written to this logger.
 		 * @param l The level to check
@@ -243,12 +214,6 @@ private:
 
 	/** The logger engine that writes to a file. */
 	Log::FileEngine filelog;
-
-	/** A logger that writes to stderr. */
-	Log::StreamEngine stderrlog;
-
-	/** A logger that writes to stdout. */
-	Log::StreamEngine stdoutlog;
 
 	/** The currently registered loggers. */
 	std::vector<Info> loggers;
@@ -289,6 +254,9 @@ private:
 public:
 	Manager();
 
+	/** Creates a Rust-backed logger for stderr/stdout. */
+	MethodPtr CreateStreamLogger(const std::string& name, uint8_t target);
+
 	/** Closes all loggers which were opened from the config. */
 	void CloseLogs();
 
@@ -304,7 +272,7 @@ public:
 	/** Unloads all loggers that are provided by the specified engine.
 	 * @param engine The engine to unload the loggers of.
 	 */
-	void UnloadEngine(const Engine* engine) ATTR_NOT_NULL(2);
+	void UnloadEngine(const Engine* engine);
 
 	/** Writes an critical message to the server log.
 	 * @param type The type of message that is being logged.

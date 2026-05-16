@@ -18,7 +18,7 @@ pub trait Module {
 
 // Trait for command implementations
 #[async_trait]
-pub trait Command {
+pub trait Command: Send + Sync {
     async fn handle(&self, user: &User, params: &Params) -> CmdResult;
 }
 

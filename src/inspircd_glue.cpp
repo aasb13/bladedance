@@ -52,6 +52,8 @@
 # include <process.h>
 #endif
 
+extern "C" void rust_early_init();
+
 extern "C" {
     void inspircd_async_init();
 
@@ -78,14 +80,6 @@ extern "C" {
     // C++ helper functions called from Rust
     extern "C" CoreExport void inspircd_ffi_exit(int code) {
         ServerInstance->Exit(code);
-    }
-
-    extern "C" CoreExport void inspircd_ffi_println(const char* msg) {
-        if (msg) fmt::println("{}", msg);
-    }
-
-    extern "C" CoreExport void inspircd_ffi_eprintln(const char* msg) {
-        if (msg) fmt::println(stderr, "{}", msg);
     }
 
     extern "C" CoreExport int inspircd_ffi_isatty(int fd) {
@@ -643,9 +637,6 @@ void InspIRCd::Run()
 
 			oldtime = Time();
 
-			if ((Time() % 3600) == 0)
-				FOREACH_MOD(OnGarbageCollect, ());
-
 			Timers.TickTimers();
 			Users.DoBackgroundUserStuff();
 
@@ -700,6 +691,7 @@ int smain(int argc, char** argv)
 int main(int argc, char** argv)
 #endif
 {
+	rust_early_init();
 	new InspIRCd(argc, argv);
 	ServerInstance->Run();
 	delete ServerInstance;

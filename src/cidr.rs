@@ -16,11 +16,9 @@
 #![allow(unsafe_op_in_unsafe_fn)]
 
 use std::ffi::{c_char, CString};
-
-unsafe extern "C" {
-    fn cidr_ffi_match_wildcard_ascii(a: *const c_char, b: *const c_char) -> bool;
-    fn cidr_ffi_match_normalized(addr: *const c_char, cidr: *const c_char) -> bool;
-}
+use libc::{AF_INET, AF_INET6};
+use crate::wildcard;
+use crate::hashcomp;
 
 fn is_invalid_cidr_mask_format(cidr_copy: &str) -> bool {
     let Some(per_pos) = cidr_copy.rfind('/') else {
@@ -43,16 +41,104 @@ fn is_invalid_cidr_mask_format(cidr_copy: &str) -> bool {
     false
 }
 
+fn parse_ip_address(addr: &str) -> Option<(Vec<u8>, i32)> {
+    // Try IPv4 first
+    if let Ok(ipv4) = addr.parse::<std::net::Ipv4Addr>() {
+        return Some((ipv4.octets().to_vec(), AF_INET));
+    }
+    
+    // Try IPv6
+    if let Ok(ipv6) = addr.parse::<std::net::Ipv6Addr>() {
+        return Some((ipv6.octets().to_vec(), AF_INET6));
+    }
+    
+    None
+}
+
+fn parse_cidr_mask(cidr: &str) -> Option<(Vec<u8>, u8, i32)> {
+    let slash_pos = cidr.rfind('/');
+    
+    if let Some(pos) = slash_pos {
+        let addr_part = &cidr[..pos];
+        let length_part = &cidr[pos + 1..];
+        
+        let length: u8 = length_part.parse().ok()?;
+        
+        if let Some((bytes, family)) = parse_ip_address(addr_part) {
+            // Normalize the mask by applying the prefix length
+            let normalized = normalize_cidr(&bytes, length, family);
+            Some((normalized, length, family))
+        } else {
+            None
+        }
+    } else {
+        // No slash, treat as /128 for IPv6 or /32 for IPv4
+        if let Some((bytes, family)) = parse_ip_address(cidr) {
+            let length = if family == libc::AF_INET { 32 } else { 128 };
+            let normalized = normalize_cidr(&bytes, length, family);
+            Some((normalized, length, family))
+        } else {
+            None
+        }
+    }
+}
+
+fn normalize_cidr(bytes: &[u8], length: u8, family: i32) -> Vec<u8> {
+    let mut result = bytes.to_vec();
+    let total_bytes = if family == AF_INET { 4 } else { 16 };
+    
+    let border = (length / 8) as usize;
+    let bitmask: u8 = ((0xFF00u16 >> (length & 7)) & 0xFF) as u8;
+    
+    for i in 0..total_bytes {
+        if i < border {
+            // Keep the byte as-is
+        } else if i == border {
+            // Apply the bitmask
+            result[i] &= bitmask;
+        } else {
+            // Zero out remaining bytes
+            result[i] = 0;
+        }
+    }
+    
+    result
+}
+
+fn cidr_match_normalized(address: &str, cidr: &str) -> bool {
+    // Parse the address
+    let (addr_bytes, addr_family) = match parse_ip_address(address) {
+        Some(result) => result,
+        None => return false,
+    };
+    
+    // Parse the CIDR mask
+    let (mask_bytes, mask_length, mask_family) = match parse_cidr_mask(cidr) {
+        Some(result) => result,
+        None => return false,
+    };
+    
+    // Families must match
+    if addr_family != mask_family {
+        return false;
+    }
+    
+    // Normalize the address with the mask length
+    let normalized_addr = normalize_cidr(&addr_bytes, mask_length, addr_family);
+    
+    // Compare the normalized address with the mask
+    normalized_addr == mask_bytes
+}
+
 unsafe fn ffi_norm_match(address_copy: &str, cidr_copy: &str) -> bool {
-    let a = CString::new(address_copy).unwrap_or_else(|_| CString::new("").unwrap());
-    let c = CString::new(cidr_copy).unwrap_or_else(|_| CString::new("").unwrap());
-    cidr_ffi_match_normalized(a.as_ptr(), c.as_ptr())
+    cidr_match_normalized(address_copy, cidr_copy)
 }
 
 unsafe fn ffi_wild_match(a: &str, b: &str) -> bool {
-    let ca = CString::new(a).unwrap_or_else(|_| CString::new("").unwrap());
-    let cb = CString::new(b).unwrap_or_else(|_| CString::new("").unwrap());
-    cidr_ffi_match_wildcard_ascii(ca.as_ptr(), cb.as_ptr())
+    return wildcard::rust_wildcard_match(
+		a.as_ptr(),
+		b.as_ptr(),
+	    &hashcomp::ASCII_CASE_INSENSITIVE_MAP as *const u8)
 }
 
 /// Match CIDR strings, e.g. 127.0.0.1 to 127.0.0.0/8 or 3ffe:1:5:6::8 to 3ffe:1::0/32

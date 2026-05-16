@@ -20,6 +20,9 @@ pub mod inspircd;
 pub mod helperfuncs;
 pub mod xline;
 pub mod clientprotocol;
+pub mod commands;
+
+use tracing_subscriber;
 
 #[path = "coremods/core_info/cmd_admin.rs"] 
 mod cmd_admin;
@@ -54,12 +57,30 @@ pub fn init_async_runtime() {
     let _ = &*HANDLE; // force init
 }
 
+pub fn init_tracing() {
+    // Initialize tracing subscriber with default configuration
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .with_target(true)
+        .with_thread_ids(true)
+        .init();
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn inspircd_async_init() {
     init_async_runtime();
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rust_early_init() {
+    init_tracing();
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn inspircd_async_get_handle() -> *const std::ffi::c_void {
     (&*HANDLE) as *const Handle as *const std::ffi::c_void
+}
+
+pub fn get_async_handle() -> Option<Handle> {
+    Some(HANDLE.clone())
 }

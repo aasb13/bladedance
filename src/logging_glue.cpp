@@ -19,7 +19,6 @@
 
 #include "inspircd.h"
 #include "clientprotocolmsg.h"
-#include "timeutils.h"
 
 #include <cstdint>
 #include <fmt/color.h>
@@ -27,20 +26,11 @@
 extern "C" {
 	const char* rust_log_level_to_string(uint8_t level);
 
-	void* rust_log_filemethod_create(const char* target, size_t target_length, unsigned long flush, uint8_t kind);
-	void rust_log_filemethod_destroy(void* handle);
-	StdString rust_log_filemethod_on_log(void* handle, time_t time, uint8_t level,
-		const char* type, size_t type_length, const char* message, size_t message_length);
-	void rust_log_filemethod_tick(void* handle);
-
 	// Manager functions
-	void rust_log_debug_method_on_log(time_t time, uint8_t level,
-		const char* type, size_t type_length, const char* message, size_t message_length);
 	void rust_log_manager_write(uint8_t level,
 		const char* type, size_t type_length, const char* message, size_t message_length);
 	void rust_log_manager_enable_debug_mode(bool forceprotodebug);
 	uint8_t rust_log_manager_check_level();
-	void rust_log_manager_add_logger(uint8_t level, void* method_handle, bool config);
 	void rust_log_manager_open_logs(bool requiremethods);
 	void rust_log_manager_close_logs();
 	uint8_t rust_log_manager_get_maxlevel();
@@ -55,59 +45,6 @@ void Log::NotifyRawIO(LocalUser* user, MessageType type)
 {
 	ClientProtocol::Messages::Privmsg msg(ServerInstance->FakeClient, user, "*** Raw I/O logging is enabled on this server. All messages, passwords, and commands are being recorded.", type);
 	user->Send(ServerInstance->GetRFCEvents().privmsg, msg);
-}
-
-class DebugLogMethod final
-	: public Log::Method
-{
-public:
-	void OnLog(time_t time, Log::Level level, const std::string& type, const std::string& message) override
-	{
-		rust_log_debug_method_on_log(time, static_cast<uint8_t>(level),
-			type.c_str(), type.length(), message.c_str(), message.length());
-	}
-};
-
-Log::FileMethod::FileMethod(const std::string& n, unsigned long fl, Target target)
-	: Timer(15*60, true)
-	, handle(nullptr)
-	, flush(fl)
-	, name(n)
-{
-	handle = rust_log_filemethod_create(name.c_str(), name.length(), flush, static_cast<uint8_t>(target));
-	if (!handle)
-		throw CoreException(INSP_FORMAT("Unable to create file logger for {}", name));
-
-	// Register with Rust manager - will be done at level NORMAL (2)
-	rust_log_manager_add_logger(2, handle, true);
-
-	if (flush > 1)
-		ServerInstance->Timers.AddTimer(this);
-}
-
-Log::FileMethod::~FileMethod()
-{
-	rust_log_filemethod_destroy(handle);
-	handle = nullptr;
-}
-
-void Log::FileMethod::OnLog(time_t time, Level level, const std::string& type, const std::string& message)
-{
-	StdString err = rust_log_filemethod_on_log(handle, time, static_cast<uint8_t>(level),
-		type.c_str(), type.length(), message.c_str(), message.length());
-	if (!err.empty())
-	{
-		const std::string errstr = err.to_std_string();
-		StdString_Destroy(&err);
-		throw CoreException(INSP_FORMAT("Unable to write to {}: {}", name, errstr));
-	}
-	StdString_Destroy(&err);
-}
-
-bool Log::FileMethod::Tick()
-{
-	rust_log_filemethod_tick(handle);
-	return true;
 }
 
 Log::Engine::Engine(Module* Creator, const std::string& Name)
@@ -128,24 +65,29 @@ Log::FileEngine::FileEngine(Module* Creator)
 
 Log::MethodPtr Log::FileEngine::Create(const std::shared_ptr<ConfigTag>& tag)
 {
+	// Tracing handles output, so we don't need to create file handles
+	// The configuration is still validated for compatibility
 	const std::string target = tag->getString("target");
 	if (target.empty())
 		throw CoreException("<log:target> must be specified for file logger at " + tag->source.str());
 
-	const std::string fulltarget = ServerInstance->Config->Paths.PrependLog(Time::ToString(ServerInstance->Time(), target.c_str()));
-	const unsigned long flush = tag->getNum<unsigned long>("flush", 20, 1);
-	return std::make_shared<FileMethod>(fulltarget, flush, Log::FileMethod::Target::FILE);
+	// Return nullptr since tracing handles all output
+	return nullptr;
 }
 
-Log::StreamEngine::StreamEngine(Module* Creator, const std::string& Name, Log::FileMethod::Target t)
+Log::StreamEngine::StreamEngine(Module* Creator, const std::string& Name)
 	: Engine(Creator, Name)
-	, target(t)
 {
 }
 
 Log::MethodPtr Log::StreamEngine::Create(const std::shared_ptr<ConfigTag>& tag)
 {
-	return std::make_shared<FileMethod>(name, 1, target);
+	// Tracing handles output, so we don't need to create stream handles
+	// The configuration is still validated for compatibility
+	const std::string namestr = tag->getString("target", name, 1);
+
+	// Return nullptr since tracing handles all output
+	return nullptr;
 }
 
 Log::Manager::CachedMessage::CachedMessage(time_t ts, Level l, const std::string& t, const std::string& m)
@@ -172,8 +114,6 @@ bool Log::Manager::Info::Suitable(Level l, const std::string& t) const
 
 Log::Manager::Manager()
 	: filelog(nullptr)
-	, stderrlog(nullptr, "stderr", Log::FileMethod::Target::STDERR)
-	, stdoutlog(nullptr, "stdout", Log::FileMethod::Target::STDOUT)
 {
 }
 
@@ -256,8 +196,11 @@ void Log::Manager::OpenLogs(bool requiremethods)
 
 void Log::Manager::RegisterServices()
 {
-	ServiceProvider* coreloggers[] = { &filelog, &stderrlog, &stdoutlog };
+	ServiceProvider* coreloggers[] = { &filelog };
 	ServerInstance->Modules.AddServices(coreloggers, sizeof(coreloggers)/sizeof(ServiceProvider*));
+
+	// Create stderr logger only (stdout would cause duplicate output to terminal)
+	loggers.emplace_back(Level::NORMAL, TokenList("*"), CreateStreamLogger("stderr", 2), false, nullptr);
 }
 
 void Log::Manager::UnloadEngine(const Engine* engine)
@@ -281,4 +224,11 @@ void Log::Manager::Write(Level level, const std::string& type, const std::string
 {
 	rust_log_manager_write(static_cast<uint8_t>(level),
 		type.c_str(), type.length(), message.c_str(), message.length());
+}
+
+Log::MethodPtr Log::Manager::CreateStreamLogger(const std::string& name, uint8_t target)
+{
+	// Tracing handles output, so we don't need to create stream handles
+	// Return nullptr since tracing handles all output
+	return nullptr;
 }

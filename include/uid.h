@@ -23,22 +23,7 @@
 
 class CoreExport UIDGenerator final
 {
-private:
-	/** Holds the current UID. Used to generate the next one.
-	 */
-	std::string current_uid;
-
-	/** Increments the current UID by one.
-	 */
-	void IncrementUID(unsigned int pos);
-
 public:
-	/**
-	* This is the maximum length of a UUID (unique user identifier).
-	* It allows up to 12,960 servers and 2,176,782,336 users per server.
-	*/
-	static constexpr unsigned int UUID_LENGTH = 9;
-
 	/** Initializes this UID generator with the given SID
 	 * @param sid SID that conforms to InspIRCd::IsSID()
 	 */

@@ -415,6 +415,11 @@ void ModuleManager::DoSafeUnload(Module* mod)
 
 	std::map<std::string, Module*>::iterator modfind = Modules.find(mod->ModuleFile);
 
+	if (modfind == Modules.end() || modfind->second != mod)
+	{
+		return;
+	}
+
 	// Unregister modes before extensions because modes may require their extension to show the mode being unset
 	UnregisterModes(mod, MODETYPE_USER);
 	UnregisterModes(mod, MODETYPE_CHANNEL);
@@ -528,12 +533,10 @@ void ModuleManager::LoadAll()
 			continue;
 
 		this->NewServices = &servicemap[name];
-		fmt::println("[{}] Loading module:\t{}", fmt::styled("*", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::green)), name);
+		ServerInstance->Logs.Normal("MODULE", "Loading {}", name);
 		if (!this->Load(name, true))
 		{
-			fmt::println("");
-			fmt::println("[{}] {}", fmt::styled("*", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::red)), LastError());
-			fmt::println("");
+			ServerInstance->Logs.Normal("MODULE", "Failed to load module: {}", LastError());
 			ServerInstance->Exit(EXIT_FAILURE);
 		}
 	}
@@ -552,9 +555,6 @@ void ModuleManager::LoadAll()
 		{
 			LastModuleError = "Unable to initialize " + modname + ": " + modexcept.GetReason();
 			ServerInstance->Logs.Critical("MODULE", LastModuleError);
-			fmt::println("");
-			fmt::println("[{}] {}", fmt::styled("*", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::red)), LastModuleError);
-			fmt::println("");
 			ServerInstance->Exit(EXIT_FAILURE);
 		}
 	}
@@ -576,9 +576,6 @@ void ModuleManager::LoadAll()
 		{
 			LastModuleError = "Unable to read the configuration for " + modname + ": " + modexcept.GetReason();
 			ServerInstance->Logs.Critical("MODULE", LastModuleError);
-			fmt::println("");
-			fmt::println("[{}] {}", fmt::styled("*", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::red)), LastModuleError);
-			fmt::println("");
 			ServerInstance->Exit(EXIT_FAILURE);
 		}
 	}

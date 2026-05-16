@@ -354,6 +354,11 @@ impl User {
     pub fn is_oper(&self) -> bool {
         !self.oper_obj.is_null()
     }
+
+    /// Create a User reference from a raw pointer
+    pub unsafe fn from_ptr(ptr: *mut c_void) -> &'static mut User {
+        &mut *(ptr as *mut User)
+    }
 }
 
 // Extern "C" functions for C++ to call

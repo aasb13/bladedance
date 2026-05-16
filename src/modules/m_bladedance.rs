@@ -4,11 +4,11 @@ use mongodb::{Client, Collection, Database, options::{ClientOptions, FindOneOpti
 use mongodb::bson::{doc, Document};
 use chrono::{DateTime, Utc};
 use std::ffi::c_void;
+use tracing::{error, info};
 
 use rust_core::traits::{Module, Command, CmdResult, Params};
 use rust_core::users::User;
 use rust_core::account::AccountAPI;
-use rust_core::logging::log;
 
 unsafe extern "C" {
     fn inspircd_async_get_handle() -> *const std::ffi::c_void;
@@ -231,7 +231,7 @@ pub static inspircd_module_version: [u8; 7] = *b"4.10.1\0";
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_module_init(handle: *mut std::ffi::c_void) {
     if handle.is_null() {
-        log(1, "m_bladedance", "m_bladedance: rust_module_init called with null handle");
+        error!(module = "m_bladedance", "rust_module_init called with null handle");
         return;
     }
     let module = unsafe { &mut *(handle as *mut ModuleBladedance) };
@@ -239,10 +239,10 @@ pub extern "C" fn rust_module_init(handle: *mut std::ffi::c_void) {
 
     match core_handle() {
         Some(h) => match h.block_on(module.initialize_database(&uri)) {
-            Ok(_) => log(2, "m_bladedance", &format!("MongoDB connected to {}", uri)),
-            Err(e) => log(1, "m_bladedance", &format!("MongoDB connection failed: {}", e)),
+            Ok(_) => info!(module = "m_bladedance", "MongoDB connected to {}", uri),
+            Err(e) => error!(module = "m_bladedance", "MongoDB connection failed: {}", e),
         },
-        None => log(1, "m_bladedance", "Core async runtime not available"),
+        None => error!(module = "m_bladedance", "Core async runtime not available"),
     }
 }
 

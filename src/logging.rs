@@ -1,34 +1,11 @@
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
-use std::fs::OpenOptions;
-use std::io::Write;
-use std::os::raw::{c_char, c_int};
+use std::ffi::CString;
+use std::os::raw::c_char;
 use std::ptr;
-use std::slice;
 use std::sync::Mutex;
-use tracing::info;
+use tracing::{debug, error, info, warn, trace};
 
 use crate::stringutils::StdString;
-
-type TimeT = i64;
-
-#[repr(C)]
-struct tm {
-    tm_sec: c_int,
-    tm_min: c_int,
-    tm_hour: c_int,
-    tm_mday: c_int,
-    tm_mon: c_int,
-    tm_year: c_int,
-    tm_wday: c_int,
-    tm_yday: c_int,
-    tm_isdst: c_int,
-}
-
-unsafe extern "C" {
-    fn localtime(timer: *const TimeT) -> *mut tm;
-    fn strftime(s: *mut c_char, maxsize: usize, format: *const c_char, timeptr: *const tm) -> usize;
-}
 
 #[repr(C)]
 pub enum FileMethodTarget {
@@ -38,18 +15,22 @@ pub enum FileMethodTarget {
 }
 
 pub struct FileMethodHandle {
-    file: Option<std::fs::File>,
     target: FileMethodTarget,
     name: String,
-    flush: u64,
-    lines: u64,
-    prevtime: i64,
-    timestr: String,
 }
+
+// Implement Send and Sync for FileMethodHandle since we only use it in a single-threaded context
+unsafe impl Send for FileMethodHandle {}
+unsafe impl Sync for FileMethodHandle {}
 
 lazy_static::lazy_static! {
     static ref FILE_HANDLES: Mutex<HashMap<usize, FileMethodHandle>> = Mutex::new(HashMap::new());
     static ref NEXT_HANDLE_ID: Mutex<usize> = Mutex::new(1);
+}
+
+/// Helper function to safely convert raw bytes to a String, handling invalid UTF-8
+unsafe fn from_raw_parts_lossy(ptr: *const u8, len: usize) -> String {
+    unsafe { String::from_utf8_lossy(std::slice::from_raw_parts(ptr, len)).into_owned() }
 }
 
 #[unsafe(no_mangle)]
@@ -61,18 +42,26 @@ pub unsafe extern "C" fn LogManager_Log(
     msg_len: usize,
 ) {
     let ty_s = if ty.is_null() || ty_len == 0 {
-        ""
+        String::new()
     } else {
-        unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ty, ty_len)) }
+        unsafe { from_raw_parts_lossy(ty, ty_len) }
     };
 
     let msg_s = if msg.is_null() || msg_len == 0 {
-        ""
+        String::new()
     } else {
-        unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(msg, msg_len)) }
+        unsafe { from_raw_parts_lossy(msg, msg_len) }
     };
 
-    info!(level = level, ty = ty_s, "{}", msg_s);
+    // Map InspIRCd log levels to tracing levels
+    match level {
+        0 => error!(ty = %ty_s, "{}", msg_s), // CRITICAL
+        1 => warn!(ty = %ty_s, "{}", msg_s),  // WARNING
+        2 => info!(ty = %ty_s, "{}", msg_s),  // NORMAL
+        3 => debug!(ty = %ty_s, "{}", msg_s), // DEBUG
+        4 => debug!(ty = %ty_s, "{}", msg_s), // RAWIO
+        _ => info!(ty = %ty_s, "{}", msg_s),  // UNKNOWN
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -92,7 +81,7 @@ pub unsafe extern "C" fn rust_log_level_to_string(level: u8) -> *const c_char {
 pub unsafe extern "C" fn rust_log_filemethod_create(
     target: *const c_char,
     target_length: usize,
-    flush: u64,
+    _flush: u64,
     kind: u8,
 ) -> *mut std::os::raw::c_void {
     if target.is_null() || target_length == 0 {
@@ -100,7 +89,7 @@ pub unsafe extern "C" fn rust_log_filemethod_create(
     }
 
     let target_str = unsafe {
-        std::str::from_utf8_unchecked(slice::from_raw_parts(target as *const u8, target_length))
+        from_raw_parts_lossy(target as *const u8, target_length)
     };
     let name = target_str.to_string();
 
@@ -110,24 +99,9 @@ pub unsafe extern "C" fn rust_log_filemethod_create(
         _ => FileMethodTarget::FILE,
     };
 
-    let file = match file_target {
-        FileMethodTarget::FILE => {
-            match OpenOptions::new().create(true).append(true).open(&name) {
-                Ok(f) => Some(f),
-                Err(_) => return ptr::null_mut(),
-            }
-        }
-        FileMethodTarget::STDOUT | FileMethodTarget::STDERR => None,
-    };
-
     let handle = FileMethodHandle {
-        file,
         target: file_target,
         name,
-        flush,
-        lines: 0,
-        prevtime: 0,
-        timestr: String::new(),
     };
 
     let mut handles = FILE_HANDLES.lock().unwrap();
@@ -153,8 +127,8 @@ pub unsafe extern "C" fn rust_log_filemethod_destroy(handle: *mut std::os::raw::
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_log_filemethod_on_log(
     handle: *mut std::os::raw::c_void,
-    time: i64,
-    _level: u8,
+    _time: i64,
+    level: u8,
     type_str: *const c_char,
     type_length: usize,
     message: *const c_char,
@@ -165,143 +139,64 @@ pub unsafe extern "C" fn rust_log_filemethod_on_log(
     }
 
     let id = unsafe { *(handle as *mut usize) };
-    let mut handles = FILE_HANDLES.lock().unwrap();
+    let handles = FILE_HANDLES.lock().unwrap();
     
-    if let Some(method) = handles.get_mut(&id) {
-        if method.prevtime != time {
-            method.prevtime = time;
-            
-            let format_str = CString::new("%d %b %H:%M:%S").unwrap();
-            let mut buffer = [0u8; 64];
-            
-            unsafe {
-                let tm_ptr = localtime(&time);
-                if !tm_ptr.is_null() {
-                    strftime(buffer.as_mut_ptr() as *mut c_char, buffer.len(), format_str.as_ptr(), tm_ptr);
-                    let c_str = CStr::from_ptr(buffer.as_ptr() as *const c_char);
-                    method.timestr = c_str.to_string_lossy().to_string();
-                } else {
-                    method.timestr = format!("{}", time);
-                }
-            }
-        }
-
+    if let Some(_method) = handles.get(&id) {
         let type_s = if type_str.is_null() || type_length == 0 {
-            ""
+            String::new()
         } else {
-            unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(type_str as *const u8, type_length)) }
+            unsafe { from_raw_parts_lossy(type_str as *const u8, type_length) }
         };
 
         let message_s = if message.is_null() || message_length == 0 {
-            ""
+            String::new()
         } else {
-            unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(message as *const u8, message_length)) }
+            unsafe { from_raw_parts_lossy(message as *const u8, message_length) }
         };
 
-        let log_line = format!("{} {}: {}\n", method.timestr, type_s, message_s);
+        match level {
+            0 => error!(log_type = %type_s, "{}", message_s),
+            1 => warn!(log_type = %type_s, "{}", message_s),
+            2 => info!(log_type = %type_s, "{}", message_s),
+            3 => debug!(log_type = %type_s, "{}", message_s),
+            4 => trace!(log_type = %type_s, "{}", message_s),
+            _ => info!(log_type = %type_s, "{}", message_s),
+        }
 
-        let result = match method.target {
-            FileMethodTarget::FILE => {
-                if let Some(ref mut file) = method.file {
-                    match file.write_all(log_line.as_bytes()) {
-                        Ok(_) => {
-                            method.lines += 1;
-                            if method.flush > 0 && method.lines % method.flush == 0 {
-                                let _ = file.flush();
-                            }
-                            StdString::from_vec(Vec::new())
-                        }
-                        Err(e) => StdString::from_vec(format!("Unable to write to {}: {}", method.name, e).into_bytes()),
-                    }
-                } else {
-                    StdString::from_vec("File handle is null".to_string().into_bytes())
-                }
-            }
-            FileMethodTarget::STDOUT => {
-                print!("{}", log_line);
-                method.lines += 1;
-                if method.flush > 0 && method.lines % method.flush == 0 {
-                    let _ = std::io::stdout().flush();
-                }
-                StdString::from_vec(Vec::new())
-            }
-            FileMethodTarget::STDERR => {
-                eprint!("{}", log_line);
-                method.lines += 1;
-                if method.flush > 0 && method.lines % method.flush == 0 {
-                    let _ = std::io::stderr().flush();
-                }
-                StdString::from_vec(Vec::new())
-            }
-        };
-
-        result
+        StdString::from_vec(Vec::new())
     } else {
         StdString::from_vec("Handle not found".to_string().into_bytes())
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn rust_log_filemethod_tick(handle: *mut std::os::raw::c_void) {
-    if handle.is_null() {
-        return;
-    }
-
-    let id = unsafe { *(handle as *mut usize) };
-    let mut handles = FILE_HANDLES.lock().unwrap();
-    
-    if let Some(method) = handles.get_mut(&id) {
-        match method.target {
-            FileMethodTarget::FILE => {
-                if let Some(ref mut file) = method.file {
-                    let _ = file.flush();
-                }
-            }
-            FileMethodTarget::STDOUT => {
-                let _ = std::io::stdout().flush();
-            }
-            FileMethodTarget::STDERR => {
-                let _ = std::io::stderr().flush();
-            }
-        }
-    }
-}
-
-// DebugLogMethod functionality
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_log_debug_method_on_log(
-    time: i64,
-    _level: u8,
+    _time: i64,
+    level: u8,
     type_str: *const c_char,
     type_length: usize,
     message: *const c_char,
     message_length: usize,
 ) {
     let type_s = if type_str.is_null() || type_length == 0 {
-        ""
+        String::new()
     } else {
-        unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(type_str as *const u8, type_length)) }
+        unsafe { from_raw_parts_lossy(type_str as *const u8, type_length) }
     };
 
     let message_s = if message.is_null() || message_length == 0 {
-        ""
+        String::new()
     } else {
-        unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(message as *const u8, message_length)) }
+        unsafe { from_raw_parts_lossy(message as *const u8, message_length) }
     };
 
-    let format_str = CString::new("%d %b %H:%M:%S").unwrap();
-    let mut buffer = [0u8; 64];
-    
-    unsafe {
-        let tm_ptr = localtime(&time);
-        if !tm_ptr.is_null() {
-            strftime(buffer.as_mut_ptr() as *mut c_char, buffer.len(), format_str.as_ptr(), tm_ptr);
-            let c_str = CStr::from_ptr(buffer.as_ptr() as *const c_char);
-            let time_str = c_str.to_string_lossy();
-            println!("{} {}: {}", time_str, type_s, message_s);
-        } else {
-            println!("{} {}: {}", time, type_s, message_s);
-        }
+    match level {
+        0 => error!(log_type = %type_s, "{}", message_s),
+        1 => warn!(log_type = %type_s, "{}", message_s),
+        2 => info!(log_type = %type_s, "{}", message_s),
+        3 => debug!(log_type = %type_s, "{}", message_s),
+        4 => trace!(log_type = %type_s, "{}", message_s),
+        _ => info!(log_type = %type_s, "{}", message_s),
     }
 }
 
@@ -365,19 +260,19 @@ pub unsafe extern "C" fn rust_log_manager_write(
     message_length: usize,
 ) {
     let type_s = if type_str.is_null() || type_length == 0 {
-        ""
+        String::new()
     } else {
-        unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(type_str as *const u8, type_length)) }
+        unsafe { from_raw_parts_lossy(type_str as *const u8, type_length) }
     };
 
     let message_s = if message.is_null() || message_length == 0 {
-        ""
+        String::new()
     } else {
-        unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(message as *const u8, message_length)) }
+        unsafe { from_raw_parts_lossy(message as *const u8, message_length) }
     };
 
     let mut state = LOG_MANAGER_STATE.lock().unwrap();
-    
+
     if state.logging {
         return; // Avoid log loops
     }
@@ -387,38 +282,21 @@ pub unsafe extern "C" fn rust_log_manager_write(
     }
 
     state.logging = true;
-    
-    // Route to all suitable loggers
-    for logger in state.loggers.iter_mut() {
-        if logger.dead || logger.level < level {
-            continue;
-        }
 
-         // Call the appropriate log method based on the handle
-         if !logger.method_handle.is_null() {
-             let err = unsafe {
-                 rust_log_filemethod_on_log(
-                     logger.method_handle,
-                     std::time::SystemTime::now()
-                         .duration_since(std::time::UNIX_EPOCH)
-                         .unwrap()
-                         .as_secs() as i64,
-                     level,
-                     type_str,
-                     type_length,
-                     message,
-                     message_length,
-                 )
-             };
-            
-            if !err.is_empty() {
-                logger.dead = true;
-            }
-        }
+    // Log to tracing - this is the only logging we need now
+    match level {
+        0 => error!(log_type = %type_s, "{}", message_s), // CRITICAL
+        1 => warn!(log_type = %type_s, "{}", message_s),  // WARNING
+        2 => info!(log_type = %type_s, "{}", message_s),  // NORMAL
+        3 => debug!(log_type = %type_s, "{}", message_s), // DEBUG
+        4 => trace!(log_type = %type_s, "{}", message_s), // RAWIO
+        _ => info!(log_type = %type_s, "{}", message_s),  // UNKNOWN
     }
 
     if state.caching {
         // Cache the message
+        let type_len = type_s.len();
+        let message_len = message_s.len();
         let type_copy = CString::new(type_s).unwrap();
         let message_copy = CString::new(message_s).unwrap();
         
@@ -429,9 +307,9 @@ pub unsafe extern "C" fn rust_log_manager_write(
                 .as_secs() as i64,
             level,
             type_str: type_copy.into_raw(),
-            type_length: type_s.len(),
+            type_length: type_len,
             message: message_copy.into_raw(),
-            message_length: message_s.len(),
+            message_length: message_len,
         };
         state.cache.push(cached);
     }
@@ -506,55 +384,19 @@ pub unsafe extern "C" fn rust_log_manager_open_logs(requiremethods: bool) {
         let cached_messages: Vec<CachedMessage> = state.cache.drain(..).collect();
         
         for cached in cached_messages {
-            let _type_str = unsafe { std::slice::from_raw_parts(cached.type_str as *const u8, cached.type_length) };
-            let _message_str = unsafe { std::slice::from_raw_parts(cached.message as *const u8, cached.message_length) };
-            
-             // Process loggers separately to avoid borrowing conflicts
-             let mut logger_ids_to_mark_dead = Vec::new();
-             
-             for (idx, logger) in state.loggers.iter_mut().enumerate() {
-                 if logger.dead || logger.level < cached.level {
-                     continue;
-                 }
-                 
-                 if !logger.method_handle.is_null() {
-                     let err = unsafe {
-                         rust_log_filemethod_on_log(
-                             logger.method_handle,
-                             cached.time,
-                             cached.level,
-                             cached.type_str,
-                             cached.type_length,
-                             cached.message,
-                             cached.message_length,
-                         )
-                     };
-                     
-                     if !err.is_empty() {
-                         logger_ids_to_mark_dead.push(idx);
-                     }
-                 } else {
-                     // Debug logger
-                     unsafe {
-                         rust_log_debug_method_on_log(
-                             cached.time,
-                             cached.level,
-                             cached.type_str,
-                             cached.type_length,
-                             cached.message,
-                             cached.message_length,
-                         );
-                     }
-                 }
-             }
-            
-            // Mark dead loggers
-            for idx in logger_ids_to_mark_dead {
-                if let Some(logger) = state.loggers.get_mut(idx) {
-                    logger.dead = true;
-                }
+            let type_s = unsafe { from_raw_parts_lossy(cached.type_str as *const u8, cached.type_length) };
+            let message_s = unsafe { from_raw_parts_lossy(cached.message as *const u8, cached.message_length) };
+
+            // Emit tracing event for cached message
+            match cached.level {
+                0 => error!(log_type = %type_s, "{}", message_s), // CRITICAL
+                1 => warn!(log_type = %type_s, "{}", message_s),  // WARNING
+                2 => info!(log_type = %type_s, "{}", message_s),  // NORMAL
+                3 => debug!(log_type = %type_s, "{}", message_s), // DEBUG
+                4 => trace!(log_type = %type_s, "{}", message_s), // RAWIO
+                _ => info!(log_type = %type_s, "{}", message_s),  // UNKNOWN
             }
-            
+
             // Free cached strings
             unsafe {
                 let _ = CString::from_raw(cached.type_str);
@@ -582,15 +424,14 @@ pub unsafe extern "C" fn rust_log_manager_get_maxlevel() -> u8 {
     state.maxlevel
 }
 
-/// Convenience wrapper for Rust modules to log messages
+#[deprecated(since = "0.1.0", note = "Use tracing macros (error!, warn!, info!, debug!, trace!) directly")]
 pub fn log(level: u8, log_type: &str, message: &str) {
-    unsafe {
-        rust_log_manager_write(
-            level,
-            log_type.as_ptr() as *const i8,
-            log_type.len(),
-            message.as_ptr() as *const i8,
-            message.len(),
-        );
+    match level {
+        0 => error!(log_type, "{}", message), // CRITICAL
+        1 => warn!(log_type, "{}", message),  // WARNING
+        2 => info!(log_type, "{}", message),  // NORMAL
+        3 => debug!(log_type, "{}", message), // DEBUG
+        4 => trace!(log_type, "{}", message), // RAWIO
+        _ => info!(log_type, "{}", message),  // UNKNOWN
     }
 }

@@ -30,6 +30,8 @@
 extern "C" {
     struct StdString;
     StdString rust_generate_sid(const char* servername, size_t servername_length, const char* serverdesc, size_t serverdesc_length);
+    void rust_uid_init(const char* sid, size_t sid_length);
+    StdString rust_uid_get();
 }
 
 void InspIRCd::HandleSignal(sig_atomic_t signal)
@@ -75,67 +77,12 @@ void InspIRCd::Rehash(const std::string& uuid)
 
 std::string UIDGenerator::GenerateSID(const std::string& servername, const std::string& serverdesc)
 {
-	// Use Rust implementation instead of C++
-	StdString result = rust_generate_sid(servername.c_str(), servername.length(), serverdesc.c_str(), serverdesc.length());
-	
-	if (result.data) {
-		return std::string(result.data, result.length);
-	}
-	
-	// Fallback to "000" if Rust fails
-	return "000";
-}
-
-void UIDGenerator::IncrementUID(unsigned int pos)
-{
-	/*
-	 * Okay. The rules for generating a UID go like this...
-	 * -- > ABCDEFGHIJKLMNOPQRSTUVWXYZ --> 012345679 --> WRAP
-	 * That is, we start at A. When we reach Z, we go to 0. At 9, we go to
-	 * A again, in an iterative fashion.. so..
-	 * AAA9 -> AABA, and so on. -- w00t
-	 */
-
-	// If we hit Z, wrap around to 0.
-	if (current_uid[pos] == 'Z')
-	{
-		current_uid[pos] = '0';
-	}
-	else if (current_uid[pos] == '9')
-	{
-		/*
-		 * Or, if we hit 9, wrap around to pos = 'A' and (pos - 1)++,
-		 * e.g. A9 -> BA -> BB ..
-		 */
-		current_uid[pos] = 'A';
-		if (pos == 3)
-		{
-			// At pos 3, if we hit '9', we've run out of available UIDs, and reset to AAA..AAA.
-			return;
-		}
-		this->IncrementUID(pos - 1);
-	}
-	else
-	{
-		// Anything else, nobody gives a shit. Just increment.
-		current_uid[pos]++;
-	}
+	return rust_generate_sid(servername.c_str(), servername.length(), serverdesc.c_str(), serverdesc.length()).data;
 }
 
 void UIDGenerator::init(const std::string& sid)
 {
-	/*
-	 * Copy SID into the first three digits, 9's to the rest, null term at the end
-	 * Why 9? Well, we increment before we find, otherwise we have an unnecessary copy, and I want UID to start at AAA..AA
-	 * and not AA..AB. So by initialising to 99999, we force it to rollover to AAAAA on the first IncrementUID call.
-	 * Kind of silly, but I like how it looks.
-	 *		-- w
-	 */
-
-	current_uid.resize(UUID_LENGTH, '9');
-	current_uid[0] = sid[0];
-	current_uid[1] = sid[1];
-	current_uid[2] = sid[2];
+	rust_uid_init(sid.c_str(), sid.length());
 }
 
 /*
@@ -145,18 +92,16 @@ std::string UIDGenerator::GetUID()
 {
 	while (true)
 	{
-		// Add one to the last UID
-		this->IncrementUID(UUID_LENGTH - 1);
+		StdString rust_uid = rust_uid_get();
+		std::string uid = std::string(rust_uid.data, rust_uid.length);
 
-		if (!ServerInstance->Users.FindUUID(current_uid))
-			break;
+		if (!ServerInstance->Users.FindUUID(uid))
+			return uid;
 
 		/*
 		 * It's in use. We need to try the loop again.
 		 */
 	}
-
-	return current_uid;
 }
 
 const std::string& Server::GetPublicName() const

@@ -9,6 +9,8 @@ project('privirc', 'cpp', 'rust',
   ]
 )
 
+add_project_arguments('-g', language : 'cpp')
+
 fs = import('fs')
 rust_lib_path = meson.current_build_dir() / 'librust_core.a'
 
@@ -55,7 +57,7 @@ core_src_list = files(
   'src/channels.cpp',
   'src/cidr_glue.cpp',
   'src/clientprotocol_glue.cpp',
-  'src/commands.cpp',
+  'src/commands_glue.cpp',
   'src/configparser.cpp',
   'src/configreader_glue.cpp',
   'src/dynamic_glue.cpp',
@@ -74,7 +76,7 @@ core_src_list = files(
   'src/socket.cpp',
   'src/socketengine.cpp',
   'src/streamsocket.cpp',
-  'src/thread.cpp',
+  'src/thread_glue.cpp',
   'src/timer_glue.cpp',
   'src/usermanager_glue.cpp',
   'src/users_glue.cpp',

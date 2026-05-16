@@ -1,5 +1,4 @@
 use std::ffi::{c_char, CStr, CString};
-use std::os::raw::c_int;
 
 /// Escapes special characters in IRC message tags according to IRCv3 tag escaping rules.
 /// Replaces: space -> \s, semicolon -> \:, backslash -> \\, newline -> \n, carriage return -> \r

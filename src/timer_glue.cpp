@@ -65,10 +65,11 @@ Timer::Timer(unsigned long secs_from_now, bool repeating)
 
 Timer::~Timer()
 {
-    // Mark cpp_timer as invalid in Rust wrapper before destroying it
+    // Invalidate FIRST, before any potential concurrent Rust access
     if (rust_timer) {
         timer_rust_invalidate_cpp_timer(rust_timer);
         timer_rust_destroy_timer(rust_timer);
+        rust_timer = nullptr; // Prevent accidental reuse
     }
 }
 
@@ -117,9 +118,11 @@ extern "C" {
     __attribute__((visibility("default"))) bool timer_ffi_timer_tick(void* cpp_timer)
     {
         Timer* timer = static_cast<Timer*>(cpp_timer);
-        if (timer)
-            return timer->Tick();
-        return false;
+        if (!timer)
+            return false;
+        if (!timer->rust_timer)
+            return false;
+        return timer->Tick();
     }
     
     __attribute__((visibility("default"))) void* timer_ffi_get_rust_timer(void* cpp_timer)

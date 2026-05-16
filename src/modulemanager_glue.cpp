@@ -103,15 +103,15 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
                 ConfigStatus confstatus;
                 newmod->init();
                 newmod->ReadConfig(confstatus);
-            }
 
-            ServerInstance->Logs.Normal("MODULE", "New module introduced: {} (version {}, properties {})",
-                filename, newmod->GetVersion(), newmod->GetPropertyString());
+                ServerInstance->Logs.Normal("MODULE", "New module introduced: {} (version {}, properties {})",
+                    filename, newmod->GetVersion(), newmod->GetPropertyString());
 
-            if (newmod->properties & VF_DEPRECATED)
-            {
-                ServerInstance->Logs.Warning("MODULE", "The {} module is deprecated and will be removed in the next version of InspIRCd!",
-                    ModuleManager::ShrinkModName(filename));
+                if (newmod->properties & VF_DEPRECATED)
+                {
+                    ServerInstance->Logs.Warning("MODULE", "The {} module is deprecated and will be removed in the next version of InspIRCd!",
+                        ModuleManager::ShrinkModName(filename));
+                }
             }
         }
         else

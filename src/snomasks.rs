@@ -70,68 +70,76 @@ fn snomask_get_description(sn: *mut Snomask, letter: u8) -> String {
 unsafe fn send_via_ffi(letter: u8, desc: &str, msg: &str) {
     let dc = CString::new(desc).unwrap_or_else(|_| CString::new("").unwrap());
     let mc = CString::new(msg).unwrap_or_else(|_| CString::new("").unwrap());
-    snomask_ffi_send_impl(letter as c_char, dc.as_ptr(), mc.as_ptr());
+    unsafe { snomask_ffi_send_impl(letter as c_char, dc.as_ptr(), mc.as_ptr()); }
 }
 
 unsafe fn snomask_flush_one(sn: *mut Snomask) {
-    let cnt = snomask_ffi_count_get(sn);
+    let cnt = unsafe { snomask_ffi_count_get(sn) };
     if cnt > 1 {
-        let last_letter = snomask_ffi_last_letter_get(sn) as u8;
+        let last_letter = unsafe { snomask_ffi_last_letter_get(sn) } as u8;
         let desc = snomask_get_description(sn, last_letter);
         let msg = format!("(last message repeated {} times)", cnt);
         let desc_c = CString::new(desc.as_str()).unwrap_or_else(|_| CString::new("").unwrap());
         let msg_c = CString::new(msg.as_str()).unwrap_or_else(|_| CString::new("").unwrap());
-        snomask_ffi_foreach_mod_on_send_snotice(
-            last_letter as c_char,
-            desc_c.as_ptr(),
-            msg_c.as_ptr(),
-        );
-        send_via_ffi(last_letter, &desc, &msg);
+        unsafe {
+            snomask_ffi_foreach_mod_on_send_snotice(
+                last_letter as c_char,
+                desc_c.as_ptr(),
+                msg_c.as_ptr(),
+            );
+        }
+        unsafe { send_via_ffi(last_letter, &desc, &msg); }
     }
 
-    snomask_ffi_last_message_clear(sn);
-    snomask_ffi_count_set(sn, 0);
+    unsafe { snomask_ffi_last_message_clear(sn); }
+    unsafe { snomask_ffi_count_set(sn, 0); }
 }
 
 unsafe fn snomask_send_message(sn: *mut Snomask, message: &str, letter: u8) {
-    let stack_ok = !snomask_ffi_no_snotice_stack();
-    let same_line = message == c_str_to_string(snomask_ffi_last_message_cstr(sn));
-    let same_letter = letter == snomask_ffi_last_letter_get(sn) as u8;
+    let stack_ok = unsafe { !snomask_ffi_no_snotice_stack() };
+    let same_line = message == c_str_to_string(unsafe { snomask_ffi_last_message_cstr(sn) });
+    let same_letter = letter == unsafe { snomask_ffi_last_letter_get(sn) } as u8;
     if stack_ok && same_line && same_letter {
-        snomask_ffi_count_set(sn, snomask_ffi_count_get(sn).saturating_add(1));
+        unsafe {
+            snomask_ffi_count_set(sn, snomask_ffi_count_get(sn).saturating_add(1));
+        }
         return;
     }
 
-    snomask_flush_one(sn);
+    unsafe { snomask_flush_one(sn); }
 
     let desc = snomask_get_description(sn, letter);
     let desc_c = CString::new(desc.as_str()).unwrap_or_else(|_| CString::new("").unwrap());
     let msg_c = CString::new(message).unwrap_or_else(|_| CString::new("").unwrap());
-    if snomask_ffi_first_mod_on_send_snotice(
-        letter as c_char,
-        desc_c.as_ptr(),
-        msg_c.as_ptr(),
-    ) {
+    if unsafe {
+        snomask_ffi_first_mod_on_send_snotice(
+            letter as c_char,
+            desc_c.as_ptr(),
+            msg_c.as_ptr(),
+        )
+    } {
         return;
     }
 
-    send_via_ffi(letter, &desc, message);
+    unsafe { send_via_ffi(letter, &desc, message); }
 
-    snomask_ffi_last_message_assign(sn, msg_c.as_ptr());
-    snomask_ffi_last_letter_set(sn, letter as c_char);
-    snomask_ffi_count_set(sn, snomask_ffi_count_get(sn).saturating_add(1));
+    unsafe { snomask_ffi_last_message_assign(sn, msg_c.as_ptr()); }
+    unsafe { snomask_ffi_last_letter_set(sn, letter as c_char); }
+    unsafe {
+        snomask_ffi_count_set(sn, snomask_ffi_count_get(sn).saturating_add(1));
+    }
 }
 
 unsafe fn write_to_sno_mask(mgr: *mut SnomaskManager, letter: u8, text: &str) {
     if (b'a'..=b'z').contains(&letter) {
-        let sn = snomask_ffi_mask(mgr, (letter - b'a') as usize);
+        let sn = unsafe { snomask_ffi_mask(mgr, (letter - b'a') as usize) };
         if !sn.is_null() {
-            snomask_send_message(sn, text, letter);
+            unsafe { snomask_send_message(sn, text, letter); }
         }
     } else if (b'A'..=b'Z').contains(&letter) {
-        let sn = snomask_ffi_mask(mgr, (letter - b'A') as usize);
+        let sn = unsafe { snomask_ffi_mask(mgr, (letter - b'A') as usize) };
         if !sn.is_null() {
-            snomask_send_message(sn, text, letter);
+            unsafe { snomask_send_message(sn, text, letter); }
         }
     }
 }
@@ -139,9 +147,9 @@ unsafe fn write_to_sno_mask(mgr: *mut SnomaskManager, letter: u8, text: &str) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_snomask_flush_snotices(mgr: *mut SnomaskManager) {
     for i in 0..26usize {
-        let sn = snomask_ffi_mask(mgr, i);
+        let sn = unsafe { snomask_ffi_mask(mgr, i) };
         if !sn.is_null() {
-            snomask_flush_one(sn);
+            unsafe { snomask_flush_one(sn); }
         }
     }
 }
@@ -155,7 +163,7 @@ pub unsafe extern "C" fn rust_snomask_enable(
     let lc = letter as u8;
     if (b'a'..=b'z').contains(&lc) {
         let slot = (lc - b'a') as usize;
-        snomask_ffi_description_set(mgr, slot, desc);
+        unsafe { snomask_ffi_description_set(mgr, slot, desc); }
     }
 }
 
@@ -166,7 +174,7 @@ pub unsafe extern "C" fn rust_snomask_write_to_mask(
     text: *const c_char,
 ) {
     let s = c_str_to_string(text);
-    write_to_sno_mask(mgr, letter as u8, &s);
+    unsafe { write_to_sno_mask(mgr, letter as u8, &s); }
 }
 
 #[unsafe(no_mangle)]
@@ -176,9 +184,9 @@ pub unsafe extern "C" fn rust_snomask_write_global_sno(
     text: *const c_char,
 ) {
     let s = c_str_to_string(text);
-    write_to_sno_mask(mgr, letter as u8, &s);
+    unsafe { write_to_sno_mask(mgr, letter as u8, &s); }
     let tc = CString::new(s.as_str()).unwrap_or_else(|_| CString::new("").unwrap());
-    snomask_ffi_send_global_notice(letter, tc.as_ptr());
+    unsafe { snomask_ffi_send_global_notice(letter, tc.as_ptr()); }
 }
 
 #[unsafe(no_mangle)]
@@ -192,7 +200,7 @@ pub unsafe extern "C" fn rust_snomask_manager_ctor_init(mgr: *mut SnomaskManager
         (b'r' as c_char, c"REHASH".as_ptr()),
     ];
     for (ch, ptr) in pairs {
-        rust_snomask_enable(mgr, ch, ptr);
+        unsafe { rust_snomask_enable(mgr, ch, ptr); }
     }
 }
 
@@ -210,9 +218,9 @@ pub unsafe extern "C" fn rust_snomask_is_usable(mgr: *mut SnomaskManager, ch: c_
     let Some(slot) = slot_any_case(ch as u8) else {
         return false;
     };
-    let sn = snomask_ffi_mask(mgr, slot);
+    let sn = unsafe { snomask_ffi_mask(mgr, slot) };
     if sn.is_null() {
         return false;
     }
-    !c_str_to_string(snomask_ffi_description_cstr(sn)).is_empty()
+    unsafe { !c_str_to_string(snomask_ffi_description_cstr(sn)).is_empty() }
 }

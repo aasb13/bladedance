@@ -152,20 +152,20 @@ unsafe fn c_str_to_string(p: *const c_char) -> String {
     if p.is_null() {
         return String::new();
     }
-    CStr::from_ptr(p).to_string_lossy().into_owned()
+    unsafe { CStr::from_ptr(p).to_string_lossy().into_owned() }
 }
 
 unsafe fn user_nick_string(user: *mut User) -> String {
-    c_str_to_string(um_ffi_user_get_nick_cstr(user))
+    unsafe { c_str_to_string(um_ffi_user_get_nick_cstr(user)) }
 }
 
 unsafe fn user_uuid_string(user: *mut User) -> String {
-    c_str_to_string(um_ffi_user_get_uuid_cstr(user))
+    unsafe { c_str_to_string(um_ffi_user_get_uuid_cstr(user)) }
 }
 
 /// Matches C++ `Duration::ToLongString` via one FFI call.
 unsafe fn duration_long_string_from_cpp(secs: u64) -> String {
-    c_str_to_string(um_ffi_duration_to_long_string(secs))
+    unsafe { c_str_to_string(um_ffi_duration_to_long_string(secs)) }
 }
 
 fn ping_timeout_quit_message(secs_u64: u64) -> String {
@@ -176,27 +176,27 @@ fn ping_timeout_quit_message(secs_u64: u64) -> String {
 }
 
 unsafe fn user_real_mask_string(u: *mut User) -> String {
-    c_str_to_string(um_ffi_user_get_real_mask_cstr(u))
+    unsafe { c_str_to_string(um_ffi_user_get_real_mask_cstr(u)) }
 }
 
 unsafe fn user_address_string_user(u: *mut User) -> String {
-    c_str_to_string(um_ffi_user_get_address_cstr(u))
+    unsafe { c_str_to_string(um_ffi_user_get_address_cstr(u)) }
 }
 
 unsafe fn local_user_address_string(lu: *mut LocalUser) -> String {
-    c_str_to_string(um_ffi_local_user_get_address_cstr(lu))
+    unsafe { c_str_to_string(um_ffi_local_user_get_address_cstr(lu)) }
 }
 
 unsafe fn apply_local_user_flood_and_sendq_decay(curr: *mut LocalUser) {
-    if um_ffi_local_user_command_flood_penalty(curr) != 0 || um_ffi_local_user_eh_get_sendq_size(curr) != 0 {
-        let rate: u64 = um_ffi_local_user_get_class_commandrate(curr);
-        let penalty: u64 = um_ffi_local_user_command_flood_penalty(curr);
+    if unsafe { um_ffi_local_user_command_flood_penalty(curr) } != 0 || unsafe { um_ffi_local_user_eh_get_sendq_size(curr) } != 0 {
+        let rate: u64 = unsafe { um_ffi_local_user_get_class_commandrate(curr) };
+        let penalty: u64 = unsafe { um_ffi_local_user_command_flood_penalty(curr) };
         if penalty > rate {
-            um_ffi_local_user_set_command_flood_penalty(curr, penalty - rate);
+            unsafe { um_ffi_local_user_set_command_flood_penalty(curr, penalty - rate) };
         } else {
-            um_ffi_local_user_set_command_flood_penalty(curr, 0);
+            unsafe { um_ffi_local_user_set_command_flood_penalty(curr, 0) };
         }
-        um_ffi_local_user_eh_on_data_ready(curr);
+        unsafe { um_ffi_local_user_eh_on_data_ready(curr) };
     }
 }
 
@@ -343,8 +343,8 @@ unsafe fn quit_user_inner(
 
     let uuid_erase = CString::new(uuid.as_str()).unwrap_or_else(|_| CString::new("").unwrap());
     um_ffi_user_manager_rust_access_uuid_erase_cstr(um, uuid_erase.as_ptr());
-    um_ffi_user_purge_empty_channels(user);
-    um_ffi_user_oper_logout(user);
+    unsafe { um_ffi_user_purge_empty_channels(user); }
+    unsafe { um_ffi_user_oper_logout(user); }
 }
 
 #[unsafe(no_mangle)]
@@ -357,7 +357,7 @@ pub unsafe extern "C" fn rust_usermanager_quit_user(
     let quit = if quitmessage.is_null() {
         String::new()
     } else {
-        c_str_to_string(quitmessage)
+        unsafe { c_str_to_string(quitmessage) }
     };
     let oper = if operquitmessage.is_null() {
         None
@@ -550,16 +550,16 @@ pub unsafe extern "C" fn rust_usermanager_next_already_sent_id(um: *mut UserMana
     um_ffi_user_manager_rust_access_set_already_sent_id(um, id);
     if id == 0 {
         // Wrapped around, reset the already_sent ids of all users
-        um_ffi_user_manager_rust_access_set_already_sent_id(um, 1);
-        let lit = um_ffi_user_manager_rust_access_local_iter_new(um);
+        unsafe { um_ffi_user_manager_rust_access_set_already_sent_id(um, 1) };
+        let lit = unsafe { um_ffi_user_manager_rust_access_local_iter_new(um) };
         loop {
-            let user = um_ffi_user_manager_rust_access_local_iter_next(lit);
+            let user = unsafe { um_ffi_user_manager_rust_access_local_iter_next(lit) };
             if user.is_null() {
                 break;
             }
-            um_ffi_local_user_set_already_sent(user, 0);
+            unsafe { um_ffi_local_user_set_already_sent(user, 0) };
         }
-        um_ffi_user_manager_rust_access_local_iter_free(lit);
+        unsafe { um_ffi_user_manager_rust_access_local_iter_free(lit) };
         return 1;
     }
     id
@@ -576,9 +576,9 @@ unsafe fn find_user_by_nick_or_uuid_string(
     let key = CString::new(nickuuid).unwrap_or_else(|_| CString::new("").unwrap());
     let first = nickuuid.as_bytes()[0];
     if first.is_ascii_digit() {
-        um_ffi_user_manager_find_uuid_impl(um, key.as_ptr(), fullyconnected)
+        unsafe { um_ffi_user_manager_find_uuid_impl(um, key.as_ptr(), fullyconnected) }
     } else {
-        um_ffi_user_manager_find_nick_impl(um, key.as_ptr(), fullyconnected)
+        unsafe { um_ffi_user_manager_find_nick_impl(um, key.as_ptr(), fullyconnected) }
     }
 }
 
@@ -591,8 +591,8 @@ pub unsafe extern "C" fn rust_usermanager_find(
     if nickuuid.is_null() {
         return ptr::null_mut();
     }
-    let s = c_str_to_string(nickuuid);
-    find_user_by_nick_or_uuid_string(um, s.as_str(), fullyconnected)
+    let s = unsafe { c_str_to_string(nickuuid) };
+    unsafe { find_user_by_nick_or_uuid_string(um, s.as_str(), fullyconnected) }
 }
 
 #[unsafe(no_mangle)]
@@ -601,7 +601,7 @@ pub unsafe extern "C" fn rust_usermanager_find_nick(
     nick: *const c_char,
     fullyconnected: bool,
 ) -> *mut User {
-    um_ffi_user_manager_find_nick_impl(um, nick, fullyconnected)
+    unsafe { um_ffi_user_manager_find_nick_impl(um, nick, fullyconnected) }
 }
 
 #[unsafe(no_mangle)]
@@ -610,5 +610,5 @@ pub unsafe extern "C" fn rust_usermanager_find_uuid(
     uuid: *const c_char,
     fullyconnected: bool,
 ) -> *mut User {
-    um_ffi_user_manager_find_uuid_impl(um, uuid, fullyconnected)
+    unsafe { um_ffi_user_manager_find_uuid_impl(um, uuid, fullyconnected) }
 }

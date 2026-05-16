@@ -28,6 +28,7 @@
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
 use std::ptr;
+use tracing::debug;
 
 use crate::stringutils::{StdString, StdString_Destroy};
 
@@ -36,9 +37,6 @@ type time_t = i64;
 
 unsafe extern "C" {
     fn um_ffi_server_time() -> time_t;
-    fn rust_log_manager_write(level: u8,
-        type_str: *const c_char, type_length: usize, 
-        message: *const c_char, message_length: usize);
 }
 
 /// Layout must match `BanCacheHit` in include/bancache.h (StdString, StdString, time_t).
@@ -77,21 +75,13 @@ fn std_string_bytes_eq(s: &StdString, t: &str) -> bool {
     s.as_bytes() == t.as_bytes()
 }
 
-const TAG: &[u8] = b"BANCACHE\0";
-
 /// A manager for ban cache, which allocates and deallocates and checks cached bans.
 pub struct BanCacheManager {
     BanHash: HashMap<String, *mut BanCacheHit>,
 }
 
 fn log_bancache_line(message: &str) {
-    let _tag = b"BANCACHE";
-    let msg = message.as_bytes();
-    unsafe {
-        rust_log_manager_write(3, // debug level
-            TAG.as_ptr() as *const c_char, TAG.len() - 1, // strip trailing \0 for length
-            msg.as_ptr() as *const c_char, msg.len());
-    }
+    debug!(log_type = "BANCACHE", "{}", message);
 }
 
 impl BanCacheManager {

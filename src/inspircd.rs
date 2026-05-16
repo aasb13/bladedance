@@ -1,64 +1,46 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-#![allow(dead_code)]
-
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
 use clap::{Parser, CommandFactory};
+use tracing::{warn, error, info};
 
-// External C++ functions
 unsafe extern "C" {
     fn inspircd_ffi_exit(code: c_int);
-    fn inspircd_ffi_println(msg: *const c_char);
-    fn inspircd_ffi_eprintln(msg: *const c_char);
     fn inspircd_ffi_isatty(fd: c_int) -> c_int;
     fn inspircd_ffi_sleep(seconds: c_int);
 }
 
-/// Parsed command line options
 #[derive(Parser, Debug)]
 #[command(name = "inspircd")]
 #[command(about = "InspIRCd - Internet Relay Chat Daemon", long_about = None)]
 struct InspircdArgs {
-    /// The location of the main config file
     #[arg(short = 'c', long = "config", value_name = "FILE")]
     config: Option<String>,
 
-    /// Start in debug mode
     #[arg(short = 'd', long = "debug")]
     debug: bool,
 
-    /// Disable forking into the background
     #[arg(short = 'F', long = "nofork")]
     nofork: bool,
 
-    /// Show help and exit
     #[arg(short = 'h', long = "help")]
     help: bool,
 
-    /// Disable writing logs to disk
     #[arg(short = 'L', long = "nolog")]
     nolog: bool,
 
-    /// Start in protocol debug mode
     #[arg(short = 'p', long = "protocoldebug")]
     protocoldebug: bool,
 
-    /// Disable writing the pid file
     #[arg(short = 'P', long = "nopid")]
     nopid: bool,
 
-    /// Allow starting as root (not recommended)
     #[arg(short = 'r', long = "runasroot")]
     runasroot: bool,
 
-    /// Show version and exit
     #[arg(short = 'v', long = "version")]
     version: bool,
 }
 
-/// Result of parsing command line options
 #[repr(C)]
 pub struct ParseOptionsResult {
     pub config_path: *mut c_char,
@@ -105,29 +87,25 @@ pub extern "C" fn inspircd_check_root() {
 
         // Check if running as root (uid or gid is 0)
         if euid.as_raw() == 0 || egid.as_raw() == 0 {
-            let warning = CString::new(
-                "Warning! You have started as root. Running as root is generally not required\n\
-                 and may allow an attacker to gain access to your system if they find a way to\n\
-                 exploit your IRC server.\n"
-            ).unwrap();
-
-            unsafe { inspircd_ffi_println(warning.as_ptr()); }
+            warn!(
+                "Warning! You have started as root. Running as root is generally not required \
+                 and may allow an attacker to gain access to your system if they find a way to \
+                 exploit your IRC server."
+            );
 
             let is_tty = unsafe { inspircd_ffi_isatty(1) } != 0;
 
             if is_tty {
-                let msg = CString::new(
-                    "InspIRCd will start in 30 seconds. If you are sure that you need to run as root\n\
+                warn!(
+                    "InspIRCd will start in 30 seconds. If you are sure that you need to run as root \
                      then you can pass the --runasroot option to disable this wait."
-                ).unwrap();
-                unsafe { inspircd_ffi_println(msg.as_ptr()); }
+                );
                 unsafe { inspircd_ffi_sleep(30); }
             } else {
-                let msg = CString::new(
-                    "If you are sure that you need to run as root then you can pass the --runasroot\n\
+                error!(
+                    "If you are sure that you need to run as root then you can pass the --runasroot \
                      option to disable this error."
-                ).unwrap();
-                unsafe { inspircd_ffi_println(msg.as_ptr()); }
+                );
                 unsafe { inspircd_ffi_exit(1); }
             }
         }
@@ -183,8 +161,7 @@ pub extern "C" fn inspircd_parse_options(
     match InspircdArgs::try_parse_from(&args) {
         Ok(parsed) => {
             if parsed.help {
-                let help = CString::new(format!("{}", InspircdArgs::command())).unwrap();
-                unsafe { inspircd_ffi_println(help.as_ptr()); }
+                info!("{}", InspircdArgs::command());
                 result.should_exit = true;
                 result.exit_code = 0;
                 return result;
@@ -192,8 +169,7 @@ pub extern "C" fn inspircd_parse_options(
 
             if parsed.version {
                 let version = env!("CARGO_PKG_VERSION");
-                let version_str = CString::new(format!("InspIRCd {}", version)).unwrap();
-                unsafe { inspircd_ffi_println(version_str.as_ptr()); }
+                info!("InspIRCd {}", version);
                 result.should_exit = true;
                 result.exit_code = 0;
                 return result;
@@ -222,8 +198,7 @@ pub extern "C" fn inspircd_parse_options(
             result.forceprotodebug = parsed.protocoldebug;
         }
         Err(e) => {
-            let error_msg = CString::new(format!("Error: {}", e)).unwrap();
-            unsafe { inspircd_ffi_eprintln(error_msg.as_ptr()); }
+            error!("Error: {}", e);
             result.should_exit = true;
             result.exit_code = 1;
         }

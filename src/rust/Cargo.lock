@@ -1348,6 +1348,7 @@ dependencies = [
  "chrono",
  "clap",
  "lazy_static",
+ "libc",
  "libloading",
  "mongodb",
  "nix",

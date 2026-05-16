@@ -31,6 +31,7 @@ tokio = { version = "1", features = ["full"] }
 chrono = "0.4"
 async-trait = "0.1"
 rust_core = { path = "../../../src/rust" }
+tracing = "0.1"
 EOF
 
     cargo build --release \

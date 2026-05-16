@@ -401,7 +401,7 @@ void CommandBase::EncodeParameter(std::string& parameter, unsigned int index)
 
 RouteDescriptor CommandBase::GetRouting(User* user, const Params& parameters)
 {
-	return ROUTE_LOCALONLY;
+	return (RouteDescriptor(RouteType::LOCAL));
 }
 
 Command::Command(Module* mod, const std::string& cmd, unsigned int minpara, unsigned int maxpara)

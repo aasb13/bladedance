@@ -1,16 +1,27 @@
 use std::collections::BTreeMap;
 use std::ffi::c_void;
+use std::ptr;
+use std::cell::RefCell;
 
 // Type definitions for C++ compatibility
-type time_t = i64;
+type TimeT = i64;
+
+thread_local! {
+    // Deferred destruction list – only used on the main event loop thread.
+    static DEFERRED_FREE_LIST: RefCell<Vec<*mut Timer>> = RefCell::new(Vec::new());
+}
 
 #[repr(C)]
 pub struct Timer {
-    pub trigger: time_t,
+    pub trigger: TimeT,
     pub secs: u64,
     pub repeat: bool,
     pub cpp_timer: *mut c_void,
     pub cpp_timer_valid: bool,
+    pub rust_callback: Option<unsafe extern "C" fn(*mut c_void)>,
+    pub rust_callback_data: *mut c_void,
+    // NEW: prevents freeing while this timer is in the processing batch
+    pub being_processed: bool,
 }
 
 impl Timer {
@@ -21,12 +32,33 @@ impl Timer {
             repeat: repeating,
             cpp_timer,
             cpp_timer_valid: true,
+            rust_callback: None,
+            rust_callback_data: ptr::null_mut(),
+            being_processed: false,
         }
     }
-    pub fn get_trigger(&self) -> time_t {
+
+    pub fn new_with_rust_callback(
+        secs_from_now: u64,
+        repeating: bool,
+        callback: unsafe extern "C" fn(*mut c_void),
+        callback_data: *mut c_void,
+    ) -> Self {
+        Timer {
+            trigger: 0,
+            secs: secs_from_now,
+            repeat: repeating,
+            cpp_timer: ptr::null_mut(),
+            cpp_timer_valid: false,
+            rust_callback: Some(callback),
+            rust_callback_data: callback_data,
+            being_processed: false,
+        }
+    }
+    pub fn get_trigger(&self) -> TimeT {
         self.trigger
     }
-    pub fn set_trigger(&mut self, nexttrigger: time_t) {
+    pub fn set_trigger(&mut self, nexttrigger: TimeT) {
         self.trigger = nexttrigger;
     }
     pub fn get_interval(&self) -> u64 {
@@ -51,7 +83,7 @@ impl Timer {
 }
 
 pub struct TimerManager {
-    timers: BTreeMap<time_t, *mut Timer>,
+    timers: BTreeMap<TimeT, *mut Timer>,
 }
 
 impl TimerManager {
@@ -62,38 +94,68 @@ impl TimerManager {
     }
     pub fn tick_timers(&mut self) {
         let now = unsafe { timer_ffi_server_time() };
-        let mut timers_to_process = Vec::new();
-        for (&trigger_time, &timer_ptr) in self.timers.iter() {
-            if trigger_time > now {
-                break;
-            }
-            timers_to_process.push((trigger_time, timer_ptr));
+
+        // 1) Collect ALL due timers and immediately clear the map.
+        //    This prevents any re-entrant map modification from causing issues.
+        let due: Vec<(TimeT, *mut Timer)> = self
+            .timers
+            .range(..=now)
+            .map(|(&t, &ptr)| (t, ptr))
+            .collect();
+
+        // Remove every collected entry from the map.
+        for &(trigger, _) in &due {
+            self.timers.remove(&trigger);
         }
-        for (trigger_time, timer_ptr) in timers_to_process {
-            let timer = unsafe { &mut *timer_ptr };
-            let cpp_timer = timer.cpp_timer;
-            
-            // Remove from map first (like original's erase(i++))
-            self.timers.remove(&trigger_time);
-            
-            // Check if C++ Timer is still valid before calling Tick()
-            if !timer.cpp_timer_valid || cpp_timer.is_null() {
-                // C++ Timer was deleted elsewhere, clean up Rust wrapper
-                unsafe { timer_rust_destroy_timer(timer_ptr) };
-                continue;
+
+        // 2) Mark every collected wrapper as being processed.
+        for &(_, timer_ptr) in &due {
+            unsafe {
+                (*timer_ptr).being_processed = true;
             }
-            
-            // Call Tick() on C++ timer - this may delete the C++ Timer object
+        }
+
+        // 3) Process each timer in the batch.
+        for (_, timer_ptr) in due.iter() {
+            // Safety: pointer is valid because we prevent freeing via `being_processed`.
+            let timer = unsafe { &mut **timer_ptr };
+
+            if !timer.cpp_timer_valid || timer.cpp_timer.is_null() {
+                continue; // already invalidated or was deleted by another timer's Tick()
+            }
+
+            let cpp_timer = (*timer).cpp_timer;
             let should_continue = unsafe { timer_ffi_timer_tick(cpp_timer) };
-            
-            if !should_continue {
-                // Timer deleted itself in Tick(), clean up Rust wrapper
-                unsafe { timer_rust_destroy_timer(timer_ptr) };
+
+            // After Tick(), the wrapper may have been invalidated (deferred destroy).
+            if !(*timer).cpp_timer_valid {
                 continue;
             }
-            if timer.repeat {
-                timer.trigger = now + timer.secs as i64;
-                self.timers.insert(timer.trigger, timer_ptr);
+
+            if should_continue && (*timer).repeat {
+                (*timer).trigger = now + (*timer).secs as i64;
+                self.timers.insert((*timer).trigger, *timer_ptr);
+            } else {
+                // Timer should not continue – request destruction.
+                // Since `being_processed` is true, this will only invalidate
+                // and defer actual freeing.
+                unsafe { timer_rust_destroy_timer(*timer_ptr) };
+            }
+        }
+
+        // 4) Clear the processing flag on ALL collected wrappers.
+        for &(_, timer_ptr) in &due {
+            let timer = unsafe { &mut *timer_ptr };
+            timer.being_processed = false;
+        }
+
+        // 5) Free all wrappers whose destruction was deferred.
+        let deferred = DEFERRED_FREE_LIST.with(|list| list.replace(Vec::new()));
+        for ptr in deferred {
+            if !ptr.is_null() {
+                // Safety: pointer was deferred because `being_processed` was true;
+                // now it is false and the wrapper is no longer in the map.
+                let _ = unsafe { Box::from_raw(ptr) };
             }
         }
     }
@@ -112,7 +174,7 @@ impl TimerManager {
         if trigger_time == 0 {
             return;
         }
-        let matching_timers: Vec<(time_t, *mut Timer)> = self.timers
+        let matching_timers: Vec<(TimeT, *mut Timer)> = self.timers
             .range(trigger_time..=trigger_time)
             .map(|(&time, &timer)| (time, timer))
             .collect();
@@ -145,7 +207,7 @@ pub fn get_timer_manager() -> *mut TimerManager {
 }
 
 unsafe extern "C" {
-    fn timer_ffi_server_time() -> time_t;
+    fn timer_ffi_server_time() -> TimeT;
     fn timer_ffi_add_timer(timer: *mut c_void);
     fn timer_ffi_del_timer(timer: *mut c_void);
     fn timer_ffi_timer_tick(timer: *mut c_void) -> bool;
@@ -160,19 +222,52 @@ pub extern "C" fn timer_rust_create_timer(secs_from_now: u64, repeating: bool, c
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn timer_rust_create_timer_with_callback(
+    secs_from_now: u64,
+    repeating: bool,
+    callback: unsafe extern "C" fn(*mut c_void),
+    callback_data: *mut c_void,
+) -> *mut Timer {
+    let timer = Timer::new_with_rust_callback(secs_from_now, repeating, callback, callback_data);
+    Box::into_raw(Box::new(timer))
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_destroy_timer(timer: *mut Timer) {
-    if !timer.is_null() {
+    if timer.is_null() {
+        return;
+    }
+
+    let t = unsafe { &mut *timer };
+
+    // Already invalidated? Nothing to do.
+    if !t.cpp_timer_valid {
+        return;
+    }
+
+    // Mark as destroyed.
+    t.cpp_timer_valid = false;
+    t.cpp_timer = ptr::null_mut();
+    t.rust_callback = None;
+
+    if t.being_processed {
+        // Defer actual freeing until the current batch finishes.
+        DEFERRED_FREE_LIST.with(|list| {
+            list.borrow_mut().push(timer);
+        });
+    } else {
+        // Safe to free immediately.
         let _ = unsafe { Box::from_raw(timer) };
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn timer_rust_get_trigger(timer: *const Timer) -> time_t {
+pub unsafe extern "C" fn timer_rust_get_trigger(timer: *const Timer) -> TimeT {
     unsafe { (*timer).get_trigger() }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn timer_rust_set_trigger(timer: *mut Timer, nexttrigger: time_t) {
+pub unsafe extern "C" fn timer_rust_set_trigger(timer: *mut Timer, nexttrigger: TimeT) {
     unsafe { (*timer).set_trigger(nexttrigger) };
 }
 
@@ -222,7 +317,41 @@ pub unsafe extern "C" fn timer_rust_add_timer(timer: *mut Timer) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn timer_rust_del_timer(cpp_timer: *mut c_void) {
     let manager_ptr = get_timer_manager();
-    if !manager_ptr.is_null() {
-        unsafe { (*manager_ptr).del_timer(cpp_timer) };
+    if manager_ptr.is_null() {
+        return;
+    }
+    
+    let rust_timer = unsafe { timer_ffi_get_rust_timer(cpp_timer) as *mut Timer };
+    if rust_timer.is_null() {
+        return;
+    }
+    
+    let trigger_time = unsafe { (*rust_timer).get_trigger() };
+    if trigger_time == 0 {
+        return;
+    }
+    
+    let matching_timers: Vec<(TimeT, *mut Timer)> = unsafe {
+        (*manager_ptr).timers
+            .range(trigger_time..=trigger_time)
+            .map(|(&time, &timer)| (time, timer))
+            .collect()
+    };
+    
+    for (time, timer_ptr) in matching_timers {
+        if std::ptr::eq(rust_timer, timer_ptr) {
+            // Mark trigger as 0 first
+            unsafe { (*timer_ptr).trigger = 0 };
+            // Remove from map
+            unsafe { (*manager_ptr).timers.remove(&time) };
+            
+            // IMPORTANT: Invalidate the C++ timer reference first
+            unsafe { timer_rust_invalidate_cpp_timer(timer_ptr) };
+            
+            // DO NOT destroy the Rust wrapper here!
+            // The C++ destructor will call timer_rust_destroy_timer
+            // Destroying it here would cause a double-free
+            break;
+        }
     }
 }
