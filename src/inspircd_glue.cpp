@@ -237,9 +237,8 @@ namespace
 		int childpid = fork();
 		if (childpid < 0)
 		{
-			ServerInstance->Logs.Critical("STARTUP", "fork() failed: {}", strerror(errno));
-			fmt::println("{} unable to fork into background: {}", fmt::styled("Error:", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::red)), strerror(errno));
-			ServerInstance->Exit(EXIT_FAILURE);
+		ServerInstance->Logs.Critical("STARTUP", "fork() failed: {}", strerror(errno));
+		ServerInstance->Exit(EXIT_FAILURE);
 		}
 		else if (childpid > 0)
 		{
@@ -409,7 +408,6 @@ void InspIRCd::WritePID()
 	}
 	else
 	{
-		fmt::println("Failed to write PID-file '{}', exiting.", pidfile);
 		this->Logs.Critical("STARTUP", "Failed to write PID-file '{}', exiting.", pidfile);
 		Exit(EXIT_FAILURE);
 	}
@@ -443,9 +441,8 @@ InspIRCd::InspIRCd(int argc, char** argv)
 		Modules.AddServices(provs, sizeof(provs)/sizeof(provs[0]));
 	}
 
-	fmt::println("{}", fmt::styled("InspIRCd - Internet Relay Chat Daemon", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::green)));
-	fmt::println("See {} for contributors & authors", fmt::styled("/INFO", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::green)));
-	fmt::println("");
+	this->Logs.Normal("STARTUP", "InspIRCd - Internet Relay Chat Daemon");
+	this->Logs.Normal("STARTUP", "See /INFO for contributors & authors");
 
 	Logs.RegisterServices();
 	if (Config->CommandLine.forcedebug)
@@ -455,8 +452,7 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	if (!std::filesystem::is_regular_file(ConfigFileName, ec))
 	{
 		this->Logs.Critical("STARTUP", "Unable to open config file {}", ConfigFileName);
-		fmt::println("ERROR: Cannot open config file: {}", ConfigFileName);
-		fmt::println("Exiting...");
+		this->Logs.Critical("STARTUP", "Exiting...");
 		Exit(EXIT_FAILURE);
 	}
 
@@ -466,7 +462,7 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	if (!Config->CommandLine.nofork)
 		ForkIntoBackground();
 
-	fmt::println("InspIRCd Process ID: {}", fmt::styled(getpid(), fmt::emphasis::bold | fmt::fg(fmt::terminal_color::green)));
+	this->Logs.Normal("STARTUP", "InspIRCd Process ID: {}", getpid());
 
 	/* During startup we read the configuration now, not in
 	 * a separate thread
@@ -481,8 +477,8 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	}
 	catch (const CoreException& ex)
 	{
-		fmt::println("ERROR: Cannot open log files: {}", ex.GetReason());
-		fmt::println("Exiting...");
+		this->Logs.Critical("STARTUP", "Cannot open log files: {}", ex.GetReason());
+		this->Logs.Critical("STARTUP", "Exiting...");
 		Exit(EXIT_FAILURE);
 	}
 
@@ -502,8 +498,6 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	// This is needed as all new XLines are marked pending until ApplyLines() is called
 	this->XLines->ApplyLines();
 
-	fmt::println("");
-
 	TryBindPorts();
 
 	inspircd_async_init();
@@ -517,12 +511,12 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	}
 	catch (const CoreException& ex)
 	{
-		fmt::println("ERROR: Cannot open log files: {}", ex.GetReason());
-		fmt::println("Exiting...");
+		this->Logs.Critical("STARTUP", "Cannot open log files: {}", ex.GetReason());
+		this->Logs.Critical("STARTUP", "Exiting...");
 		Exit(EXIT_FAILURE);
 	}
 
-	fmt::println("InspIRCd is now running as '{}'[{}] with {} max open sockets",
+	this->Logs.Normal("STARTUP", "InspIRCd is now running as '{}'[{}] with {} max open sockets",
 		Config->ServerName, Config->ServerId, SocketEngine::GetMaxFds());
 
 #ifndef _WIN32
@@ -530,7 +524,6 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	{
 		if (kill(getppid(), SIGTERM) == -1)
 		{
-			fmt::println("Error killing parent process: {}", strerror(errno));
 			Logs.Warning("STARTUP", "Error killing parent process: {}", strerror(errno));
 		}
 	}

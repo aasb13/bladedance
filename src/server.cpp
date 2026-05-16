@@ -98,9 +98,7 @@ std::string UIDGenerator::GetUID()
 		if (!ServerInstance->Users.FindUUID(uid))
 			return uid;
 
-		/*
-		 * It's in use. We need to try the loop again.
-		 */
+		// TODO: Make it use actual uuids instead of this crap
 	}
 }
 

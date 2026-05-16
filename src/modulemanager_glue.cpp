@@ -58,7 +58,6 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
     }
 
     // The rest of the logic would be gradually moved to Rust
-    // For now, we keep it in C++ to demonstrate the incremental approach
     const std::string filename = ExpandModName(modname);
     const std::string moduleFile = ServerInstance->Config->Paths.PrependModule(filename);
 
@@ -132,7 +131,9 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
             DoSafeUnload(newmod);
         }
         else
+        {
             delete newhandle;
+        }
         LastModuleError = "Unable to load " + filename + ": " + modexcept.GetReason();
         ServerInstance->Logs.Critical("MODULE", LastModuleError);
         return false;
@@ -146,11 +147,9 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
     return true;
 }
 
-// This demonstrates how LoadCoreModules would be gradually converted
 void ModuleManager::LoadCoreModules(std::map<std::string, ServiceList>& servicemap)
 {
-    fmt::print("Loading core modules ");
-    fflush(stdout);
+    ServerInstance->Logs.Normal("MODULE", "Loading core modules");
 
     try
     {
@@ -163,24 +162,21 @@ void ModuleManager::LoadCoreModules(std::map<std::string, ServiceList>& servicem
             if (!InspIRCd::Match(name, "core_*" DLL_EXTENSION))
                 continue;
 
-            fmt::print(".");
-            fflush(stdout);
+            ServerInstance->Logs.Debug("MODULE", "Loading {}", name);
             this->NewServices = &servicemap[name];
 
             if (!Load(name, true))
             {
-                fmt::println("");
-                fmt::println("[{}] {}", fmt::styled("*", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::red)), LastError());
-                fmt::println("");
+                ServerInstance->Logs.Critical("MODULE", "Failed to load core module: {}", LastError());
                 ServerInstance->Exit(EXIT_FAILURE);
             }
         }
     }
     catch (const std::filesystem::filesystem_error& err)
     {
-        fmt::println("failed: {}", err.what());
+        ServerInstance->Logs.Critical("MODULE", "Failed to load core modules: {}", err.what());
         ServerInstance->Exit(EXIT_FAILURE);
     }
 
-    fmt::println("");
+    ServerInstance->Logs.Normal("MODULE", "Core modules loaded");
 }

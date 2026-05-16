@@ -37,6 +37,22 @@
 
 #include "inspircd.h"
 
+extern "C" int rust_socketengine_close(int fd);
+extern "C" int rust_socketengine_blocking(int fd);
+extern "C" int rust_socketengine_nonblocking(int fd);
+extern "C" void rust_socketengine_stats_update_read_counters(ssize_t len_in, uint64_t* read_events, size_t* indata, uint64_t* error_events);
+extern "C" void rust_socketengine_stats_update_write_counters(ssize_t len_out, uint64_t* write_events, size_t* outdata, uint64_t* error_events);
+extern "C" void rust_socketengine_stats_get_bandwidth(size_t indata, size_t outdata, float* kbitpersec_in, float* kbitpersec_out, float* kbitpersec_total);
+extern "C" int rust_socketengine_connect(int fd, const sockaddr* addr, socklen_t addrlen);
+extern "C" int rust_socketengine_bind(int fd, const sockaddr* addr, socklen_t addrlen);
+extern "C" int rust_socketengine_shutdown(int fd, int how);
+extern "C" int rust_socketengine_listen(int fd, int backlog);
+extern "C" int rust_socketengine_accept(int fd, sockaddr* addr, socklen_t* addrlen);
+extern "C" ssize_t rust_socketengine_recvfrom(int fd, void* buf, size_t len, int flags, sockaddr* from, socklen_t* fromlen);
+extern "C" ssize_t rust_socketengine_send(int fd, const void* buf, size_t len, int flags);
+extern "C" ssize_t rust_socketengine_recv(int fd, void* buf, size_t len, int flags);
+extern "C" ssize_t rust_socketengine_sendto(int fd, const void* buf, size_t len, int flags, const sockaddr* to, socklen_t tolen);
+
 /** Reference table, contains all current handlers
  **/
 std::vector<EventHandler*> SocketEngine::ref;
@@ -174,7 +190,7 @@ EventHandler* SocketEngine::GetRef(int fd)
 
 int SocketEngine::Accept(EventHandler* eh, sockaddr* addr, socklen_t* addrlen)
 {
-	return accept(eh->GetFd(), addr, addrlen);
+	return rust_socketengine_accept(eh->GetFd(), addr, addrlen);
 }
 
 int SocketEngine::Close(EventHandler* eh)
@@ -187,59 +203,43 @@ int SocketEngine::Close(EventHandler* eh)
 
 int SocketEngine::Close(int fd)
 {
-#ifdef _WIN32
-	return closesocket(fd);
-#else
-	return close(fd);
-#endif
+	return rust_socketengine_close(fd);
 }
 
 int SocketEngine::Blocking(int fd)
 {
-#ifdef _WIN32
-	unsigned long opt = 0;
-	return ioctlsocket(fd, FIONBIO, &opt);
-#else
-	int flags = fcntl(fd, F_GETFL, 0);
-	return fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
-#endif
+	return rust_socketengine_blocking(fd);
 }
 
 int SocketEngine::NonBlocking(int fd)
 {
-#ifdef _WIN32
-	unsigned long opt = 1;
-	return ioctlsocket(fd, FIONBIO, &opt);
-#else
-	int flags = fcntl(fd, F_GETFL, 0);
-	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-#endif
+	return rust_socketengine_nonblocking(fd);
 }
 
 ssize_t SocketEngine::RecvFrom(EventHandler* eh, void* buf, size_t len, int flags, sockaddr* from, socklen_t* fromlen)
 {
-	ssize_t nbRecvd = recvfrom(eh->GetFd(), static_cast<char*>(buf), len, flags, from, fromlen);
+	ssize_t nbRecvd = rust_socketengine_recvfrom(eh->GetFd(), buf, len, flags, from, fromlen);
 	stats.UpdateReadCounters(nbRecvd);
 	return nbRecvd;
 }
 
 ssize_t SocketEngine::Send(EventHandler* eh, const void* buf, size_t len, int flags)
 {
-	ssize_t nbSent = send(eh->GetFd(), static_cast<const char*>(buf), len, flags);
+	ssize_t nbSent = rust_socketengine_send(eh->GetFd(), buf, len, flags);
 	stats.UpdateWriteCounters(nbSent);
 	return nbSent;
 }
 
 ssize_t SocketEngine::Recv(EventHandler* eh, void* buf, size_t len, int flags)
 {
-	ssize_t nbRecvd = recv(eh->GetFd(), static_cast<char*>(buf), len, flags);
+	ssize_t nbRecvd = rust_socketengine_recv(eh->GetFd(), buf, len, flags);
 	stats.UpdateReadCounters(nbRecvd);
 	return nbRecvd;
 }
 
 ssize_t SocketEngine::SendTo(EventHandler* eh, const void* buf, size_t len, int flags, const irc::sockets::sockaddrs& address)
 {
-	ssize_t nbSent = sendto(eh->GetFd(), static_cast<const char*>(buf), len, flags, &address.sa, address.sa_size());
+	ssize_t nbSent = rust_socketengine_sendto(eh->GetFd(), buf, len, flags, &address.sa, address.sa_size());
 	stats.UpdateWriteCounters(nbSent);
 	return nbSent;
 }
@@ -272,49 +272,36 @@ int SocketEngine::WriteV(EventHandler* eh, const iovec* iovec, int count)
 
 int SocketEngine::Connect(EventHandler* eh, const irc::sockets::sockaddrs& address)
 {
-	int ret = connect(eh->GetFd(), &address.sa, address.sa_size());
-#ifdef _WIN32
-	if ((ret == SOCKET_ERROR) && (WSAGetLastError() == WSAEWOULDBLOCK))
-		errno = EINPROGRESS;
-#endif
-	return ret;
+	return rust_socketengine_connect(eh->GetFd(), &address.sa, address.sa_size());
 }
 
 int SocketEngine::Shutdown(EventHandler* eh, int how)
 {
-	return shutdown(eh->GetFd(), how);
+	return rust_socketengine_shutdown(eh->GetFd(), how);
 }
 
 int SocketEngine::Bind(EventHandler* eh, const irc::sockets::sockaddrs& addr)
 {
-	return bind(eh->GetFd(), &addr.sa, addr.sa_size());
+	return rust_socketengine_bind(eh->GetFd(), &addr.sa, addr.sa_size());
 }
 
 int SocketEngine::Listen(EventHandler* eh, int backlog)
 {
-	return listen(eh->GetFd(), backlog);
+	return rust_socketengine_listen(eh->GetFd(), backlog);
 }
 
 void SocketEngine::Statistics::UpdateReadCounters(ssize_t len_in)
 {
 	CheckFlush();
 
-	ReadEvents++;
-	if (len_in > 0)
-		indata += static_cast<size_t>(len_in);
-	else if (len_in < 0)
-		ErrorEvents++;
+	rust_socketengine_stats_update_read_counters(len_in, &ReadEvents, &indata, &ErrorEvents);
 }
 
 void SocketEngine::Statistics::UpdateWriteCounters(ssize_t len_out)
 {
 	CheckFlush();
 
-	WriteEvents++;
-	if (len_out > 0)
-		outdata += static_cast<size_t>(len_out);
-	else if (len_out < 0)
-		ErrorEvents++;
+	rust_socketengine_stats_update_write_counters(len_out, &WriteEvents, &outdata, &ErrorEvents);
 }
 
 void SocketEngine::Statistics::CheckFlush() const
@@ -331,11 +318,7 @@ void SocketEngine::Statistics::CheckFlush() const
 void SocketEngine::Statistics::GetBandwidth(float& kbitpersec_in, float& kbitpersec_out, float& kbitpersec_total) const
 {
 	CheckFlush();
-	float in_kbit = static_cast<float>(indata) * 8;
-	float out_kbit = static_cast<float>(outdata) * 8;
-	kbitpersec_total = ((in_kbit + out_kbit) / 1024);
-	kbitpersec_in = in_kbit / 1024;
-	kbitpersec_out = out_kbit / 1024;
+	rust_socketengine_stats_get_bandwidth(indata, outdata, &kbitpersec_in, &kbitpersec_out, &kbitpersec_total);
 }
 
 std::string SocketEngine::LastError()

@@ -15,7 +15,7 @@
 
 #![allow(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::{c_char, CString};
+use std::ffi::c_char;
 use libc::{AF_INET, AF_INET6};
 use crate::wildcard;
 use crate::hashcomp;

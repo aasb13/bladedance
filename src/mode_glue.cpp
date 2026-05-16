@@ -31,6 +31,12 @@
 #include "clientprotocolevent.h"
 #include "numerichelper.h"
 
+extern "C" {
+	bool ModeParser_IsModeChar(char chr);
+	size_t ModeParser_GetModeIndex(char chr);
+	void ModeParser_CleanMask(std::string* mask);
+}
+
 ModeHandler::ModeHandler(Module* Creator, const std::string& Name, char modeletter, ParamSpec Params, ModeType type, Class mclass)
 	: ServiceProvider(Creator, Name, SERVICE_MODE)
 	, modeid(ModeParser::MODEID_MAX)
@@ -501,45 +507,7 @@ void ModeParser::ShowListModeList(User* user, Channel* chan, ModeHandler* mh)
 
 void ModeParser::CleanMask(std::string& mask)
 {
-	auto pos_of_pling    = mask.find_first_of('!');
-	auto pos_of_at       = mask.find_first_of('@',  pos_of_pling == std::string::npos ? 0 : pos_of_pling);
-	auto pos_of_hostchar = mask.find_first_of(":.", pos_of_at    == std::string::npos ? 0 : pos_of_at);
-
-	if (pos_of_pling == mask.length()-1 || pos_of_at == mask.length()-1)
-	{
-		// Malformed mask; needs * after the ! or @.
-		mask.append("*");
-	}
-
-	if (pos_of_pling == 0 || pos_of_at == 0)
-	{
-		// Malformed mask; needs * before the ! or @.
-		mask.insert(0, "*");
-	}
-
-	if (pos_of_pling == std::string::npos && pos_of_at == std::string::npos)
-	{
-		if (pos_of_hostchar == std::string::npos)
-			mask.append("!*@*"); // The mask looks like "nick".
-		else
-			mask.insert(0, "*!*@"); // The mask looks like "host".
-	}
-	else if (pos_of_pling == std::string::npos && pos_of_at != std::string::npos)
-	{
-		// The mask looks like "user@host".
-		mask.insert(0, "*!");
-
-	}
-	else if (pos_of_pling != std::string::npos && pos_of_at == std::string::npos)
-	{
-		// The mask looks like "nick!user".
-		mask.append("@*");
-	}
-	else if (pos_of_at-pos_of_pling == 1)
-	{
-		// The mask looks like "nick!@host".
-		mask.insert(pos_of_at, "*");
-	}
+	ModeParser_CleanMask(&mask);
 }
 
 ModeHandler::Id ModeParser::AllocateModeId(ModeHandler* mh)
@@ -778,25 +746,12 @@ void PrefixMode::RemoveMode(Channel* chan, Modes::ChangeList& changelist)
 
 bool ModeParser::IsModeChar(char chr)
 {
-	return ((chr >= '0' && chr <= '9') || (chr >= 'A' && chr <= 'Z') || (chr >= 'a' && chr <= 'z'));
+	return ModeParser_IsModeChar(chr);
 }
 
 size_t ModeParser::GetModeIndex(char chr)
 {
-	// Bitset layout:
-	//   0123456789                 = 10 [0-9]
-	//   ABCDEFGHIJKLMNOPQRSTUVWXYZ = 26 [10-35]
-	//   abcdefghijklmnopqrstuvwxyz = 26 [36-61]
-	if (chr >= '0' && chr <= '9')
-		return chr - '0';
-
-	if (chr >= 'A' && chr <= 'Z')
-		return chr - 'A' + 10; // [0-9] = 10
-
-	if (chr >= 'a' && chr <= 'z')
-		return chr - 'a' + 36; // [0-9]+[A-Z] = 10+26 = 36
-
-	return ModeParser::MODEID_MAX;
+	return ModeParser_GetModeIndex(chr);
 }
 
 ModeParser::ModeParser()

@@ -115,11 +115,33 @@ public:
 		return *this;
 	}
 
-	inline T* ptr() const { return value; }
-	inline operator bool() const { return (value != nullptr); }
-	inline operator T*() const { return value; }
-	inline T* operator->() const { return value; }
-	inline T& operator*() const { return *value; }
+	inline T* ptr() const {
+		if (!value) {
+			return nullptr;
+		}
+		return value; 
+	}
+	inline operator bool() const {
+		return (value != nullptr);
+	}
+	inline operator T*() const {
+		if (!value) {
+			return nullptr;
+		}
+		return value; 
+	}
+	inline T* operator->() const {
+		if (!value) {
+			return nullptr;
+		}
+		return value;
+	}
+	inline T& operator*() const {
+		if (!value) {
+			return nullptr;
+		}
+		return *value;
+	}
 	inline bool operator<(const reference<T>& other) const { return value < other.value; }
 	inline bool operator>(const reference<T>& other) const { return value > other.value; }
 	static inline void* operator new(size_t, void* m) { return m; }

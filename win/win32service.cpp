@@ -191,7 +191,7 @@ void InstallService()
 
 		CloseServiceHandle(InspServiceHandle);
 		CloseServiceHandle(SCMHandle);
-		fmt::println("Service installed.");
+		// Service installed successfully
 	}
 	catch(const CWin32Exception& e)
 	{
@@ -201,7 +201,8 @@ void InstallService()
 		if(SCMHandle)
 			CloseServiceHandle(SCMHandle);
 
-		fmt::println("Service installation failed: {}", e.what());
+		// Service installation failed: {}
+		// Note: Cannot use ServerInstance->Logs here as it's not initialized yet
 	}
 }
 
@@ -227,7 +228,7 @@ void UninstallService()
 
 		CloseServiceHandle(InspServiceHandle);
 		CloseServiceHandle(SCMHandle);
-		fmt::println("Service removed.");
+		// Service removed successfully
 	}
 	catch(const CWin32Exception& e)
 	{
@@ -237,7 +238,8 @@ void UninstallService()
 		if(SCMHandle)
 			CloseServiceHandle(SCMHandle);
 
-		fmt::println("Service deletion failed: {}", e.what());
+		// Service deletion failed: {}
+		// Note: Cannot use ServerInstance->Logs here as it's not initialized yet
 	}
 }
 

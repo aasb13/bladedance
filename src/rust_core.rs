@@ -21,6 +21,8 @@ pub mod helperfuncs;
 pub mod xline;
 pub mod clientprotocol;
 pub mod commands;
+pub mod socketengine;
+pub mod mode;
 
 use tracing_subscriber;
 
