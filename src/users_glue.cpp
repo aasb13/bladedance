@@ -577,7 +577,7 @@ void User::ChangeRemoteAddress(const irc::sockets::sockaddrs& sa)
 {
 	const std::string oldip(client_sa.family() == AF_UNSPEC ? "" : GetAddress());
 	memcpy(&client_sa, &sa, sizeof(irc::sockets::sockaddrs));
-	this->InvalidateCache();
+	rust_user_invalidate_cache(this);
 
 	// If the users hostname was their IP then update it.
 	if (GetRealHost() == oldip)
@@ -984,7 +984,7 @@ void User::ChangeDisplayedUser(const std::string& newuser)
 		this->displayuser.assign(tnewuser);
 	this->displayuser.shrink_to_fit();
 
-	this->InvalidateCache();
+	rust_user_invalidate_cache(this);
 }
 
 void User::PurgeEmptyChannels()

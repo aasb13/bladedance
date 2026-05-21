@@ -23,6 +23,7 @@ pub mod clientprotocol;
 pub mod commands;
 pub mod socketengine;
 pub mod mode;
+pub mod thread;
 
 use tracing_subscriber;
 
