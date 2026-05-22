@@ -11,7 +11,7 @@ use winapi::shared::ws2def::SOCKADDR as sockaddr_alias;
 use std::os::raw::c_void;
 
 #[cfg(not(target_os = "windows"))]
-use libc::{close, fcntl, F_GETFL, F_SETFL, O_NONBLOCK, connect, bind, shutdown, listen, accept, socklen_t};
+use libc::{close, fcntl, F_GETFL, F_SETFL, O_NONBLOCK, connect, bind, shutdown, listen, accept, socklen_t, setsockopt};
 
 type ssize_t = libc::ssize_t;
 type uint64_t = libc::uint64_t;

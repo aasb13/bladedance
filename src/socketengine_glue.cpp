@@ -52,6 +52,7 @@ extern "C" ssize_t rust_socketengine_recvfrom(int fd, void* buf, size_t len, int
 extern "C" ssize_t rust_socketengine_send(int fd, const void* buf, size_t len, int flags);
 extern "C" ssize_t rust_socketengine_recv(int fd, void* buf, size_t len, int flags);
 extern "C" ssize_t rust_socketengine_sendto(int fd, const void* buf, size_t len, int flags, const sockaddr* to, socklen_t tolen);
+extern "C" int rust_socketengine_set_option(int fd, int level, int name, int value);
 
 /** Reference table, contains all current handlers
  **/
@@ -340,5 +341,15 @@ std::string SocketEngine::GetError(int errnum)
 #else
 	WSASetLastError(errnum);
 	return LastError();
+#endif
+}
+
+extern "C" int rust_socketengine_set_option(int fd, int level, int name, int value)
+{
+#ifndef _WIN32
+	return setsockopt(fd, level, name, &value, sizeof(value));
+#else
+	// Windows setsockopt takes a const char* for the value parameter
+	return setsockopt(fd, level, name, (const char*)&value, sizeof(value));
 #endif
 }

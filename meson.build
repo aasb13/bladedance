@@ -65,7 +65,7 @@ core_src_list = files(
   'src/hashcomp_glue.cpp',
   'src/helperfuncs_glue.cpp',
   'src/inspircd_glue.cpp',
-  'src/listensocket.cpp',
+  'src/listensocket_glue.cpp',
   'src/listmode.cpp',
   'src/logging_glue.cpp',
   'src/mode_glue.cpp',

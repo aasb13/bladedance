@@ -18,3 +18,4 @@
 
 /win/Win32
 /win/*.dir
+/src/rust/target
