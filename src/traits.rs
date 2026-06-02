@@ -1,3 +1,7 @@
+// This file is a Rust port of a corresponding InspIRCd module.
+// Original work Copyright (C) the InspIRCd contributors.
+// Licensed under GPLv2. See LICENSE for details.
+
 use async_trait::async_trait;
 use crate::users::User;
 

@@ -1,3 +1,7 @@
+// This file is a Rust port of a corresponding InspIRCd module.
+// Original work Copyright (C) the InspIRCd contributors.
+// Licensed under GPLv2. See LICENSE for details.
+
 use std::ffi::{c_char, CStr, CString};
 
 /// Escapes special characters in IRC message tags according to IRCv3 tag escaping rules.

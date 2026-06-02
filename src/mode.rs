@@ -1,3 +1,7 @@
+// This file is a Rust port of a corresponding InspIRCd module.
+// Original work Copyright (C) the InspIRCd contributors.
+// Licensed under GPLv2. See LICENSE for details.
+
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]

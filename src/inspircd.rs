@@ -1,3 +1,7 @@
+// This file is a Rust port of a corresponding InspIRCd module.
+// Original work Copyright (C) the InspIRCd contributors.
+// Licensed under GPLv2. See LICENSE for details.
+
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
 use clap::{Parser, CommandFactory};
