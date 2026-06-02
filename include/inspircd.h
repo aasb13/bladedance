@@ -285,10 +285,6 @@ public:
 	 */
 	bool BindPort(const std::shared_ptr<ConfigTag>& tag, const irc::sockets::sockaddrs& sa, std::vector<ListenSocket*>& oldports, sa_family_t protocol);
 
-	/** Binds all ports specified in the configuration file.
-	 * @param failedports The location to store details about the ports that failed to bind.
-	 * @return The number of ports bound without error.
-	 */
 	size_t BindPorts(FailedPortList& failedports);
 
 	/** Compares a password to a hashed password.

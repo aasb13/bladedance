@@ -24,6 +24,7 @@ pub mod commands;
 pub mod socketengine;
 pub mod mode;
 pub mod thread;
+pub mod socket;
 pub mod listensocket;
 
 use tracing_subscriber;

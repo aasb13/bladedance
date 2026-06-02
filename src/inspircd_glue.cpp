@@ -323,34 +323,6 @@ namespace
 		signal(SIGTERM, InspIRCd::SetSignal);
 	}
 
-	void TryBindPorts()
-	{
-		FailedPortList pl;
-		ServerInstance->BindPorts(pl);
-
-		if (!pl.empty())
-		{
-			fmt::println("{} Some of your listeners failed to bind:", fmt::styled("Warning!", fmt::emphasis::bold | fmt::fg(fmt::terminal_color::red)));
-			fmt::println("");
-
-			for (const auto& fp : pl)
-			{
-				fmt::print("  ");
-				if (fp.sa.family() != AF_UNSPEC)
-					fmt::print("{}: ", fmt::styled(fp.sa.str(), fmt::emphasis::bold));
-
-				fmt::println("{}.", fp.error);
-				fmt::println("Created from <bind> tag at {}", fp.tag->source.str());
-				fmt::println("");
-			}
-
-			fmt::println("{}", fmt::styled("Hints:", fmt::emphasis::bold));
-			fmt::println("- For TCP/IP listeners try using a public IP address in <bind:address> instead");
-			fmt::println("  of * or leaving it blank.");
-			fmt::println("- For UNIX socket listeners try enabling <bind:replace> to replace old sockets.");
-		}
-	}
-
 	// Required for returning the proper value of EXIT_SUCCESS for the parent process.
 	void VoidSignalHandler(int)
 	{
@@ -498,7 +470,27 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	// This is needed as all new XLines are marked pending until ApplyLines() is called
 	this->XLines->ApplyLines();
 
-	TryBindPorts();
+	FailedPortList pl;
+	ServerInstance->BindPorts(pl);
+
+	if (!pl.empty())
+	{
+		this->Logs.Critical("STARTUP", "Some of your listeners failed to bind:");
+
+		for (const auto& fp : pl)
+		{
+			if (fp.sa.family() != AF_UNSPEC)
+			this->Logs.Critical("STARTUP", "{}: ", fp.sa.str());
+
+			this->Logs.Critical("STARTUP", "{}.", fp.error);
+			this->Logs.Critical("STARTUP", "Created from <bind> tag at {}", fp.tag->source.str());
+		}
+
+		this->Logs.Critical("STARTUP", "Hints");
+		this->Logs.Critical("STARTUP","- For TCP/IP listeners try using a public IP address in <bind:address> instead");
+		this->Logs.Critical("STARTUP","  of * or leaving it blank.");
+		this->Logs.Critical("STARTUP","- For UNIX socket listeners try enabling <bind:replace> to replace old sockets.");
+	}
 
 	inspircd_async_init();
 

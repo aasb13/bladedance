@@ -73,7 +73,7 @@ core_src_list = files(
   'src/modules_glue.cpp',
   'src/server.cpp',
   'src/snomasks_glue.cpp',
-  'src/socket.cpp',
+  'src/socket_glue.cpp',
   'src/socketengine_glue.cpp',
   'src/streamsocket.cpp',
   'src/thread_glue.cpp',

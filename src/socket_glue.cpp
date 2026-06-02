@@ -31,22 +31,7 @@
 #include "inspircd.h"
 #include "utility/string.h"
 
-namespace
-{
-#ifdef IPPROTO_SCTP
-	// Checks whether the system can create SCTP sockets.
-	bool CanCreateSCTPSocket()
-	{
-		int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-		if (fd >= 0)
-		{
-			SocketEngine::Close(fd);
-			return true;
-		}
-		return false;
-	}
-#endif
-}
+extern "C" bool rust_CanCreateSCTPSocket();
 
 bool InspIRCd::BindPort(const std::shared_ptr<ConfigTag>& tag, const irc::sockets::sockaddrs& sa, std::vector<ListenSocket*>& old_ports, sa_family_t protocol)
 {
@@ -69,7 +54,7 @@ bool InspIRCd::BindPort(const std::shared_ptr<ConfigTag>& tag, const irc::socket
 	auto* ll = new ListenSocket(tag, sa, protocol);
 	if (!ll->HasFd())
 	{
-		ServerInstance->Logs.Normal("SOCKET", "Failed to listen on {} from tag at {}: {}",
+		ServerInstance->Logs.Warning("SOCKET", "Failed to listen on {} from tag at {}: {}",
 			sa.str(), tag->source.str(), SocketEngine::LastError());
 		delete ll;
 		return false;
@@ -143,7 +128,7 @@ size_t InspIRCd::BindPorts(FailedPortList& failed_ports)
 					{
 						protocols.push_back(0); // IPPROTO_TCP
 #ifdef IPPROTO_SCTP
-						if (CanCreateSCTPSocket())
+						if (rust_CanCreateSCTPSocket())
 							protocols.push_back(IPPROTO_SCTP);
 #endif
 					}
