@@ -1,1 +1,1 @@
-./run/inspircd restart
+./run/bin/inspircd

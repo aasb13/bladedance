@@ -17,3 +17,7 @@ It is under active, opinionated development and is **not** intended to be a drop
 ```
 
 NOTE: Windows is **not supported** until a stable version is released.
+
+## Todo
+
+- [ ] Move the config system to TOML
