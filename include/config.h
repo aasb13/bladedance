@@ -32,22 +32,22 @@
 #define INSPIRCD_VERSION_SINCE(MAJOR, MINOR) (((4 << 8) | 10) >= ((MAJOR << 8) | (MINOR)))
 
 /** The default location that config files are stored in. */
-#define INSPIRCD_CONFIG_PATH "/home/dr/inspircd/run/conf"
+#define INSPIRCD_CONFIG_PATH "./run/conf"
 
 /** The default location that example config files are stored in. */
-#define INSPIRCD_EXAMPLE_PATH "/home/dr/inspircd/run/conf/examples"
+#define INSPIRCD_EXAMPLE_PATH "./run/conf/examples"
 
 /** The default location that data files are stored in. */
-#define INSPIRCD_DATA_PATH "/home/dr/inspircd/run/data"
+#define INSPIRCD_DATA_PATH "./run/data"
 
 /** The default location that log files are stored in. */
-#define INSPIRCD_LOG_PATH "/home/dr/inspircd/run/logs"
+#define INSPIRCD_LOG_PATH "./run/logs"
 
 /** The default location that module files are stored in. */
-#define INSPIRCD_MODULE_PATH "/home/dr/inspircd/run/modules"
+#define INSPIRCD_MODULE_PATH "./run/modules"
 
 /** The default location that runtime files are stored in. */
-#define INSPIRCD_RUNTIME_PATH "/home/dr/inspircd/run/data"
+#define INSPIRCD_RUNTIME_PATH "./run/data"
 
 /** The URL of the InspIRCd docs site. */
 #define INSPIRCD_DOCS "https://docs.inspircd.org/4/"

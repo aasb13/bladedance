@@ -1,11 +1,11 @@
-project('privirc', 'cpp', 'rust',
+project('bladedance', 'cpp', 'rust',
   version: '4.10.1',
   default_options: [
     'cpp_std=c++26',
     'rust_std=2024',
     'warning_level=3',
     'buildtype=release',
-    'prefix=/home/dr/inspircd/run',
+    'prefix=' + meson.current_source_dir() / 'run',
   ]
 )
 
