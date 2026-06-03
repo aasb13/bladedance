@@ -46,6 +46,3 @@ done
 meson compile -C build
 cp build/cargo/release/librust_core.a build/librust_core.a
 meson install -C build
-
-cd run
-./inspircd restart
