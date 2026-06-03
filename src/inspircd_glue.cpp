@@ -99,7 +99,8 @@ extern "C" {
     }
 }
 
-__attribute__((visibility("default"), used, retain)) std::function<int(User*)> GetUserLevel = [](User*) { return 0; };
+// 1 for now
+__attribute__((visibility("default"), used, retain)) std::function<int(User*)> GetUserLevel = [](User*) { return 1; };
 
 InspIRCd* ServerInstance = nullptr;
 
