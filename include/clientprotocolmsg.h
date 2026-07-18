@@ -104,7 +104,7 @@ public:
 /** JOIN message.
  * Sent when a user joins a channel.
  */
-class CoreExport ClientProtocol::Messages::Join
+class __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Join
 	: public ClientProtocol::Message
 {
 	Membership* memb;
@@ -155,7 +155,7 @@ public:
 /** PART message.
  * Sent when a user parts a channel.
  */
-struct CoreExport ClientProtocol::Messages::Part
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Part
 	: public ClientProtocol::Message
 {
 	/** Constructor.
@@ -174,7 +174,7 @@ struct CoreExport ClientProtocol::Messages::Part
 /** KICK message.
  * Sent when a user is kicked from a channel.
  */
-struct CoreExport ClientProtocol::Messages::Kick
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Kick
 	: public ClientProtocol::Message
 {
 	/** Constructor.
@@ -194,7 +194,7 @@ struct CoreExport ClientProtocol::Messages::Kick
 /** QUIT message.
  * Sent when a user quits.
  */
-struct CoreExport ClientProtocol::Messages::Quit
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Quit
 	: public ClientProtocol::Message
 {
 	/** Constructor.
@@ -212,7 +212,7 @@ struct CoreExport ClientProtocol::Messages::Quit
 /** NICK message.
  * Sent when a user changes their nickname.
  */
-struct CoreExport ClientProtocol::Messages::Nick
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Nick
 	: public ClientProtocol::Message
 {
 	/** Constructor.
@@ -229,7 +229,7 @@ struct CoreExport ClientProtocol::Messages::Nick
 /** MODE message.
  * Sent when modes are changed on a user or channel.
  */
-class CoreExport ClientProtocol::Messages::Mode
+class __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Mode
 	: public ClientProtocol::Message
 {
 	Channel* chantarget;
@@ -413,7 +413,7 @@ struct CoreExport ClientProtocol::Messages::Topic
 
 /** PRIVMSG and NOTICE message.
  */
-class CoreExport ClientProtocol::Messages::Privmsg
+class __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Privmsg
 	: public ClientProtocol::Message
 {
 	void PushTargetChan(char status, const Channel* targetchan)
@@ -645,7 +645,7 @@ struct CoreExport ClientProtocol::Messages::Invite
 /** PING message.
  * Used to check if a connection is still alive.
  */
-struct CoreExport ClientProtocol::Messages::Ping
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Ping
 	: public ClientProtocol::Message
 {
 	/** Constructor.
@@ -670,7 +670,7 @@ struct CoreExport ClientProtocol::Messages::Ping
 /** PONG message.
  * Sent as a reply to PING.
  */
-struct CoreExport ClientProtocol::Messages::Pong
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Pong
 	: public ClientProtocol::Message
 {
 	/** Constructor.

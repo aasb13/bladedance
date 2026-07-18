@@ -30,7 +30,7 @@
  * call command handlers by name, and chop up comma separated
  * parameters into multiple calls.
  */
-class CoreExport CommandParser final
+class __attribute__ ((visibility ("default"))) CommandParser final
 {
 public:
 	typedef std::unordered_map<std::string, Command*, irc::insensitive, irc::StrHashComp> CommandMap;

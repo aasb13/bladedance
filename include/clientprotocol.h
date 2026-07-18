@@ -34,7 +34,7 @@ namespace ClientProtocol
 /** Contains a message parsed from wire format.
  * Used by Serializer::Parse().
  */
-struct CoreExport ClientProtocol::ParseOutput final
+struct __attribute__ ((visibility ("default"))) ClientProtocol::ParseOutput final
 {
 	/** Command name, must not be empty.
 	 */
@@ -51,7 +51,7 @@ struct CoreExport ClientProtocol::ParseOutput final
 
 /** A selection of zero or more tags in a TagMap.
  */
-class CoreExport ClientProtocol::TagSelection final
+class __attribute__ ((visibility ("default"))) ClientProtocol::TagSelection final
 {
 	std::bitset<64> selection;
 
@@ -90,7 +90,7 @@ public:
 	}
 };
 
-class CoreExport ClientProtocol::MessageSource
+class __attribute__ ((visibility ("default"))) ClientProtocol::MessageSource
 {
  protected:
 	User* sourceuser;
@@ -188,7 +188,7 @@ public:
  * All messages have a command name, a list of parameters and a map of tags, the last two can be empty.
  * They also always have a source, see class MessageSource.
  */
-class CoreExport ClientProtocol::Message
+class __attribute__ ((visibility ("default"))) ClientProtocol::Message
 	: public ClientProtocol::MessageSource
 {
 public:
@@ -560,7 +560,7 @@ public:
  * with tags before the message is sent and they have the job of determining whether a user should
  * get a message tag or be allowed to send one.
  */
-class CoreExport ClientProtocol::MessageTagProvider
+class __attribute__ ((visibility ("default"))) ClientProtocol::MessageTagProvider
 	: public Events::ModuleEventListener
 {
 public:
@@ -654,7 +654,7 @@ public:
  * Protocol event hooks can be attached to the instances of these providers. The core has event
  * providers for most common IRC events defined in RFC1459.
  */
-class CoreExport ClientProtocol::EventProvider final
+class __attribute__ ((visibility ("default"))) ClientProtocol::EventProvider final
 	: public Events::ModuleEventProvider
 {
 public:

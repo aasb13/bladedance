@@ -50,7 +50,7 @@ bool BanCacheHit_IsPositive(void* ptr);
  * entries expire every few hours, which is a reasonable expiry for any reasonable
  * sized network.
  */
-class CoreExport BanCacheHit final
+class __attribute__ ((visibility ("default"))) BanCacheHit final
 {
 public:
 	/** Type of cached ban
@@ -72,7 +72,7 @@ public:
 
 /** A manager for ban cache, which allocates and deallocates and checks cached bans.
  */
-class CoreExport BanCacheManager final
+class __attribute__ ((visibility ("default"))) BanCacheManager final
 {
 	void* ptr; // opaque Rust pointer
 

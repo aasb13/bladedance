@@ -38,7 +38,7 @@
  * This class represents a channel, and contains its name, modes, topic, topic set time,
  * etc, and an instance of the BanList type.
  */
-class CoreExport Channel final
+class __attribute__ ((visibility ("default"))) Channel final
 	: public Extensible
 {
 public:

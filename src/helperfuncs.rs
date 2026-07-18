@@ -987,7 +987,7 @@ mod tests {
         assert!(!is_valid_mask("", 100));
         
         // Invalid masks: too long
-        assert!(!is_valid_mask("a!b@" + &"c".repeat(100), 10));
+        assert!(!is_valid_mask(&format!("a!b@{}", "c".repeat(100)), 10));
         
         // Invalid masks: no exclamation mark
         assert!(!is_valid_mask("nickuser@host", 100));

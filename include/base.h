@@ -46,7 +46,7 @@
  * at least one reference<> will remain as long as that pointer is used; this
  * will avoid the slight overhead of changing the reference count.
  */
-class CoreExport refcountbase
+class __attribute__ ((visibility ("default"))) refcountbase
 	: private insp::uncopiable
 {
 	mutable unsigned int refcount = 0;
@@ -66,7 +66,7 @@ public:
  *
  * Safe for use as a second parent class; will not add a second vtable.
  */
-class CoreExport usecountbase
+class __attribute__ ((visibility ("default"))) usecountbase
 	: private insp::uncopiable
 {
 	mutable unsigned int usecount = 0;
@@ -170,7 +170,7 @@ enum ServiceType {
 };
 
 /** A structure defining something that a module can provide */
-class CoreExport ServiceProvider
+class __attribute__ ((visibility ("default"))) ServiceProvider
 {
 public:
 	/** Module that is providing this service */
@@ -193,7 +193,7 @@ public:
 	void DisableAutoRegister();
 };
 
-class CoreExport DataProvider
+class __attribute__ ((visibility ("default"))) DataProvider
 	: public ServiceProvider
 {
 public:

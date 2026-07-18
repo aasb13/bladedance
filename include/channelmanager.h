@@ -23,7 +23,7 @@
 typedef std::unordered_map<std::string, Channel*, irc::insensitive, irc::StrHashComp> ChannelMap;
 
 /** Manages state relating to channels. */
-class CoreExport ChannelManager final
+class __attribute__ ((visibility ("default"))) ChannelManager final
 {
 	friend struct ChannelManagerRustAccess;
 
@@ -60,7 +60,7 @@ public:
 };
 
 /** Private member access for Rust channelmanager port. */
-struct CoreExport ChannelManagerRustAccess
+struct __attribute__ ((visibility ("default"))) ChannelManagerRustAccess
 {
 	static Channel* Find(const ChannelManager* cm, const std::string& channel);
 };
