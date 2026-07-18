@@ -49,6 +49,9 @@ extern "C" {
 	void helperfuncs_free_string(char* ptr);
 	int helperfuncs_is_sid(const char* sid);
 	int helperfuncs_is_nick(const char* nick, size_t max_len);
+	int helperfuncs_is_user(const char* user, size_t max_len);
+	int helperfuncs_is_valid_mask(const char* mask, size_t max_len);
+	int helperfuncs_is_host(const char* host, size_t max_len, int allowsimple);
 }
 
 bool InspIRCd::CheckPassword(const std::string& password, const std::string& passwordhash, const std::string& value)
@@ -73,37 +76,13 @@ bool InspIRCd::CheckPassword(const std::string& password, const std::string& pas
 
 bool InspIRCd::IsValidMask(const std::string& mask)
 {
-	const char* dest = mask.c_str();
-	int exclamation = 0;
-	int atsign = 0;
-
-	for (const char* i = dest; *i; i++)
-	{
-		/* out of range character, bad mask */
-		if (*i < 32 || *i > 126)
-		{
-			return false;
-		}
-
-		switch (*i)
-		{
-			case '!':
-				exclamation++;
-				break;
-			case '@':
-				atsign++;
-				break;
-		}
-	}
-
-	/* valid masks only have 1 ! and @ */
-	if (exclamation != 1 || atsign != 1)
-		return false;
-
-	if (mask.length() > ServerInstance->Config->Limits.GetMaxMask())
-		return false;
-
-	return true;
+	// Delegate to Rust implementation
+	char buffer[1025] = {0};
+	const size_t len = std::min(mask.length(), sizeof(buffer) - 1);
+	mask.copy(buffer, len);
+	buffer[len] = '\0';
+	
+	return helperfuncs_is_valid_mask(buffer, ServerInstance->Config->Limits.GetMaxMask()) != 0;
 }
 
 void InspIRCd::StripColor(std::string& line)
@@ -142,80 +121,24 @@ bool InspIRCd::DefaultIsNick(const std::string_view& n)
 /* return true for good username, false else */
 bool InspIRCd::DefaultIsUser(const std::string_view& n)
 {
-	if (n.empty() || n.length() > ServerInstance->Config->Limits.MaxUser)
-		return false;
-
-	for (const auto chr : n)
-	{
-		if (chr >= 'A' && chr <= '}')
-			continue;
-
-		if ((chr >= '0' && chr <= '9') || chr == '-' || chr == '.')
-			continue;
-
-		return false;
-	}
-
-	return true;
+	// Delegate to Rust implementation
+	char buffer[1025] = {0};
+	const size_t len = std::min(n.length(), sizeof(buffer) - 1);
+	n.copy(buffer, len);
+	buffer[len] = '\0';
+	
+	return helperfuncs_is_user(buffer, ServerInstance->Config->Limits.MaxUser) != 0;
 }
 
 bool InspIRCd::IsHost(const std::string_view& host, bool allowsimple)
 {
-	// Hostnames must be non-empty and shorter than the maximum hostname length.
-	if (host.empty() || host.length() > ServerInstance->Config->Limits.MaxHost)
-		return false;
-
-	unsigned int numdashes = 0;
-	unsigned int numdots = 0;
-	bool seendot = false;
-	const auto hostend = host.end() - 1;
-	for (auto iter = host.begin(); iter != host.end(); ++iter)
-	{
-		const auto chr = static_cast<unsigned char>(*iter);
-
-		// If the current character is a label separator.
-		if (chr == '.')
-		{
-			numdots++;
-
-			// Consecutive separators are not allowed and dashes can not exist at the start or end
-			// of labels and separators must only exist between labels.
-			if (seendot || numdashes || iter == host.begin() || iter == hostend)
-				return false;
-
-			seendot = true;
-			continue;
-		}
-
-		// If this point is reached then the character is not a dot.
-		seendot = false;
-
-		// If the current character is a dash.
-		if (chr == '-')
-		{
-			// Consecutive separators are not allowed and dashes can not exist at the start or end
-			// of labels and separators must only exist between labels.
-			if (seendot || numdashes >= 2 || iter == host.begin() || iter == hostend)
-				return false;
-
-			numdashes += 1;
-			continue;
-		}
-
-		// If this point is reached then the character is not a dash.
-		numdashes = 0;
-
-		// Alphanumeric characters are allowed at any position.
-		if ((chr >= '0' && chr <= '9') || (chr >= 'A' && chr <= 'Z') || (chr >= 'a' && chr <= 'z'))
-			continue;
-
-		return false;
-	}
-
-	// Whilst simple hostnames (e.g. localhost) are valid we do not allow the server to use
-	// them to prevent issues with clients that differentiate between short client and server
-	// prefixes by checking whether the nickname contains a dot.
-	return numdots || allowsimple;
+	// Delegate to Rust implementation
+	char buffer[1025] = {0};
+	const size_t len = std::min(host.length(), sizeof(buffer) - 1);
+	host.copy(buffer, len);
+	buffer[len] = '\0';
+	
+	return helperfuncs_is_host(buffer, ServerInstance->Config->Limits.MaxHost, allowsimple ? 1 : 0) != 0;
 }
 
 bool InspIRCd::IsSID(const std::string_view& str)

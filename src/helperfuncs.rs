@@ -337,6 +337,118 @@ pub fn is_nick(nick: &str, max_len: usize) -> bool {
     true
 }
 
+/// Checks if a string is a valid IRC username.
+/// Valid usernames:
+/// - Must not be empty and must not exceed max_len
+/// - All characters must be in range 'A'-'}' or be '0'-'9', '-', or '.'
+pub fn is_user(user: &str, max_len: usize) -> bool {
+    if user.is_empty() || user.len() > max_len {
+        return false;
+    }
+    
+    for chr in user.chars() {
+        if (chr >= 'A' && chr <= '}') || (chr >= '0' && chr <= '9') || chr == '-' || chr == '.' {
+            continue;
+        }
+        return false;
+    }
+    
+    true
+}
+
+/// Checks if a string is a valid IRC mask (nick!user@host format).
+/// Valid masks:
+/// - Must contain exactly one '!' and one '@'
+/// - All characters must be printable ASCII (32-126)
+/// - Must not exceed max_len
+pub fn is_valid_mask(mask: &str, max_len: usize) -> bool {
+    if mask.is_empty() || mask.len() > max_len {
+        return false;
+    }
+    
+    let mut exclamation = 0;
+    let mut atsign = 0;
+    
+    for chr in mask.chars() {
+        // Check for out of range character
+        if chr < '\x20' || chr > '\x7e' {
+            return false;
+        }
+        
+        match chr {
+            '!' => exclamation += 1,
+            '@' => atsign += 1,
+            _ => {}
+        }
+    }
+    
+    // Valid masks must have exactly one '!' and one '@'
+    exclamation == 1 && atsign == 1
+}
+
+/// Checks if a string is a valid hostname.
+/// Valid hostnames:
+/// - Must not be empty and must not exceed max_len
+/// - Must contain at least one dot (unless allowsimple is true)
+/// - Labels separated by dots can contain alphanumeric chars and dashes
+/// - Dashes cannot be at start/end of labels or consecutive
+/// - Dots cannot be at start/end or consecutive
+pub fn is_host(host: &str, max_len: usize, allowsimple: bool) -> bool {
+    if host.is_empty() || host.len() > max_len {
+        return false;
+    }
+    
+    let bytes = host.as_bytes();
+    let mut numdashes = 0;
+    let mut numdots = 0;
+    let mut seendot = false;
+    let hostend = bytes.len() - 1;
+    
+    for (idx, &chr) in bytes.iter().enumerate() {
+        // If the current character is a label separator (dot)
+        if chr == b'.' {
+            numdots += 1;
+            
+            // Consecutive separators are not allowed and dashes can not exist at the start or end
+            // of labels and separators must only exist between labels.
+            if seendot || numdashes > 0 || idx == 0 || idx == hostend {
+                return false;
+            }
+            
+            seendot = true;
+            continue;
+        }
+        
+        // If this point is reached then the character is not a dot.
+        seendot = false;
+        
+        // If the current character is a dash
+        if chr == b'-' {
+            // Consecutive separators are not allowed and dashes can not exist at the start or end
+            // of labels and separators must only exist between labels.
+            if seendot || numdashes >= 2 || idx == 0 || idx == hostend {
+                return false;
+            }
+            
+            numdashes += 1;
+            continue;
+        }
+        
+        // If this point is reached then the character is not a dash.
+        numdashes = 0;
+        
+        // Alphanumeric characters are allowed at any position.
+        if !(chr.is_ascii_alphanumeric()) {
+            return false;
+        }
+    }
+    
+    // Whilst simple hostnames (e.g. localhost) are valid we do not allow the server to use
+    // them to prevent issues with clients that differentiate between short client and server
+    // prefixes by checking whether the nickname contains a dot.
+    numdots > 0 || allowsimple
+}
+
 /// Processes color escape sequences in a string.
 pub fn process_colors(line: &mut String) {
     let formats: HashMap<char, &str> = [
@@ -608,6 +720,51 @@ pub extern "C" fn helperfuncs_is_nick(nick: *const c_char, max_len: usize) -> c_
     if is_nick(str_slice, max_len) { 1 } else { 0 }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn helperfuncs_is_user(user: *const c_char, max_len: usize) -> c_int {
+    if user.is_null() {
+        return 0;
+    }
+    
+    let c_str = unsafe { CStr::from_ptr(user) };
+    let str_slice = match c_str.to_str() {
+        Ok(s) => s,
+        Err(_) => return 0,
+    };
+    
+    if is_user(str_slice, max_len) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn helperfuncs_is_valid_mask(mask: *const c_char, max_len: usize) -> c_int {
+    if mask.is_null() {
+        return 0;
+    }
+    
+    let c_str = unsafe { CStr::from_ptr(mask) };
+    let str_slice = match c_str.to_str() {
+        Ok(s) => s,
+        Err(_) => return 0,
+    };
+    
+    if is_valid_mask(str_slice, max_len) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn helperfuncs_is_host(host: *const c_char, max_len: usize, allowsimple: c_int) -> c_int {
+    if host.is_null() {
+        return 0;
+    }
+    
+    let c_str = unsafe { CStr::from_ptr(host) };
+    let str_slice = match c_str.to_str() {
+        Ok(s) => s,
+        Err(_) => return 0,
+    };
+    
+    if is_host(str_slice, max_len, allowsimple != 0) { 1 } else { 0 }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -716,5 +873,98 @@ mod tests {
         assert!(!is_nick("Test@User", 30)); // @ (64) is before A (65)
         assert!(!is_nick("Test User", 30)); // space (32) not allowed
         assert!(!is_nick("Test(User", 30)); // ( (40) not allowed
+    }
+
+    #[test]
+    fn test_is_user() {
+        // Valid usernames with max_len = 30
+        assert!(is_user("testuser", 30));
+        assert!(is_user("user123", 30));
+        assert!(is_user("user-name", 30));
+        assert!(is_user("user.name", 30));
+        assert!(is_user("a", 30));
+        
+        // Invalid usernames: empty
+        assert!(!is_user("", 30));
+        
+        // Invalid usernames: too long
+        assert!(!is_user("ThisUsernameIsWayTooLongForTheLimit", 30));
+        
+        // Invalid usernames: contains disallowed characters
+        assert!(!is_user("user@domain", 30)); // @ not allowed
+        assert!(!is_user("user name", 30)); // space not allowed
+        assert!(!is_user("user!name", 30)); // ! not allowed
+    }
+
+    #[test]
+    fn test_is_valid_mask() {
+        // Valid masks with max_len = 100
+        assert!(is_valid_mask("nick!user@host", 100));
+        assert!(is_valid_mask("test!testuser@testhost", 100));
+        
+        // Invalid masks: empty
+        assert!(!is_valid_mask("", 100));
+        
+        // Invalid masks: too long
+        assert!(!is_valid_mask("a!b@" + &"c".repeat(100), 10));
+        
+        // Invalid masks: no exclamation mark
+        assert!(!is_valid_mask("nickuser@host", 100));
+        
+        // Invalid masks: no at sign
+        assert!(!is_valid_mask("nick!userhost", 100));
+        
+        // Invalid masks: multiple exclamation marks
+        assert!(!is_valid_mask("nick!!user@host", 100));
+        
+        // Invalid masks: multiple at signs
+        assert!(!is_valid_mask("nick!user@host@domain", 100));
+        
+        // Invalid masks: contains control characters
+        assert!(!is_valid_mask("nick\x01user@host", 100)); // SOH character
+        assert!(!is_valid_mask("nick!user\x7fhost", 100)); // DEL character
+    }
+
+    #[test]
+    fn test_is_host() {
+        // Valid hostnames with allowsimple = false
+        assert!(is_host("example.com", 100, false));
+        assert!(is_host("sub.example.com", 100, false));
+        assert!(is_host("test-host.example.com", 100, false));
+        assert!(is_host("localhost", 100, true)); // allowsimple = true
+        
+        // Valid hostnames with dashes
+        assert!(is_host("my-host.example.com", 100, false));
+        
+        // Invalid hostnames: empty
+        assert!(!is_host("", 100, false));
+        
+        // Invalid hostnames: too long
+        assert!(!is_host(&"a".repeat(101), 100, false));
+        
+        // Invalid hostnames: no dot and allowsimple = false
+        assert!(!is_host("localhost", 100, false));
+        
+        // Invalid hostnames: starts with dot
+        assert!(!is_host(".example.com", 100, false));
+        
+        // Invalid hostnames: ends with dot
+        assert!(!is_host("example.com.", 100, false));
+        
+        // Invalid hostnames: consecutive dots
+        assert!(!is_host("example..com", 100, false));
+        
+        // Invalid hostnames: starts with dash
+        assert!(!is_host("-example.com", 100, false));
+        
+        // Invalid hostnames: ends with dash
+        assert!(!is_host("example-.com", 100, false));
+        
+        // Invalid hostnames: consecutive dashes
+        assert!(!is_host("example--host.com", 100, false));
+        
+        // Invalid hostnames: special characters not allowed
+        assert!(!is_host("example_host.com", 100, false)); // underscore
+        assert!(!is_host("example@host.com", 100, false)); // at sign
     }
 }
