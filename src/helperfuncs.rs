@@ -306,6 +306,37 @@ pub fn is_sid(sid: &str) -> bool {
     sid.chars().nth(2).map_or(false, |c| (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
 }
 
+/// Checks if a string is a valid IRC nickname.
+/// Valid nicknames:
+/// - Must not be empty and must not exceed max_len
+/// - First character must be in range 'A' to '}' (ASCII 65-125)
+/// - Subsequent characters can be 'A'-'}', '0'-'9', or '-'
+pub fn is_nick(nick: &str, max_len: usize) -> bool {
+    if nick.is_empty() || nick.len() > max_len {
+        return false;
+    }
+    
+    let mut chars = nick.chars();
+    
+    // First character: must be in A-} (ASCII 65-125)
+    if let Some(first) = chars.next() {
+        if first < 'A' || first > '}' {
+            return false;
+        }
+    } else {
+        return false; // empty string
+    }
+    
+    // Subsequent characters: can be A-}, 0-9, or -
+    for chr in chars {
+        if !((chr >= 'A' && chr <= '}') || (chr >= '0' && chr <= '9') || chr == '-') {
+            return false;
+        }
+    }
+    
+    true
+}
+
 /// Processes color escape sequences in a string.
 pub fn process_colors(line: &mut String) {
     let formats: HashMap<char, &str> = [
@@ -562,6 +593,21 @@ pub extern "C" fn helperfuncs_is_sid(sid: *const c_char) -> c_int {
     if is_sid(str_slice) { 1 } else { 0 }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn helperfuncs_is_nick(nick: *const c_char, max_len: usize) -> c_int {
+    if nick.is_null() {
+        return 0;
+    }
+    
+    let c_str = unsafe { CStr::from_ptr(nick) };
+    let str_slice = match c_str.to_str() {
+        Ok(s) => s,
+        Err(_) => return 0,
+    };
+    
+    if is_nick(str_slice, max_len) { 1 } else { 0 }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -633,5 +679,42 @@ mod tests {
         // Invalid SIDs: contains special characters
         assert!(!is_sid("0A-"));
         assert!(!is_sid("0A_"));
+    }
+
+    #[test]
+    fn test_is_nick() {
+        // Valid nicknames with max_len = 30
+        // First char must be A-}, subsequent can be A-}, 0-9, or -
+        assert!(is_nick("TestUser", 30));
+        assert!(is_nick("user123", 30)); // 'u' is in A-} range
+        assert!(is_nick("Test-User", 30));
+        assert!(is_nick("a", 30)); // 'a' is in A-} range (97)
+        assert!(is_nick("A", 30));
+        assert!(is_nick("Test_", 30)); // '_' is in A-} range (95)
+        assert!(is_nick("Test}", 30)); // '}' is the upper bound (125)
+        assert!(is_nick("t", 30)); // lowercase 't' (116) is in A-} range
+        
+        // Invalid nicknames: empty
+        assert!(!is_nick("", 30));
+        
+        // Invalid nicknames: too long
+        assert!(!is_nick("ThisNicknameIsWayTooLongForTheLimit", 30));
+        
+        // Invalid nicknames: first char out of range
+        assert!(!is_nick(" test", 30)); // space (32) is before A (65)
+        assert!(!is_nick("~test", 30)); // ~ (126) is after } (125)
+        assert!(!is_nick("\x1Ftest", 30)); // control char before A
+        
+        // Invalid nicknames: first char is digit (digits only allowed after first char)
+        assert!(!is_nick("1test", 30));
+        assert!(!is_nick("9user", 30));
+        
+        // Invalid nicknames: first char is dash (dashes only allowed after first char)
+        assert!(!is_nick("-test", 30));
+        
+        // Invalid nicknames: special chars not in allowed ranges
+        assert!(!is_nick("Test@User", 30)); // @ (64) is before A (65)
+        assert!(!is_nick("Test User", 30)); // space (32) not allowed
+        assert!(!is_nick("Test(User", 30)); // ( (40) not allowed
     }
 }

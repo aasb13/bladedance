@@ -48,6 +48,7 @@ extern "C" {
 	void helperfuncs_process_colors(char* line);
 	void helperfuncs_free_string(char* ptr);
 	int helperfuncs_is_sid(const char* sid);
+	int helperfuncs_is_nick(const char* nick, size_t max_len);
 }
 
 bool InspIRCd::CheckPassword(const std::string& password, const std::string& passwordhash, const std::string& value)
@@ -128,28 +129,14 @@ void InspIRCd::ProcessColors(std::string& line)
 /* true for valid nickname, false else */
 bool InspIRCd::DefaultIsNick(const std::string_view& n)
 {
-	if (n.empty() || n.length() > ServerInstance->Config->Limits.MaxNick)
-		return false;
-
-	for (std::string_view::const_iterator i = n.begin(); i != n.end(); ++i)
-	{
-		if ((*i >= 'A') && (*i <= '}'))
-		{
-			/* "A"-"}" can occur anywhere in a nickname */
-			continue;
-		}
-
-		if ((((*i >= '0') && (*i <= '9')) || (*i == '-')) && (i != n.begin()))
-		{
-			/* "0"-"9", "-" can occur anywhere BUT the first char of a nickname */
-			continue;
-		}
-
-		/* invalid character! abort */
-		return false;
-	}
-
-	return true;
+	// Delegate to Rust implementation
+	// Create a null-terminated temporary buffer for FFI
+	char buffer[1025] = {0};
+	const size_t len = std::min(n.length(), sizeof(buffer) - 1);
+	n.copy(buffer, len);
+	buffer[len] = '\0';
+	
+	return helperfuncs_is_nick(buffer, ServerInstance->Config->Limits.MaxNick) != 0;
 }
 
 /* return true for good username, false else */
