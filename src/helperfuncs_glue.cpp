@@ -47,6 +47,7 @@ extern "C" {
 	void helperfuncs_strip_color(char* line);
 	void helperfuncs_process_colors(char* line);
 	void helperfuncs_free_string(char* ptr);
+	int helperfuncs_is_sid(const char* sid);
 }
 
 bool InspIRCd::CheckPassword(const std::string& password, const std::string& passwordhash, const std::string& value)
@@ -233,11 +234,16 @@ bool InspIRCd::IsHost(const std::string_view& host, bool allowsimple)
 bool InspIRCd::IsSID(const std::string_view& str)
 {
 	/* Returns true if the string given is exactly 3 characters long,
-	 * starts with a digit, and the other two characters are A-Z or digits
+	 * starts with a digit, and the other two characters are A-Z or digits.
+	 * This now delegates to the Rust implementation.
 	 */
-	return ((str.length() == 3) && isdigit(str[0]) &&
-			((str[1] >= 'A' && str[1] <= 'Z') || isdigit(str[1])) &&
-			((str[2] >= 'A' && str[2] <= 'Z') || isdigit(str[2])));
+	// Create a null-terminated temporary buffer for FFI
+	char buffer[4] = {0};
+	const size_t len = std::min(str.length(), sizeof(buffer) - 1);
+	str.copy(buffer, len);
+	buffer[len] = '\0';
+	
+	return helperfuncs_is_sid(buffer) != 0;
 }
 
 namespace

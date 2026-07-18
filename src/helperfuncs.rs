@@ -296,6 +296,16 @@ pub fn strip_color(line: &mut String) {
     *line = String::from_utf8(result).unwrap_or_else(|_| line.clone());
 }
 
+/// Checks if a string is a valid Server ID (SID).
+/// A valid SID is exactly 3 characters long, starts with a digit,
+/// and the other two characters are uppercase letters (A-Z) or digits.
+pub fn is_sid(sid: &str) -> bool {
+    sid.len() == 3 &&
+    sid.chars().next().map_or(false, |c| c >= '0' && c <= '9') &&
+    sid.chars().nth(1).map_or(false, |c| (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) &&
+    sid.chars().nth(2).map_or(false, |c| (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
+}
+
 /// Processes color escape sequences in a string.
 pub fn process_colors(line: &mut String) {
     let formats: HashMap<char, &str> = [
@@ -537,6 +547,21 @@ pub extern "C" fn helperfuncs_free_string(ptr: *mut c_char) {
     }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn helperfuncs_is_sid(sid: *const c_char) -> c_int {
+    if sid.is_null() {
+        return 0;
+    }
+    
+    let c_str = unsafe { CStr::from_ptr(sid) };
+    let str_slice = match c_str.to_str() {
+        Ok(s) => s,
+        Err(_) => return 0,
+    };
+    
+    if is_sid(str_slice) { 1 } else { 0 }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -578,5 +603,35 @@ mod tests {
         let mut s = String::from(r"\bbold");
         process_colors(&mut s);
         assert_eq!(s, "\x02bold");
+    }
+
+    #[test]
+    fn test_is_sid() {
+        // Valid SIDs: 3 chars, first is digit, rest are uppercase or digits
+        assert!(is_sid("0AA"));
+        assert!(is_sid("1AB"));
+        assert!(is_sid("9ZZ"));
+        assert!(is_sid("0A0"));
+        assert!(is_sid("123"));
+        assert!(is_sid("9Z9"));
+        
+        // Invalid SIDs: wrong length
+        assert!(!is_sid(""));
+        assert!(!is_sid("A"));
+        assert!(!is_sid("AB"));
+        assert!(!is_sid("ABCD"));
+        
+        // Invalid SIDs: first char not a digit
+        assert!(!is_sid("AAA"));
+        assert!(!is_sid("BAA"));
+        assert!(!is_sid("ZAA"));
+        
+        // Invalid SIDs: contains lowercase
+        assert!(!is_sid("0aA"));
+        assert!(!is_sid("0Ab"));
+        
+        // Invalid SIDs: contains special characters
+        assert!(!is_sid("0A-"));
+        assert!(!is_sid("0A_"));
     }
 }
