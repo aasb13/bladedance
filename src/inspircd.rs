@@ -165,7 +165,7 @@ pub extern "C" fn inspircd_parse_options(
     match InspircdArgs::try_parse_from(&args) {
         Ok(parsed) => {
             if parsed.help {
-                info!("{}", InspircdArgs::command());
+                InspircdArgs::command().print_help().ok();
                 result.should_exit = true;
                 result.exit_code = 0;
                 return result;
