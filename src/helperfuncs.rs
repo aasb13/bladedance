@@ -306,6 +306,59 @@ pub fn is_sid(sid: &str) -> bool {
     sid.chars().nth(2).map_or(false, |c| (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
 }
 
+/// Checks if a character is a word character (alphanumeric, -, ., _).
+/// This is used by the config parser.
+pub fn is_wordchar(ch: u8) -> bool {
+    ch.is_ascii_alphanumeric() || ch == b'-' || ch == b'.' || ch == b'_'
+}
+
+/// Default random number generator - fills output buffer with pseudo-random bytes.
+/// This uses a simple Xorshift algorithm for demonstration.
+pub fn default_gen_random(output: &mut [u8]) {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    
+    // Use current timestamp as seed
+    let duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let mut seed: u64 = duration.as_nanos() as u64;
+    
+    // Simple Xorshift64* algorithm
+    for byte in output.iter_mut() {
+        seed ^= seed >> 12;
+        seed ^= seed << 25;
+        seed ^= seed >> 27;
+        *byte = (seed >> 33) as u8;
+    }
+}
+
+/// Generates a random integer in the range [0, max).
+/// Uses a simple hash-based approach for demonstration.
+pub fn gen_random_int(max: u64) -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    
+    if max <= 1 {
+        return 0;
+    }
+    
+    let duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let hash = duration.as_nanos() as u64;
+    
+    // Simple pseudo-random number in range [0, max)
+    ((hash.wrapping_mul(6364136223846793005).wrapping_add(1)) % max)
+}
+
+/// Generates a random alphanumeric string of the specified length.
+/// Uses characters: a-z, A-Z, 0-9
+pub fn gen_random_str(length: usize) -> String {
+    static CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    
+    let mut result = String::with_capacity(length);
+    for _ in 0..length {
+        let idx = gen_random_int(CHARS.len() as u64) as usize;
+        result.push(CHARS[idx] as char);
+    }
+    result
+}
+
 /// Checks if a string is a valid IRC nickname.
 /// Valid nicknames:
 /// - Must not be empty and must not exceed max_len
@@ -765,6 +818,25 @@ pub extern "C" fn helperfuncs_is_host(host: *const c_char, max_len: usize, allow
     if is_host(str_slice, max_len, allowsimple != 0) { 1 } else { 0 }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn helperfuncs_is_wordchar(ch: c_int) -> c_int {
+    if ch < 0 || ch > 255 {
+        return 0;
+    }
+    if is_wordchar(ch as u8) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn helperfuncs_gen_random_int(max: u64) -> u64 {
+    gen_random_int(max)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn helperfuncs_gen_random_str(length: usize) -> *mut c_char {
+    let result = gen_random_str(length);
+    CString::new(result).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -966,5 +1038,50 @@ mod tests {
         // Invalid hostnames: special characters not allowed
         assert!(!is_host("example_host.com", 100, false)); // underscore
         assert!(!is_host("example@host.com", 100, false)); // at sign
+    }
+
+    #[test]
+    fn test_is_wordchar() {
+        // Alphanumeric
+        assert!(is_wordchar(b'a'));
+        assert!(is_wordchar(b'Z'));
+        assert!(is_wordchar(b'0'));
+        assert!(is_wordchar(b'9'));
+        
+        // Special allowed chars
+        assert!(is_wordchar(b'-'));
+        assert!(is_wordchar(b'.'));
+        assert!(is_wordchar(b'_'));
+        
+        // Not allowed
+        assert!(!is_wordchar(b' '));
+        assert!(!is_wordchar(b'@'));
+        assert!(!is_wordchar(b'!'));
+    }
+
+    #[test]
+    fn test_gen_random_int() {
+        // Test that it returns a value in the correct range
+        let result = gen_random_int(100);
+        assert!(result < 100);
+        
+        // Test edge cases
+        assert_eq!(gen_random_int(0), 0);
+        assert_eq!(gen_random_int(1), 0);
+    }
+
+    #[test]
+    fn test_gen_random_str() {
+        // Test that it returns a string of the correct length
+        let result = gen_random_str(10);
+        assert_eq!(result.len(), 10);
+        
+        // Test that all characters are alphanumeric
+        for ch in result.chars() {
+            assert!(ch.is_ascii_alphanumeric());
+        }
+        
+        // Test edge case
+        assert_eq!(gen_random_str(0).len(), 0);
     }
 }
