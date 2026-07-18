@@ -30,6 +30,11 @@
 #include "timeutils.h"
 #include "utility/string.h"
 
+// Rust FFI declaration
+extern "C" {
+	int helperfuncs_is_wordchar(int ch);
+}
+
 #ifdef _WIN32
 # define pclose _pclose
 # define popen _popen
@@ -134,10 +139,8 @@ struct Parser final
 
 	static bool wordchar(int ch)
 	{
-		return isalnum(ch)
-			|| ch == '-'
-			|| ch == '.'
-			|| ch == '_';
+		// Delegate to Rust implementation
+		return helperfuncs_is_wordchar(ch) != 0;
 	}
 
 	void nextword(std::string& rv)

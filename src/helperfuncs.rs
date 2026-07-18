@@ -837,6 +837,15 @@ pub extern "C" fn helperfuncs_gen_random_str(length: usize) -> *mut c_char {
     CString::new(result).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn helperfuncs_default_gen_random(output: *mut u8, max: usize) {
+    use std::slice;
+    if !output.is_null() && max > 0 {
+        let buffer = unsafe { slice::from_raw_parts_mut(output, max) };
+        default_gen_random(buffer);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

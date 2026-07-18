@@ -55,6 +55,7 @@ extern "C" {
 	int helperfuncs_is_wordchar(int ch);
 	uint64_t helperfuncs_gen_random_int(uint64_t max);
 	char* helperfuncs_gen_random_str(size_t length);
+	void helperfuncs_default_gen_random(uint8_t* output, size_t max);
 }
 
 bool InspIRCd::CheckPassword(const std::string& password, const std::string& passwordhash, const std::string& value)
@@ -260,20 +261,15 @@ unsigned long InspIRCd::GenRandomInt(unsigned long max) const
 // Now delegates to Rust implementation
 void InspIRCd::DefaultGenRandom(char* output, size_t max)
 {
-	// For now, use a simple fallback - the Rust implementation is available but
-	// we need to handle the buffer filling. We'll use the system getentropy if available,
-	// otherwise fall back to the Rust gen_random_int for each byte.
+	// Try system entropy sources first for better randomness
 #ifdef HAS_GETENTROPY
 	if (getentropy(output, max) == 0)
 		return;
 #endif
 #ifdef HAS_ARC4RANDOM_BUF
 	arc4random_buf(output, max);
-#else
-	// Fall back to Rust implementation for each byte
-	for (size_t i = 0; i < max; ++i)
-	{
-		output[i] = static_cast<char>(helperfuncs_gen_random_int(256));
-	}
+	return;
 #endif
+	// Use the Rust implementation which uses Xorshift algorithm
+	helperfuncs_default_gen_random(reinterpret_cast<uint8_t*>(output), max);
 }
