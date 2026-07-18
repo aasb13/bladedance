@@ -42,15 +42,12 @@ extern "C" {
 # include <unistd.h>
 #endif
 
-namespace
+std::string GetPrintable(int chr)
 {
-	std::string GetPrintable(int chr)
-	{
-		if (isprint(chr))
-			return INSP_FORMAT("{} (0x{:x})", (char)chr, chr);
-		else
-			return INSP_FORMAT("0x{:x}", chr);
-	}
+	if (isprint(chr))
+		return INSP_FORMAT("{} (0x{:x})", (char)chr, chr);
+	else
+		return INSP_FORMAT("0x{:x}", chr);
 }
 
 enum ParseFlags
@@ -610,9 +607,7 @@ std::string ConfigTag::getString(const std::string& key, const std::string& def,
 	return res;
 }
 
-namespace
-{
-	/** Check for an invalid magnitude specifier. If one is found a warning is logged and the
+/** Check for an invalid magnitude specifier. If one is found a warning is logged and the
 	 * value is corrected (set to \p def).
 	 * @param tag The tag name; used in the warning message.
 	 * @param key The key name; used in the warning message.
@@ -668,7 +663,6 @@ namespace
 		tag->LogMalformed(key, ConvToStr(num), ConvToStr(def), INSP_FORMAT("not between {} and {}", min, max));
 		num = def;
 	}
-}
 
 intmax_t ConfigTag::getSInt(const std::string& key, intmax_t def, intmax_t min, intmax_t max) const
 {
