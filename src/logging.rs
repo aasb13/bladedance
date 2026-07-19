@@ -210,7 +210,6 @@ pub struct LoggerInfo {
     level: u8,
     method_handle: *mut std::os::raw::c_void,
     config: bool,
-    dead: bool,
 }
 
 // Implement Send and Sync for LoggerInfo since we only use it in a single-threaded context
@@ -333,7 +332,6 @@ pub unsafe extern "C" fn rust_log_manager_enable_debug_mode(forceprotodebug: boo
         level,
         method_handle: debug_handle,
         config: false,
-        dead: false,
     };
     
     state.loggers.push(logger);
@@ -346,7 +344,7 @@ pub unsafe extern "C" fn rust_log_manager_check_level() -> u8 {
     
     let mut newmaxlevel = 0; // Level::LOWEST
     for logger in state.loggers.iter() {
-        if !logger.dead && logger.level > newmaxlevel {
+        if logger.level > newmaxlevel {
             newmaxlevel = logger.level;
         }
     }
@@ -367,7 +365,6 @@ pub unsafe extern "C" fn rust_log_manager_add_logger(
         level,
         method_handle,
         config,
-        dead: false,
     };
     
     state.loggers.push(logger);

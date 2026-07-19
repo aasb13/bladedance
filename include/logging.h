@@ -182,9 +182,6 @@ private:
 		/** Whether the logger was read from the server config. */
 		bool config;
 
-		/** Whether this logger is dead and is awaiting removal. */
-		bool dead = false;
-
 		/** The minimum log level that this logger accepts. */
 		Level level;
 

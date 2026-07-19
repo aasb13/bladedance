@@ -109,7 +109,7 @@ Log::Manager::Info::Info(Level l, TokenList t, MethodPtr m, bool c, const Engine
 
 bool Log::Manager::Info::Suitable(Level l, const std::string& t) const
 {
-	return level >= l && types.Contains(t) && !dead;
+	return level >= l && types.Contains(t);
 }
 
 Log::Manager::Manager()
