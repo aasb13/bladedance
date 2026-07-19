@@ -30,6 +30,8 @@ pub mod socketengine;
 pub mod socketengine_epoll;
 pub mod socketengine_poll;
 pub mod socketengine_select;
+#[cfg(any(target_os = "freebsd", target_os = "netbsd", target_os = "macos", target_os = "openbsd"))]
+pub mod socketengine_kqueue;
 pub mod mode;
 pub mod thread;
 pub mod socket;

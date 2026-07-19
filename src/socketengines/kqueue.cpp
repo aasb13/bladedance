@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2021 Dominic Hamon
+ *   Copyright (C) 2021 Mistral AI
  *   Copyright (C) 2014-2015 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2014 Adam <Adam@anope.org>
  *   Copyright (C) 2012, 2017, 2019, 2022-2023 Sadie Powell <sadie@witchery.services>
@@ -30,22 +30,21 @@
 
 #include <sys/types.h>
 #include <sys/event.h>
-#include <sys/sysctl.h>
+
+/** Rust FFI declarations for kqueue socket engine */
+extern "C" bool rust_socketengine_kqueue_init();
+extern "C" void rust_socketengine_kqueue_deinit();
+extern "C" bool rust_socketengine_kqueue_recover_from_fork();
+extern "C" bool rust_socketengine_kqueue_add_fd(int fd, int event_mask, void* eh_ptr);
+extern "C" bool rust_socketengine_kqueue_mod_fd(int fd, int old_mask, int new_mask, void* eh_ptr);
+extern "C" bool rust_socketengine_kqueue_del_fd(int fd, void* eh_ptr);
+extern "C" int rust_socketengine_kqueue_dispatch_events();
+extern "C" int rust_socketengine_kqueue_get_event(size_t index, struct kevent* kev_out);
 
 /** A specialisation of the SocketEngine class, designed to use BSD kqueue().
  */
 namespace
 {
-	int EngineHandle;
-	unsigned int ChangePos = 0;
-	/** These are used by kqueue() to hold socket events
-	 */
-	std::vector<struct kevent> ke_list(16);
-
-	/** Pending changes
-	 */
-	std::vector<struct kevent> changelist(8);
-
 #if defined __NetBSD__ && __NetBSD_Version__ <= 999001400
 	inline intptr_t udata_cast(EventHandler* eh)
 	{
@@ -66,6 +65,11 @@ namespace
 void SocketEngine::Init()
 {
 	LookupMaxFds();
+	
+	// Initialize Rust kqueue engine
+	if (!rust_socketengine_kqueue_init())
+		InitError();
+	
 	RecoverFromFork();
 }
 
@@ -76,8 +80,8 @@ void SocketEngine::RecoverFromFork()
 	 * BUM HATS.
 	 *
 	 */
-	EngineHandle = kqueue();
-	if (EngineHandle == -1)
+	// Use Rust to recover from fork
+	if (!rust_socketengine_kqueue_recover_from_fork())
 		InitError();
 }
 
@@ -85,14 +89,8 @@ void SocketEngine::RecoverFromFork()
  */
 void SocketEngine::Deinit()
 {
-	Close(EngineHandle);
-}
-
-static struct kevent* GetChangeKE()
-{
-	if (ChangePos >= changelist.size())
-		changelist.resize(changelist.size() * 2);
-	return &changelist[ChangePos++];
+	// Clean up Rust kqueue engine
+	rust_socketengine_kqueue_deinit();
 }
 
 bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
@@ -105,14 +103,15 @@ bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
 
 	// We always want to read from the socket...
 	int fd = eh->GetFd();
-	struct kevent* ke = GetChangeKE();
-	EV_SET(ke, fd, EVFILT_READ, EV_ADD, 0, 0, udata_cast(eh));
+	
+	// Use Rust implementation
+	if (!rust_socketengine_kqueue_add_fd(fd, event_mask, udata_cast(eh)))
+		return false;
 
 	ServerInstance->Logs.Debug("SOCKET", "New file descriptor: {}", fd);
 
 	eh->SetEventMask(event_mask);
 	OnSetEvent(eh, 0, event_mask);
-	ResizeDouble(ke_list);
 
 	return true;
 }
@@ -126,14 +125,8 @@ void SocketEngine::DelFd(EventHandler* eh)
 		return;
 	}
 
-	// First remove the write filter ignoring errors, since we can't be
-	// sure if there are actually any write filters registered.
-	struct kevent* ke = GetChangeKE();
-	EV_SET(ke, eh->GetFd(), EVFILT_WRITE, EV_DELETE, 0, 0, nullptr);
-
-	// Then remove the read filter.
-	ke = GetChangeKE();
-	EV_SET(ke, eh->GetFd(), EVFILT_READ, EV_DELETE, 0, 0, nullptr);
+	// Use Rust implementation
+	rust_socketengine_kqueue_del_fd(fd, udata_cast(eh));
 
 	SocketEngine::DelFdRef(eh);
 
@@ -142,33 +135,14 @@ void SocketEngine::DelFd(EventHandler* eh)
 
 void SocketEngine::OnSetEvent(EventHandler* eh, int old_mask, int new_mask)
 {
-	if ((new_mask & FD_WANT_POLL_WRITE) && !(old_mask & FD_WANT_POLL_WRITE))
-	{
-		// new poll-style write
-		struct kevent* ke = GetChangeKE();
-		EV_SET(ke, eh->GetFd(), EVFILT_WRITE, EV_ADD, 0, 0, udata_cast(eh));
-	}
-	else if ((old_mask & FD_WANT_POLL_WRITE) && !(new_mask & FD_WANT_POLL_WRITE))
-	{
-		// removing poll-style write
-		struct kevent* ke = GetChangeKE();
-		EV_SET(ke, eh->GetFd(), EVFILT_WRITE, EV_DELETE, 0, 0, nullptr);
-	}
-	if ((new_mask & (FD_WANT_FAST_WRITE | FD_WANT_SINGLE_WRITE)) && !(old_mask & (FD_WANT_FAST_WRITE | FD_WANT_SINGLE_WRITE)))
-	{
-		struct kevent* ke = GetChangeKE();
-		EV_SET(ke, eh->GetFd(), EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, udata_cast(eh));
-	}
+	// Delegate fully to Rust implementation
+	rust_socketengine_kqueue_mod_fd(eh->GetFd(), old_mask, new_mask, udata_cast(eh));
 }
 
 int SocketEngine::DispatchEvents()
 {
-	struct timespec ts;
-	ts.tv_nsec = 0;
-	ts.tv_sec = 1;
-
-	int i = kevent(EngineHandle, &changelist.front(), ChangePos, &ke_list.front(), static_cast<int>(ke_list.size()), &ts);
-	ChangePos = 0;
+	// Use Rust implementation to dispatch events
+	int i = rust_socketengine_kqueue_dispatch_events();
 	ServerInstance->UpdateTime();
 
 	if (i < 0)
@@ -178,8 +152,12 @@ int SocketEngine::DispatchEvents()
 
 	for (int j = 0; j < i; j++)
 	{
+		// Get event from Rust
+		struct kevent kev;
+		if (rust_socketengine_kqueue_get_event(j, &kev) != 0)
+			continue;
+	
 		// This can't be a static_cast because udata is intptr_t on NetBSD.
-		struct kevent& kev = ke_list[j];
 		EventHandler* eh = reinterpret_cast<EventHandler*>(kev.udata);
 		if (!eh || !eh->HasFd())
 			continue;
