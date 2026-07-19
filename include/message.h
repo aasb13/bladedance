@@ -31,7 +31,7 @@ enum class MessageType
 	NOTICE,
 };
 
-class CoreExport MessageDetails
+class __attribute__ ((visibility ("default"))) MessageDetails
 {
 public:
 	/** Whether to echo the message at all. */
@@ -89,7 +89,7 @@ protected:
 };
 
 /** Represents the target of a message (NOTICE, PRIVMSG, etc). */
-class CoreExport MessageTarget final
+class __attribute__ ((visibility ("default"))) MessageTarget final
 {
 public:
 	/** An enumeration of possible message target types. */

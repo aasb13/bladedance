@@ -31,12 +31,12 @@ namespace Duration
 	 * @param str A string containing a duration.
 	 * @return Either the number of seconds in the duration or 0 on error.
 	 */
-	CoreExport unsigned long From(const std::string& str);
+	__attribute__ ((visibility ("default"))) unsigned long From(const std::string& str);
 
 	/** Determines whether a duration string is valid.
 	 * @param str The duration string to check.
 	 */
-	CoreExport bool IsValid(const std::string& str);
+	__attribute__ ((visibility ("default"))) bool IsValid(const std::string& str);
 
 	/** Converts a number of seconds to a human-readable duration string.
 	 *
@@ -46,7 +46,7 @@ namespace Duration
 	 * @param duration The number of seconds to convert.
 	 * @param brief Whether to round to the nearest time period.
 	 */
-	CoreExport std::string ToLongString(unsigned long duration, bool brief = false);
+	__attribute__ ((visibility ("default"))) std::string ToLongString(unsigned long duration, bool brief = false);
 
 	/** Converts a number of seconds to a duration string.
 	 *
@@ -55,7 +55,7 @@ namespace Duration
 	 *
 	 * @param duration The number of seconds to convert.
 	 */
-	CoreExport std::string ToString(unsigned long duration);
+	__attribute__ ((visibility ("default"))) std::string ToString(unsigned long duration);
 
 	/** Attempts to converts a string containing a duration to the number of
 	 * seconds it represents returning whether the conversion succeeded.
@@ -68,7 +68,7 @@ namespace Duration
 	 * @param duration The location to store the resulting duration.
 	 * @return True if the conversion succeeded; otherwise, false.
 	 */
-	CoreExport bool TryFrom(const std::string& str, unsigned long& duration);
+	__attribute__ ((visibility ("default"))) bool TryFrom(const std::string& str, unsigned long& duration);
 }
 
 namespace Time
@@ -92,7 +92,7 @@ namespace Time
 	 * @param utc If the timestamp is a UTC timestamp then true or false if the
 	 *            timestamp is a local timestamp.
 	 */
-	CoreExport std::string ToString(time_t ts, const char* format = nullptr, bool utc = false);
+	__attribute__ ((visibility ("default"))) std::string ToString(time_t ts, const char* format = nullptr, bool utc = false);
 
 	/** Converts a duration from now to a time string.
 	 *

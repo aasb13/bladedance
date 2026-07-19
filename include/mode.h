@@ -87,7 +87,7 @@ class ParamModeBase;
  * mode is expected to have a parameter, then this is
  * equivalent to returning false.
  */
-class CoreExport ModeHandler
+class __attribute__ ((visibility ("default"))) ModeHandler
 	: public ServiceProvider
 {
 public:
@@ -350,7 +350,7 @@ public:
  * for example changing the topic on a channel having +t set requires a rank that is >= than the rank of a halfop,
  * but there is no such restriction when +t isn't set.
  */
-class CoreExport PrefixMode
+class __attribute__ ((visibility ("default"))) PrefixMode
 	: public ModeHandler
 {
 protected:
@@ -432,7 +432,7 @@ public:
  * is already set and not allowing it to be unset if it is already unset.
  * An example of a simple user mode is user mode +w.
  */
-class CoreExport SimpleUserMode
+class __attribute__ ((visibility ("default"))) SimpleUserMode
 	: public ModeHandler
 {
 public:
@@ -451,7 +451,7 @@ public:
  * is already set and not allowing it to be unset if it is already unset.
  * An example of a simple channel mode is channel mode +s.
  */
-class CoreExport SimpleChannelMode
+class __attribute__ ((visibility ("default"))) SimpleChannelMode
 	: public ModeHandler
 {
 public:
@@ -472,7 +472,7 @@ public:
  * and attach it to the mode using Server::AddModeWatcher and Server::DelModeWatcher.
  * A ModeWatcher will be called both before and after the mode change.
  */
-class CoreExport ModeWatcher
+class __attribute__ ((visibility ("default"))) ModeWatcher
 {
 private:
 	/**
@@ -538,7 +538,7 @@ public:
  * parses client to server MODE strings for user and channel modes, and performs
  * processing for the 004 mode list numeric, amongst other things.
  */
-class CoreExport ModeParser final
+class __attribute__ ((visibility ("default"))) ModeParser final
 {
 public:
 	/** The maximum number of modes which can be created. */

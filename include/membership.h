@@ -31,7 +31,7 @@
  * All prefix modes a member has is tracked by this object. Moreover, Memberships are Extensibles
  * meaning modules can add arbitrary data to them using extensions (see m_delaymsg for an example).
  */
-class CoreExport Membership final
+class __attribute__ ((visibility ("default"))) Membership final
 	: public Extensible
 	, public insp::intrusive_list_node<Membership>
 {

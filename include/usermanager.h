@@ -29,7 +29,7 @@
 /** A mapping of user nicks or uuids to their User object. */
 typedef std::unordered_map<std::string, User*, irc::insensitive, irc::StrHashComp> UserMap;
 
-class CoreExport UserManager final
+class __attribute__ ((visibility ("default"))) UserManager final
 {
 public:
 	struct CloneCounts final
@@ -286,7 +286,7 @@ public:
 };
 
 /** Private member access for Rust UserManager port (see usermanager_ffi.cpp). */
-struct CoreExport UserManagerRustAccess
+struct __attribute__ ((visibility ("default"))) UserManagerRustAccess
 {
 	static const UserManager::CloneCounts& LookupCloneCounts(UserManager* um, User* user);
 

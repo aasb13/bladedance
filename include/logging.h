@@ -66,16 +66,16 @@ namespace Log
 	/** Converts a log level to a string.
 	 * @param level The log level to convert.
 	 */
-	CoreExport const char* LevelToString(Level level);
+	__attribute__ ((visibility ("default"))) const char* LevelToString(Level level);
 
 	/** Notify a user that raw I/O logging is enabled.
 	 * @param user The user to notify.
 	 * @param type The type of message to send.
 	 */
-	CoreExport void NotifyRawIO(LocalUser* user, MessageType type);
+	__attribute__ ((visibility ("default"))) void NotifyRawIO(LocalUser* user, MessageType type);
 
 	/** Base class for logging methods. */
-	class CoreExport Method
+	class __attribute__ ((visibility ("default"))) Method
 	{
 	protected:
 		Method() = default;
@@ -96,7 +96,7 @@ namespace Log
 	};
 
 	/** A simple wrapper for Rust-created log methods. */
-	class CoreExport RustMethod final
+	class __attribute__ ((visibility ("default"))) RustMethod final
 		: public Method
 	{
 	private:
@@ -116,7 +116,7 @@ namespace Log
 }
 
 /** Base class for logging engines. */
-class CoreExport Log::Engine
+class __attribute__ ((visibility ("default"))) Log::Engine
 	: public DataProvider
 {
 protected:
@@ -133,7 +133,7 @@ public:
 };
 
 /** A logger which writes to a file. */
-class CoreExport Log::FileEngine final
+class __attribute__ ((visibility ("default"))) Log::FileEngine final
 	: public Engine
 {
 public:
@@ -144,7 +144,7 @@ public:
 };
 
 /** A logger which writes to a stream. */
-class CoreExport Log::StreamEngine final
+class __attribute__ ((visibility ("default"))) Log::StreamEngine final
 	: public Engine
 {
 public:
@@ -155,7 +155,7 @@ public:
 };
 
 /** Manager for the logging system. */
-class CoreExport Log::Manager final
+class __attribute__ ((visibility ("default"))) Log::Manager final
 {
 private:
 	/** A log message which has been cached until modules load. */

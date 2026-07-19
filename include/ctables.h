@@ -138,7 +138,7 @@ public:
 /** A structure that defines a command. Every command available
  * in InspIRCd must be defined as derived from Command.
  */
-class CoreExport CommandBase
+class __attribute__ ((visibility ("default"))) CommandBase
 	: public ServiceProvider
 {
 public:
@@ -220,7 +220,7 @@ public:
 	virtual void EncodeParameter(std::string& parameter, unsigned int index);
 };
 
-class CoreExport Command
+class __attribute__ ((visibility ("default"))) Command
 	: public CommandBase
 {
 protected:
@@ -286,7 +286,7 @@ public:
 	virtual void TellNotFullyConnected(LocalUser* user, const Params& parameters);
 };
 
-class CoreExport SplitCommand
+class __attribute__ ((visibility ("default"))) SplitCommand
 	: public Command
 {
 protected:

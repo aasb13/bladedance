@@ -22,7 +22,7 @@
 
 #include "base.h"
 
-class CoreExport dynamic_reference_base
+class __attribute__ ((visibility ("default"))) dynamic_reference_base
 	: public insp::intrusive_list_node<dynamic_reference_base>
 {
 public:

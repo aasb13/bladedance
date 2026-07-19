@@ -23,57 +23,57 @@
 
 #include "extension.h"
 
+/** An item in a listmode's list
+ */
+struct ListItem final
+{
+	std::string setter;
+	std::string mask;
+	time_t time;
+	ListItem(const std::string& Mask, const std::string& Setter, time_t Time)
+		: setter(Setter)
+		, mask(Mask)
+		, time(Time)
+	{
+	}
+};
+
+/** Items stored in the channel's list
+ */
+using ModeList = std::vector<ListItem>;
+
+struct ChanData final
+{
+	ModeList list;
+	std::optional<size_t> maxitems;
+};
+
+/** The number of items a listmode's list may contain
+ */
+struct ListLimit final
+{
+	std::string mask;
+	size_t limit;
+	ListLimit(const std::string& Mask, size_t Limit)
+		: mask(Mask)
+		, limit(Limit)
+	{
+	}
+
+	bool operator==(const ListLimit& other) const { return (this->mask == other.mask && this->limit == other.limit); }
+};
+
+/** Max items per channel by name
+ */
+using limitlist = std::vector<ListLimit>;
+
 /** The base class for list modes, should be inherited.
  */
-class CoreExport ListModeBase
+struct __attribute__ ((visibility ("default"))) ListModeBase
 	: public ModeHandler
 {
-public:
-	/** An item in a listmode's list
-	 */
-	struct ListItem final
-	{
-		std::string setter;
-		std::string mask;
-		time_t time;
-		ListItem(const std::string& Mask, const std::string& Setter, time_t Time)
-			: setter(Setter)
-			, mask(Mask)
-			, time(Time)
-		{
-		}
-	};
-
-	/** Items stored in the channel's list
-	 */
-	typedef std::vector<ListItem> ModeList;
-
-private:
-	class ChanData final
-	{
-	public:
-		ModeList list;
-		std::optional<size_t> maxitems;
-	};
-
-	/** The number of items a listmode's list may contain
-	 */
-	struct ListLimit final
-	{
-		std::string mask;
-		size_t limit;
-		ListLimit(const std::string& Mask, size_t Limit)
-			: mask(Mask)
-			, limit(Limit)
-		{
-		}
-
-		bool operator==(const ListLimit& other) const { return (this->mask == other.mask && this->limit == other.limit); }
-	};
-
-	/** Max items per channel by name
-	 */
-	typedef std::vector<ListLimit> limitlist;
+	using ListItem = ::ListItem;
+	using ModeList = ::ModeList;
 
 	/** The default maximum list size. */
 	static constexpr unsigned int DEFAULT_LIST_SIZE = 100;
@@ -94,7 +94,6 @@ private:
 	 */
 	size_t GetLimitInternal(const std::string& channame, ChanData* cd);
 
-protected:
 	/** Numeric to use when outputting the list
 	 */
 	unsigned int listnumeric;
@@ -103,7 +102,7 @@ protected:
 	 */
 	unsigned int endoflistnumeric;
 
-	/** Limits on a per-channel basis read from the \<listmode>
+	/** Limits on a per-channel basis read from the <listmode>
 	 * config tag.
 	 */
 	limitlist chanlimits;
@@ -112,7 +111,6 @@ protected:
 	 */
 	SimpleExtItem<ChanData> extItem;
 
-public:
 	/** Constructor.
 	 * @param Creator The creator of this class
 	 * @param Name Mode name
@@ -203,7 +201,7 @@ public:
 	virtual void TellNotSet(LocalUser* source, Channel* channel, const std::string& parameter);
 };
 
-inline ListModeBase::ModeList* ListModeBase::GetList(Channel* channel)
+inline ModeList* ListModeBase::GetList(Channel* channel)
 {
 	ChanData* cd = extItem.Get(channel);
 	if (!cd)

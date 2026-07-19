@@ -37,7 +37,7 @@
 /** The DLLManager class is able to load a module file by filename,
  * and locate its init_module symbol.
  */
-class CoreExport DLLManager final
+class __attribute__ ((visibility ("default"))) DLLManager final
 {
 private:
 	/** The last error string. */

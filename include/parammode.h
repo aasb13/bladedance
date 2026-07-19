@@ -20,7 +20,7 @@
 
 #pragma once
 
-class CoreExport ParamModeBase
+class __attribute__ ((visibility ("default"))) ParamModeBase
 	: public ModeHandler
 {
 private:

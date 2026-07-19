@@ -61,7 +61,7 @@ typedef XLineLookup::iterator LookupIter;
  * to a known line type is done by means of an XLineFactory object (see
  * below).
  */
-class CoreExport XLine
+class __attribute__ ((visibility ("default"))) XLine
 {
 protected:
 
@@ -179,7 +179,7 @@ public:
 
 /** KLine class
  */
-class CoreExport KLine final
+class __attribute__ ((visibility ("default"))) KLine final
 	: public XLine
 {
 public:
@@ -221,7 +221,7 @@ public:
 
 /** GLine class
  */
-class CoreExport GLine final
+class __attribute__ ((visibility ("default"))) GLine final
 	: public XLine
 {
 public:
@@ -260,7 +260,7 @@ public:
 
 /** ELine class
  */
-class CoreExport ELine final
+class __attribute__ ((visibility ("default"))) ELine final
 	: public XLine
 {
 public:
@@ -301,7 +301,7 @@ public:
 
 /** ZLine class
  */
-class CoreExport ZLine final
+class __attribute__ ((visibility ("default"))) ZLine final
 	: public XLine
 {
 public:
@@ -333,7 +333,7 @@ public:
 
 /** QLine class
  */
-class CoreExport QLine final
+class __attribute__ ((visibility ("default"))) QLine final
 	: public XLine
 {
 public:
@@ -370,7 +370,7 @@ public:
  * does not have to know the specifics of the internals of an XLine class
  * and/or how to call its constructor.
  */
-class CoreExport XLineFactory
+class __attribute__ ((visibility ("default"))) XLineFactory
 {
 protected:
 	const std::string type;
@@ -411,7 +411,7 @@ public:
  * or any other line created by a module. It also manages XLineFactory classes which
  * can generate a specialized XLine for use by another module.
  */
-class CoreExport XLineManager final
+class __attribute__ ((visibility ("default"))) XLineManager final
 {
 protected:
 	/** Used to hold XLines which have not yet been applied.

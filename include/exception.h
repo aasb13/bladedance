@@ -46,7 +46,7 @@ public:
 class Module;
 
 /** An generic exception which was thrown by a module. */
-class CoreExport ModuleException
+class __attribute__ ((visibility ("default"))) ModuleException
 	: public CoreException
 {
 private:

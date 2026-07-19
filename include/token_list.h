@@ -23,7 +23,7 @@
 #include "stringutils.h"
 
 /** Encapsulates a list of tokens in the format "* -FOO -BAR".*/
-class CoreExport TokenList final
+class __attribute__ ((visibility ("default"))) TokenList final
 {
 private:
 	/** Opaque pointer to the Rust TokenList instance. */

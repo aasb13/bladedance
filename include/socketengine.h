@@ -150,7 +150,7 @@ enum EventMask
  * must have a file descriptor. What this file descriptor
  * is actually attached to is completely up to you.
  */
-class CoreExport EventHandler
+class __attribute__ ((visibility ("default"))) EventHandler
 {
 private:
 	/** Private state maintained by socket engine */
@@ -210,7 +210,7 @@ public:
  * from system to system and upon the config
  * settings chosen by the server admin.
  */
-class CoreExport SocketEngine final
+class __attribute__ ((visibility ("default"))) SocketEngine final
 {
 public:
 	/** Socket engine statistics: count of various events, bandwidth usage
@@ -245,7 +245,7 @@ public:
 		 * @param kbitpersec_out Filled with outgoing traffic in this second in kbit/s.
 		 * @param kbitpersec_total Filled with total traffic in this second in kbit/s.
 		 */
-		void CoreExport GetBandwidth(float& kbitpersec_in, float& kbitpersec_out, float& kbitpersec_total) const;
+		void __attribute__ ((visibility ("default"))) GetBandwidth(float& kbitpersec_in, float& kbitpersec_out, float& kbitpersec_total) const;
 
 		unsigned long TotalEvents = 0;
 		unsigned long ReadEvents = 0;

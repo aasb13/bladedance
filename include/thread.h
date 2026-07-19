@@ -21,7 +21,7 @@
 
 #include <thread>
 
-class CoreExport Thread
+class __attribute__ ((visibility ("default"))) Thread
 {
 private:
 	/** Whether this thread is in the process of stopping. */

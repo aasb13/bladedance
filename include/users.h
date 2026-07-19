@@ -36,7 +36,7 @@
 #include "membership.h"
 
 /** Represents \<connect> class tags from the server config */
-class CoreExport ConnectClass final
+class __attribute__ ((visibility ("default"))) ConnectClass final
 {
 public:
 	/** An enumeration of possible types of connect class. */
@@ -141,7 +141,7 @@ public:
 	const std::vector<std::string>& GetHosts() const { return hosts; }
 };
 
-class CoreExport AwayState final
+class __attribute__ ((visibility ("default"))) AwayState final
 {
 public:
 	/** The reason this user specified when they went away. */
@@ -154,7 +154,7 @@ public:
 };
 
 /** Represents an \<opertype> from the server config. */
-class CoreExport OperType
+class __attribute__ ((visibility ("default"))) OperType
 	: public insp::uncopiable
 {
 protected:
@@ -261,7 +261,7 @@ public:
 #endif
 
 /** Represents an \<oper> from the server config. */
-class CoreExport OperAccount
+class __attribute__ ((visibility ("default"))) OperAccount
 	: public OperType
 {
 protected:
@@ -321,7 +321,7 @@ public:
  */
 struct UserRustAccess;
 
-class CoreExport User
+class __attribute__ ((visibility ("default"))) User
 	: public Extensible
 {
 	friend struct UserRustAccess;
@@ -789,7 +789,7 @@ public:
 	virtual ~User() = default;
 };
 
-class CoreExport UserIOHandler final
+class __attribute__ ((visibility ("default"))) UserIOHandler final
 	: public StreamSocket
 {
 private:
@@ -814,7 +814,7 @@ public:
 	void AddWriteBuf(const std::string& data);
 };
 
-class CoreExport LocalUser final
+class __attribute__ ((visibility ("default"))) LocalUser final
 	: public User
 	, public insp::intrusive_list_node<LocalUser>
 {
@@ -966,7 +966,7 @@ public:
 	}
 };
 
-class CoreExport FakeUser final
+class __attribute__ ((visibility ("default"))) FakeUser final
 	: public User
 {
 public:
@@ -1026,7 +1026,7 @@ inline void User::SetMode(const ModeHandler* mh, bool value)
 }
 
 /** Private cache/string helpers for the Rust users module (implemented in users_ffi.cpp). */
-struct CoreExport UserRustAccess
+struct __attribute__ ((visibility ("default"))) UserRustAccess
 {
 	static void InvalidateCache(User* u);
 

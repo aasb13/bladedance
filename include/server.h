@@ -21,7 +21,7 @@
 
 #pragma once
 
-class CoreExport Server
+class __attribute__ ((visibility ("default"))) Server
 {
 protected:
 	/** The unique identifier for this server. */

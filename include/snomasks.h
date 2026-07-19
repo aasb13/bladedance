@@ -72,7 +72,7 @@ public:
  * Modules and the core can enable and disable snomask characters. If they do,
  * then sending snomasks using these characters becomes possible.
  */
-class CoreExport SnomaskManager final
+class __attribute__ ((visibility ("default"))) SnomaskManager final
 {
 	friend struct SnomaskRustAccess;
 
@@ -152,7 +152,7 @@ public:
 };
 
 /** Private member access for Rust snomasks port (snomasks_ffi.cpp). */
-struct CoreExport SnomaskRustAccess
+struct __attribute__ ((visibility ("default"))) SnomaskRustAccess
 {
 	static Snomask* Mask(SnomaskManager* mgr, size_t idx);
 	static std::string& Description(Snomask* s);

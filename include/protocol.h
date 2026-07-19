@@ -30,7 +30,7 @@ class User;
 [[deprecated("ProtocolServer has been merged with Server")]]
 typedef ::Server ProtocolServer;
 
-class CoreExport ProtocolInterface
+class __attribute__ ((visibility ("default"))) ProtocolInterface
 {
 public:
 	[[deprecated("ProtocolInterface::Server has been merged with Server")]]

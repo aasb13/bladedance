@@ -31,7 +31,7 @@ namespace ClientProtocol
 	}
 }
 
-struct CoreExport ClientProtocol::Events::Join
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Events::Join
 	: public ClientProtocol::Messages::Join, public ClientProtocol::Event
 {
 	Join()
@@ -52,7 +52,7 @@ struct CoreExport ClientProtocol::Events::Join
 	}
 };
 
-class CoreExport ClientProtocol::Events::Mode
+class __attribute__ ((visibility ("default"))) ClientProtocol::Events::Mode
 	: public ClientProtocol::Event
 {
 	std::list<ClientProtocol::Messages::Mode> modelist;

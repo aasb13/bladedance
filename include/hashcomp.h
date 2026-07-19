@@ -48,13 +48,13 @@
  * This is provided as a pointer so that modules can change it to their custom mapping tables,
  * e.g. for national character support.
  */
-CoreExport extern const unsigned char* national_case_insensitive_map;
+__attribute__ ((visibility ("default"))) extern const unsigned char* national_case_insensitive_map;
 
 /** Case insensitive map, ASCII rules.
  * That is;
  * [ != {, but A == a.
  */
-CoreExport extern const unsigned char ascii_case_insensitive_map[256];
+__attribute__ ((visibility ("default"))) extern const unsigned char ascii_case_insensitive_map[256];
 
 /** The irc namespace contains a number of helper classes.
  */
@@ -67,14 +67,14 @@ namespace irc
 	 * @param s2 Second string to compare
 	 * @return True if the two names are equal, false otherwise
 	 */
-	CoreExport bool equals(const std::string_view& s1, const std::string_view& s2);
+	__attribute__ ((visibility ("default"))) bool equals(const std::string_view& s1, const std::string_view& s2);
 
 	/** Check whether \p needle exists within \p haystack.
 	 * @param haystack The string to search within.
 	 * @param needle The string to search for.
 	 * @return Either the index at which \p needle was found or std::string::npos.
 	 */
-	CoreExport size_t find(const std::string_view& haystack, const std::string_view& needle);
+	__attribute__ ((visibility ("default"))) size_t find(const std::string_view& haystack, const std::string_view& needle);
 
 	/** This class returns true if two strings match.
 	 * Case sensitivity is ignored, and the RFC 'character set'
@@ -92,12 +92,12 @@ namespace irc
 
 	struct insensitive final
 	{
-		size_t CoreExport operator()(const std::string& s) const;
+		size_t __attribute__ ((visibility ("default"))) operator()(const std::string& s) const;
 	};
 
 	struct insensitive_swo
 	{
-		bool CoreExport operator()(const std::string& a, const std::string& b) const;
+		bool __attribute__ ((visibility ("default"))) operator()(const std::string& a, const std::string& b) const;
 	};
 
 	/** irc::sepstream allows for splitting token separated lists.
@@ -105,7 +105,7 @@ namespace irc
 	 * the next token, until none remain, at which point the method returns
 	 * false.
 	 */
-	class CoreExport sepstream
+	class __attribute__ ((visibility ("default"))) sepstream
 	{
 	protected:
 		/** Original string.
@@ -167,7 +167,7 @@ namespace irc
 
 	/** A derived form of sepstream, which separates on commas
 	 */
-	class CoreExport commasepstream : public sepstream
+	class __attribute__ ((visibility ("default"))) commasepstream : public sepstream
 	{
 	public:
 		/** Initialize with comma separator
@@ -180,7 +180,7 @@ namespace irc
 
 	/** A derived form of sepstream, which separates on spaces
 	 */
-	class CoreExport spacesepstream : public sepstream
+	class __attribute__ ((visibility ("default"))) spacesepstream : public sepstream
 	{
 	public:
 		/** Initialize with space separator
@@ -203,7 +203,7 @@ namespace irc
 	 * list will be ":item". This is to allow for parsing 'source' fields
 	 * from data.
 	 */
-	class CoreExport tokenstream
+	class __attribute__ ((visibility ("default"))) tokenstream
 	{
 	private:
 		/** The message we are parsing tokens from. */
@@ -240,7 +240,7 @@ namespace irc
 	 * start or end < 0) then GetToken() will return the first element
 	 * of the pair of numbers.
 	 */
-	class CoreExport portparser
+	class __attribute__ ((visibility ("default"))) portparser
 	{
 	private:
 

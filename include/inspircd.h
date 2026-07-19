@@ -65,7 +65,7 @@
 #include "stdalgo.h"
 #include "exception.h"
 
-CoreExport extern InspIRCd* ServerInstance;
+__attribute__ ((visibility ("default"))) extern InspIRCd* ServerInstance;
 
 #include "config.h"
 #include "dynref.h"
@@ -151,7 +151,7 @@ public:
  * object, and a list of active Module objects, and facilities for Module
  * objects to interact with the core system it implements.
  */
-class CoreExport InspIRCd final
+class __attribute__ ((visibility ("default"))) InspIRCd final
 {
 private:
 	/** The last signal that was received from the operating system. */

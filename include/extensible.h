@@ -39,7 +39,7 @@ enum class ExtensionType
 };
 
 /** Base class for types which can be extended with additional data. */
-class CoreExport Extensible
+class __attribute__ ((visibility ("default"))) Extensible
 {
 public:
 
@@ -77,7 +77,7 @@ private:
 };
 
 /** Manager for the extension system */
-class CoreExport ExtensionManager final
+class __attribute__ ((visibility ("default"))) ExtensionManager final
 {
 public:
 	/** The container which registered extensions are stored in. */

@@ -24,7 +24,7 @@
 
 class ThreadSignalSocket;
 
-class CoreExport SocketThread
+class __attribute__ ((visibility ("default"))) SocketThread
 	: public Thread
 {
 private:

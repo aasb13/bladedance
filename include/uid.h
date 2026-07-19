@@ -21,7 +21,7 @@
 
 #pragma once
 
-class CoreExport UIDGenerator final
+class __attribute__ ((visibility ("default"))) UIDGenerator final
 {
 public:
 	/** Initializes this UID generator with the given SID

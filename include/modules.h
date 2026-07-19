@@ -213,7 +213,7 @@ enum Implementation
  *  its methods will be called when irc server events occur. class inherited from module must be
  *  instantiated by the ModuleFactory class (see relevant section) for the module to be initialised.
  */
-class CoreExport Module
+class __attribute__ ((visibility ("default"))) Module
 	: public usecountbase
 {
 protected:
@@ -975,7 +975,7 @@ public:
 /** ModuleManager takes care of all things module-related
  * in the core.
  */
-class CoreExport ModuleManager final
+class __attribute__ ((visibility ("default"))) ModuleManager final
 {
 public:
 	typedef std::multimap<std::string, ServiceProvider*, irc::insensitive_swo> DataProviderMap;

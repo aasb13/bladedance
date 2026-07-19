@@ -50,7 +50,7 @@ namespace irc
 	namespace sockets
 	{
 		/** Represents a socket address. This can be an IP/port pair or a UNIX socket path. */
-		union CoreExport sockaddrs
+		union __attribute__ ((visibility ("default"))) sockaddrs
 		{
 			struct sockaddr sa;
 			struct sockaddr_in in4;
@@ -111,7 +111,7 @@ namespace irc
 			inline bool operator!=(const sockaddrs& other) const { return !(*this == other); }
 		};
 
-		struct CoreExport cidr_mask
+		struct __attribute__ ((visibility ("default"))) cidr_mask
 		{
 			/** Type, AF_INET or AF_INET6 */
 			sa_family_t type;
@@ -147,18 +147,18 @@ namespace irc
 		 * @param match_with_username Does the  mask include a nickname segment?
 		 * @return True if the mask matches the address
 		 */
-		CoreExport bool MatchCIDR(const std::string& address, const std::string& cidr_mask, bool match_with_username);
+		__attribute__ ((visibility ("default"))) bool MatchCIDR(const std::string& address, const std::string& cidr_mask, bool match_with_username);
 
 		/** Determines whether the specified file is a UNIX socket.
 		 * @param file The path to the file to check.
 		 * @return True if the file is a UNIX socket; otherwise, false.
 		 */
-		CoreExport bool isunix(const std::string& file);
+		__attribute__ ((visibility ("default"))) bool isunix(const std::string& file);
 	}
 }
 
 /** Represents information about a failed port binding. */
-struct CoreExport FailedPort final
+struct __attribute__ ((visibility ("default"))) FailedPort final
 {
 	/** The error which happened during binding. */
 	const std::string error;
@@ -193,7 +193,7 @@ typedef std::vector<FailedPort> FailedPortList;
  * It will create a new User for every valid connection
  * and assign it a file descriptor.
  */
-class CoreExport ListenSocket final
+class __attribute__ ((visibility ("default"))) ListenSocket final
 	: public EventHandler
 {
 public:

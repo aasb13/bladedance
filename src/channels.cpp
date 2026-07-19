@@ -208,7 +208,7 @@ Membership* Channel::JoinUser(LocalUser* user, std::string cname, bool override,
 
 	// We figured that this join is allowed and also created the
 	// channel if it didn't exist before, now do the actual join
-	return chan->ForceJoin(user, &privs, false, created_by_local);
+	return chan->ForceJoin(user, &privs, created_by_local, created_by_local);
 }
 
 Membership* Channel::ForceJoin(User* user, const std::string* privs, bool bursting, bool created_by_local)

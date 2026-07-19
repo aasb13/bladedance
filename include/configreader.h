@@ -31,7 +31,7 @@
 #include "inspircd.h"
 
 /** Represents the position within a file. */
-class CoreExport FilePosition final
+class __attribute__ ((visibility ("default"))) FilePosition final
 {
 public:
 	/** The name of the file that the position points to. */
@@ -55,7 +55,7 @@ public:
 };
 
 /** Structure representing a single \<tag> in config */
-class CoreExport ConfigTag final
+class __attribute__ ((visibility ("default"))) ConfigTag final
 {
 public:
 	/** A mapping of configuration keys to their assigned values. */
@@ -241,7 +241,7 @@ struct CommandLineConf final
  * and storage of the configuration data needed to run the ircd, such as
  * the servername, connect classes, /ADMIN data, MOTDs and filenames etc.
  */
-class CoreExport ServerConfig final
+class __attribute__ ((visibility ("default"))) ServerConfig final
 {
 private:
 	friend class ConfigReaderThread; // valid
@@ -303,7 +303,7 @@ public:
 	};
 
 	/** Encapsulates the result of calling ReadFile. */
-	class CoreExport ReadResult final
+	class __attribute__ ((visibility ("default"))) ReadResult final
 		: private insp::uncopiable
 	{
 	public:
@@ -320,7 +320,7 @@ public:
 	};
 
 	/** Holds the limits for how long various fields can be. Read from the \<limits> tag. */
-	class CoreExport ServerLimits final
+	class __attribute__ ((visibility ("default"))) ServerLimits final
 	{
 	public:
 		/** Maximum line length */
@@ -369,7 +369,7 @@ public:
 	};
 
 	/** Holds the location of various directories. Read from the \<path> tag */
-	class CoreExport ServerPaths final
+	class __attribute__ ((visibility ("default"))) ServerPaths final
 	{
 	private:
 		/** Expands a path fragment to a full path.
@@ -561,7 +561,7 @@ public:
 /** The background thread for config reading, so that reading from executable includes
  * does not block.
  */
-class CoreExport ConfigReaderThread final
+class __attribute__ ((visibility ("default"))) ConfigReaderThread final
 	: public Thread
 {
 private:
@@ -596,7 +596,7 @@ public:
 };
 
 /** Represents the status of a config load. */
-class CoreExport ConfigStatus final
+class __attribute__ ((visibility ("default"))) ConfigStatus final
 {
 public:
 	/** Whether this is the initial config load. */

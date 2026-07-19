@@ -205,7 +205,7 @@ bool ListModeBase::OnModeChange(User* source, User*, Channel* channel, Modes::Ch
 		if (cd)
 		{
 			// We have a list and we're removing; is the entry in it?
-			for (ModeList::iterator it = cd->list.begin(); it != cd->list.end(); ++it)
+			for (auto it = cd->list.begin(); it != cd->list.end(); ++it)
 			{
 				if (!CompareEntry(it->mask, change.param))
 					continue; // Doesn't match the proposed removal.

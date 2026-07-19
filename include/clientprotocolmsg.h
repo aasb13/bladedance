@@ -45,7 +45,7 @@ namespace ClientProtocol
  * The first parameter is the target of the numeric which is almost always the nick of the user
  * the numeric will be sent to.
  */
-class CoreExport ClientProtocol::Messages::Numeric
+class __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Numeric
 	: public ClientProtocol::Message
 {
 	char numericstr[4];
@@ -395,7 +395,7 @@ public:
 
 /** TOPIC message.
  */
-struct CoreExport ClientProtocol::Messages::Topic
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Topic
 	: public ClientProtocol::Message
 {
 	/** Constructor.
@@ -626,7 +626,7 @@ public:
 /** INVITE message.
  * Sent when a user is invited to join a channel.
  */
-struct CoreExport ClientProtocol::Messages::Invite
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Invite
 	: public ClientProtocol::Message
 {
 	/** Constructor.
@@ -688,7 +688,7 @@ struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Pong
 /** ERROR message.
  * Sent to clients upon disconnection.
  */
-struct CoreExport ClientProtocol::Messages::Error
+struct __attribute__ ((visibility ("default"))) ClientProtocol::Messages::Error
 	: public ClientProtocol::Message
 {
 	/** Constructor.

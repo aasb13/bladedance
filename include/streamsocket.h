@@ -78,7 +78,7 @@ class BufferedSocket;
 
 /** Used to time out socket connections
  */
-class CoreExport SocketTimeout final
+class __attribute__ ((visibility ("default"))) SocketTimeout final
 	: public Timer
 {
 private:
@@ -112,7 +112,7 @@ public:
  * StreamSocket is a class that wraps a TCP socket and handles send
  * and receive queues, including passing them to IO hooks
  */
-class CoreExport StreamSocket
+class __attribute__ ((visibility ("default"))) StreamSocket
 	: public EventHandler
 {
 public:
@@ -372,7 +372,7 @@ public:
  *
  * To use BufferedSocket, you must inherit a class from it.
  */
-class CoreExport BufferedSocket
+class __attribute__ ((visibility ("default"))) BufferedSocket
 	: public StreamSocket
 {
 public:

@@ -23,7 +23,7 @@
 #include "utility/string.h"
 
 /** Base class for types that extend an extensible. */
-class CoreExport ExtensionItem
+class __attribute__ ((visibility ("default"))) ExtensionItem
 	: public ServiceProvider
 {
 public:
@@ -239,7 +239,7 @@ public:
 };
 
 /** An extension which has a boolean value. */
-class CoreExport BoolExtItem
+class __attribute__ ((visibility ("default"))) BoolExtItem
 	: public ExtensionItem
 {
 protected:
@@ -375,7 +375,7 @@ public:
 };
 
 /** An extension which has an integer value. */
-class CoreExport IntExtItem
+class __attribute__ ((visibility ("default"))) IntExtItem
 	: public ExtensionItem
 {
 protected:
@@ -427,7 +427,7 @@ public:
 };
 
 /** An extension which has a string value. */
-class CoreExport StringExtItem
+class __attribute__ ((visibility ("default"))) StringExtItem
 	: public SimpleExtItem<std::string>
 {
 public:

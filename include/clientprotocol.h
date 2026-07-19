@@ -493,7 +493,7 @@ public:
  *
  * Event hooks attached to a specific event can alter the messages sent for that event.
  */
-class CoreExport ClientProtocol::Event
+class __attribute__ ((visibility ("default"))) ClientProtocol::Event
 {
 	EventProvider* event;
 	Message* initialmsg = nullptr;
@@ -545,7 +545,7 @@ public:
 	void GetMessagesForUser(LocalUser* user, MessageList& messagelist);
 };
 
-class CoreExport ClientProtocol::MessageTagEvent
+class __attribute__ ((visibility ("default"))) ClientProtocol::MessageTagEvent
 	: public Events::ModuleEventProvider
 {
 public:
@@ -609,7 +609,7 @@ public:
  * A protocol event hook is attached to a single event type. It has the ability to alter or block messages
  * sent to users which belong to the event the hook is attached to.
  */
-class CoreExport ClientProtocol::EventHook
+class __attribute__ ((visibility ("default"))) ClientProtocol::EventHook
 	: public Events::ModuleEventListener
 {
 public:
@@ -672,7 +672,7 @@ public:
 /** Commonly used client protocol events.
  * Available via InspIRCd::GetRFCEvents().
  */
-struct CoreExport ClientProtocol::RFCEvents final
+struct __attribute__ ((visibility ("default"))) ClientProtocol::RFCEvents final
 {
 	EventProvider numeric;
 	EventProvider join;
@@ -709,7 +709,7 @@ struct CoreExport ClientProtocol::RFCEvents final
 /** Base class for client protocol serializers.
  * A serializer has to implement serialization and parsing of protocol messages to/from wire format.
  */
-class CoreExport ClientProtocol::Serializer
+class __attribute__ ((visibility ("default"))) ClientProtocol::Serializer
 	: public DataProvider
 {
 private:

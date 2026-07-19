@@ -38,7 +38,7 @@ class Module;
  * your object (which you have to override) will be called
  * at the given time.
  */
-class CoreExport Timer
+class __attribute__ ((visibility ("default"))) Timer
 {
 	/** The triggering time
 	 */
@@ -122,7 +122,7 @@ public:
  * This will ensure timers are not missed, as well as removing timers that have
  * expired and allowing the addition of new ones.
  */
-class CoreExport TimerManager final
+class __attribute__ ((visibility ("default"))) TimerManager final
 {
 	typedef std::multimap<time_t, Timer*> TimerMap;
 

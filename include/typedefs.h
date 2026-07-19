@@ -56,7 +56,7 @@ namespace ClientProtocol
 	typedef std::vector<std::string> ParamList;
 	typedef std::string SerializedMessage;
 
-	struct CoreExport MessageTagData final
+	struct __attribute__ ((visibility ("default"))) MessageTagData final
 	{
 		MessageTagProvider* tagprov;
 		std::string value;
