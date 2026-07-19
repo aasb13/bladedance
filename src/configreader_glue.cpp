@@ -35,6 +35,21 @@
 #include "configparser.h"
 #include "utility/string.h"
 
+// Rust FFI declarations for server config
+extern "C" {
+    void* serverconfig_new();
+    void serverconfig_free(void* ptr);
+    void serverconfig_fill_defaults(void* ptr);
+    void serverconfig_set_string(void* ptr, const char* field_name, const char* value);
+    char* serverconfig_get_string(const void* ptr, const char* field_name);
+    void serverconfig_free_string(char* ptr);
+    void* serverconfig_read_config_file(const char* path);
+    void serverconfig_free_tags(void* ptr);
+    void* serverconfig_parse_file(const char* path);
+    int serverconfig_is_sid(const char* sid);
+    char* serverconfig_get_hostname();
+}
+
 ServerConfig::ReadResult::ReadResult(const std::string& c, const std::string& e)
 	: contents(c)
 	, error(e)
@@ -345,7 +360,70 @@ namespace
 
 void ServerConfig::Fill()
 {
-	// Read the <server> config.
+	// Try to use Rust config parser first
+	::Logs.Debug("CONFIG", "Attempting to use Rust config parser");
+	
+	// Parse config using Rust
+	void* rust_config_ptr = serverconfig_parse_file(ServerInstance->ConfigFileName.c_str());
+	if (rust_config_ptr)
+	{
+		// Rust parser succeeded - extract values and copy to C++
+		::Logs.Normal("CONFIG", "Successfully parsed config using Rust parser");
+		
+		// Copy values from Rust ServerConfig to C++ ServerConfig
+		// Note: We use set_string to copy individual values
+		char* value;
+		
+		value = serverconfig_get_string(rust_config_ptr, "server_name");
+		if (value && *value) {
+			ServerName = value;
+			serverconfig_free_string(value);
+		}
+		
+		value = serverconfig_get_string(rust_config_ptr, "server_id");
+		if (value && *value) {
+			ServerId = value;
+			serverconfig_free_string(value);
+		}
+		
+		value = serverconfig_get_string(rust_config_ptr, "server_desc");
+		if (value && *value) {
+			ServerDesc = value;
+			serverconfig_free_string(value);
+		}
+		
+		value = serverconfig_get_string(rust_config_ptr, "network");
+		if (value && *value) {
+			Network = value;
+			serverconfig_free_string(value);
+		}
+		
+		// Clean up Rust config
+		serverconfig_free(rust_config_ptr);
+		
+		// Validate server ID if we got one
+		if (!ServerId.empty() && !InspIRCd::IsSID(ServerId))
+			throw CoreException(ServerId + " is not a valid server ID. A server ID must be 3 characters long, with the first character a digit and the next two characters a digit or letter.");
+		
+		// Fill in any defaults that weren't set
+		if (ServerName.empty())
+			ServerName = GetServerHost();
+		if (ServerDesc.empty())
+			ServerDesc = ServerName;
+		if (Network.empty())
+			Network = ServerName;
+		
+		// For now, still call C++ parsing for other tags (connect classes, etc.)
+		// Eventually this will be fully Rust
+		::Logs.Debug("CONFIG", "Rust parser: using Rust values, continuing with C++ for remaining config");
+	}
+	else
+	{
+		// Fall back to C++ parser completely
+		::Logs.Normal("CONFIG", "Rust config parser failed, using C++ parser");
+	}
+	
+	// Read the <server> config using C++ parser.
 	const auto& server = ConfValue("server");
 	if (ServerId.empty())
 	{
