@@ -36,7 +36,7 @@
 #include <fmt/color.h>
 
 #include "inspircd.h"
-#include "socketengine_glue.h"
+#include "socketengine.h"
 
 extern "C" int rust_socketengine_close(int fd);
 extern "C" int rust_socketengine_blocking(int fd);
