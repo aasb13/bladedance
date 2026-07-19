@@ -334,21 +334,19 @@ size_t DataKeeper::SaveSerializer(User *user) {
 
 void DataKeeper::SaveExtensions(Extensible *extensible,
                                 std::vector<InstanceData> &extdata) {
-  const Extensible::ExtensibleStore &setexts = extensible->GetExtList();
-
   // Position of the extension saved in the handledexts list
   size_t index = 0;
   for (const auto &prov : handledexts) {
     ExtensionItem *const item = prov.extitem;
-    Extensible::ExtensibleStore::const_iterator it = setexts.find(item);
-    if (it == setexts.end())
+    void* value = extensible->GetRawExt(item);
+    if (!value)
       continue;
 
-    std::string value = item->ToInternal(extensible, it->second);
+    std::string value_str = item->ToInternal(extensible, value);
     // If the serialized value is empty the extension won't be saved and
     // restored
-    if (!value.empty())
-      extdata.emplace_back(index, value);
+    if (!value_str.empty())
+      extdata.emplace_back(index, value_str);
   }
 }
 
@@ -451,7 +449,7 @@ void DataKeeper::CreateModeList(ModeType modetype) {
 void DataKeeper::Save(Module *currmod) {
   this->mod = currmod;
 
-  for (const auto &[_, ext] : ServerInstance->Extensions.GetExts()) {
+  for (auto *ext : ServerInstance->Extensions.GetExts()) {
     if (ext->creator == mod)
       handledexts.emplace_back(ext);
   }

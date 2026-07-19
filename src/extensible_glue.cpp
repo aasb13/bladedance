@@ -1,6 +1,10 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
+ *   Copyright (C) 2013, 2019, 2021-2022 Sadie Powell <sadie@witchery.services>
+ *   Copyright (C) 2012, 2014-2015 Attila Molnar <attilamolnar@hush.com>
+ *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
+ *   Copyright (C) 2009 Daniel De Graaf <danieldg@inspircd.org>
  *   Copyright (C) 2019-2024 Sadie Powell <sadie@witchery.services>
  *
  * This file is part of InspIRCd.  InspIRCd is free software: you can
@@ -16,73 +20,157 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// This file is the C++ shell wrapping the Rust storage engine in
+// src/extensible.rs. Extensible/ExtensionManager themselves no longer own a
+// C++ container; they hold an opaque pointer into Rust-owned memory and
+// delegate all map operations across the FFI boundary. The ExtensionItem
+// virtual-dispatch hierarchy (include/extension.h, unchanged) still lives
+// in C++ and is called back into from here wherever behavior (Delete,
+// serialization) is needed, since that behavior is arbitrary per-module
+// C++ code.
 
 #include "inspircd.h"
 #include "extension.h"
 
-bool ExtensionManager::Register(ExtensionItem* item)
-{
-	return types.emplace(item->name, item).second;
-}
-
-void ExtensionManager::BeginUnregister(Module* module, std::vector<ExtensionItem*>& items)
-{
-	for (ExtMap::iterator type = types.begin(); type != types.end(); )
-	{
-		ExtMap::iterator thistype = type++;
-		ExtensionItem* item = thistype->second;
-		if (item->creator == module)
-		{
-			items.push_back(item);
-			types.erase(thistype);
-		}
-	}
-}
-
-ExtensionItem* ExtensionManager::GetItem(const std::string& name)
-{
-	ExtMap::iterator iter = types.find(name);
-	if (iter == types.end())
-		return nullptr;
-
-	return iter->second;
-}
+// ---------------------------------------------------------------------
+// Extensible
+// ---------------------------------------------------------------------
 
 Extensible::Extensible(ExtensionType exttype)
 	: extype(exttype)
+	, store(extensible_store_new())
 	, culled(false)
 {
 }
 
 Extensible::~Extensible()
 {
-	if ((!extensions.empty() || !culled) && ServerInstance)
+	if ((!extensible_store_is_empty(store) || !culled) && ServerInstance)
 	{
 		ServerInstance->Logs.Debug("CULL", "Extensible was deleted without being culled: @{}",
 			fmt::ptr(this));
 	}
+	extensible_store_free(store);
 }
-
 
 void Extensible::FreeAllExtItems()
 {
-	for (const auto& [extension, item] : extensions)
-		extension->Delete(this, item);
-	extensions.clear();
+	const size_t count = extensible_store_len(store);
+	for (size_t i = 0; i < count; ++i)
+	{
+		size_t key = 0;
+		size_t value = 0;
+		if (!extensible_store_entry_at(store, i, &key, &value))
+			break;
+
+		auto* extension = reinterpret_cast<ExtensionItem*>(key);
+		extension->Delete(this, reinterpret_cast<void*>(value));
+	}
+	extensible_store_clear(store);
+}
+
+std::vector<std::pair<ExtensionItem*, void*>> Extensible::GetExtList() const
+{
+	std::vector<std::pair<ExtensionItem*, void*>> result;
+	const size_t count = extensible_store_len(store);
+	result.reserve(count);
+	for (size_t i = 0; i < count; ++i)
+	{
+		size_t key = 0;
+		size_t value = 0;
+		if (!extensible_store_entry_at(store, i, &key, &value))
+			break;
+
+		result.emplace_back(reinterpret_cast<ExtensionItem*>(key), reinterpret_cast<void*>(value));
+	}
+	return result;
+}
+
+void* Extensible::GetRawExt(const ExtensionItem* item) const
+{
+	return reinterpret_cast<void*>(extensible_store_get_raw(store, reinterpret_cast<size_t>(item)));
 }
 
 void Extensible::UnhookExtensions(const std::vector<ExtensionItem*>& items)
 {
+	// Note: every ExtensionItem in this codebase only ever stores a
+	// non-zero raw value when "set" (Unset()/UnsetRaw() always erases the
+	// entry rather than storing a zero sentinel), so a 0 read here reliably
+	// means "nothing set for this item".
 	for (auto* item : items)
 	{
-		ExtensibleStore::iterator iter = extensions.find(item);
-		if (iter != extensions.end())
-		{
-			item->Delete(this, iter->second);
-			extensions.erase(iter);
-		}
+		const size_t key = reinterpret_cast<size_t>(item);
+		const size_t value = extensible_store_unset_raw(store, key);
+		if (value != 0)
+			item->Delete(this, reinterpret_cast<void*>(value));
 	}
 }
+
+// ---------------------------------------------------------------------
+// ExtensionManager
+// ---------------------------------------------------------------------
+
+ExtensionManager::ExtensionManager()
+	: store(extension_manager_new())
+{
+}
+
+ExtensionManager::~ExtensionManager()
+{
+	extension_manager_free(store);
+}
+
+bool ExtensionManager::Register(ExtensionItem* item)
+{
+	Module* creator = item->creator;
+	return extension_manager_register(
+		store,
+		item->name.c_str(),
+		reinterpret_cast<size_t>(item),
+		reinterpret_cast<size_t>(creator));
+}
+
+void ExtensionManager::BeginUnregister(Module* module, std::vector<ExtensionItem*>& items)
+{
+	const size_t capacity = extension_manager_len(store);
+	std::vector<size_t> buf(capacity);
+	const size_t removed = extension_manager_begin_unregister(
+		store, reinterpret_cast<size_t>(module), buf.data(), buf.size());
+
+	items.reserve(items.size() + removed);
+	for (size_t i = 0; i < removed; ++i)
+		items.push_back(reinterpret_cast<ExtensionItem*>(buf[i]));
+}
+
+std::vector<ExtensionItem*> ExtensionManager::GetExts() const
+{
+	std::vector<ExtensionItem*> result;
+	const size_t count = extension_manager_len(store);
+	result.reserve(count);
+	for (size_t i = 0; i < count; ++i)
+	{
+		size_t item = 0;
+		if (!extension_manager_entry_at(store, i, &item))
+			break;
+		result.push_back(reinterpret_cast<ExtensionItem*>(item));
+	}
+	return result;
+}
+
+ExtensionItem* ExtensionManager::GetItem(const std::string& name)
+{
+	const size_t item = extension_manager_get_item(store, name.c_str());
+	return reinterpret_cast<ExtensionItem*>(item);
+}
+
+// ---------------------------------------------------------------------
+// ExtensionItem and its concrete subclasses: unchanged from upstream.
+// These stay in C++ because they are templated / virtual-dispatch classes
+// that call back into Module and Server, neither of which is ported to
+// Rust yet. They already go through Extensible::GetRawExt (formerly a
+// private GetRaw/SetRaw/UnsetRaw against the raw map) via the public
+// wrapper API added above.
+// ---------------------------------------------------------------------
 
 ExtensionItem::ExtensionItem(Module* mod, const std::string& Key, ExtensionType exttype)
 	: ServiceProvider(mod, Key, SERVICE_METADATA)
@@ -102,33 +190,21 @@ void ExtensionItem::RegisterService()
 
 void* ExtensionItem::GetRaw(const Extensible* container) const
 {
-	auto iter = container->extensions.find(const_cast<ExtensionItem*>(this));
-	if (iter == container->extensions.end())
-		return nullptr;
-
-	return iter->second;
+	return container->GetRawExt(this);
 }
 
 void* ExtensionItem::SetRaw(Extensible* container, void* value)
 {
-	auto result = container->extensions.emplace(this, value);
-	if (result.second)
-		return nullptr;
-
-	void* old = result.first->second;
-	result.first->second = value;
-	return old;
+	const size_t key = reinterpret_cast<size_t>(this);
+	const size_t old = extensible_store_set_raw(container->store, key, reinterpret_cast<size_t>(value));
+	return reinterpret_cast<void*>(old);
 }
 
 void* ExtensionItem::UnsetRaw(Extensible* container)
 {
-	auto iter = container->extensions.find(this);
-	if (iter == container->extensions.end())
-		return nullptr;
-
-	void* result = iter->second;
-	container->extensions.erase(iter);
-	return result;
+	const size_t key = reinterpret_cast<size_t>(this);
+	const size_t old = extensible_store_unset_raw(container->store, key);
+	return reinterpret_cast<void*>(old);
 }
 
 void ExtensionItem::Sync(const Extensible* container, void* item)
@@ -307,9 +383,7 @@ void StringExtItem::FromInternal(Extensible* container, const std::string& value
 		Set(container, value, false);
 }
 
-
 std::string StringExtItem::ToInternal(const Extensible* container, void* item) const noexcept
 {
 	return item ? *static_cast<std::string*>(item) : std::string();
 }
-

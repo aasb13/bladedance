@@ -2,6 +2,7 @@
 // Original work Copyright (C) the InspIRCd contributors.
 // Licensed under GPLv2. See LICENSE for details.
 
+pub mod extensible;
 pub mod stringutils;
 pub mod bancache;
 pub mod usermanager;

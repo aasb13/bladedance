@@ -61,7 +61,7 @@ core_src_list = files(
   'src/configparser.cpp',
   'src/configreader_glue.cpp',
   'src/dynamic_glue.cpp',
-  'src/extensible.cpp',
+  'src/extensible_glue.cpp',
   'src/hashcomp_glue.cpp',
   'src/helperfuncs_glue.cpp',
   'src/inspircd_glue.cpp',

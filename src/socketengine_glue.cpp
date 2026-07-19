@@ -36,6 +36,7 @@
 #include <fmt/color.h>
 
 #include "inspircd.h"
+#include "socketengine_glue.h"
 
 extern "C" int rust_socketengine_close(int fd);
 extern "C" int rust_socketengine_blocking(int fd);
@@ -238,7 +239,7 @@ ssize_t SocketEngine::Recv(EventHandler* eh, void* buf, size_t len, int flags)
 	return nbRecvd;
 }
 
-ssize_t SocketEngine::SendTo(EventHandler* eh, const void* buf, size_t len, int flags, const irc::sockets::sockaddrs& address)
+ssize_t SocketEngine::SendTo(EventHandler* eh, const void* buf, size_t len, int flags, const sockaddrs& address)
 {
 	ssize_t nbSent = rust_socketengine_sendto(eh->GetFd(), buf, len, flags, &address.sa, address.sa_size());
 	stats.UpdateWriteCounters(nbSent);
@@ -271,7 +272,7 @@ int SocketEngine::WriteV(EventHandler* eh, const iovec* iovec, int count)
 }
 #endif
 
-int SocketEngine::Connect(EventHandler* eh, const irc::sockets::sockaddrs& address)
+int SocketEngine::Connect(EventHandler* eh, const sockaddrs& address)
 {
 	return rust_socketengine_connect(eh->GetFd(), &address.sa, address.sa_size());
 }
@@ -281,7 +282,7 @@ int SocketEngine::Shutdown(EventHandler* eh, int how)
 	return rust_socketengine_shutdown(eh->GetFd(), how);
 }
 
-int SocketEngine::Bind(EventHandler* eh, const irc::sockets::sockaddrs& addr)
+int SocketEngine::Bind(EventHandler* eh, const sockaddrs& addr)
 {
 	return rust_socketengine_bind(eh->GetFd(), &addr.sa, addr.sa_size());
 }
