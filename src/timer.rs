@@ -72,9 +72,9 @@ impl Timer {
         self.secs = newinterval;
         if restart {
             unsafe {
-                timer_ffi_del_timer(self.cpp_timer);
+                timer_rust_del_timer(self.cpp_timer);
                 self.trigger = timer_ffi_server_time() + newinterval as i64;
-                timer_ffi_add_timer(self.cpp_timer);
+                timer_rust_add_timer(self as *const _ as *mut _);
             }
         }
     }
@@ -212,8 +212,6 @@ pub fn get_timer_manager() -> *mut TimerManager {
 
 unsafe extern "C" {
     fn timer_ffi_server_time() -> TimeT;
-    fn timer_ffi_add_timer(timer: *mut c_void);
-    fn timer_ffi_del_timer(timer: *mut c_void);
     fn timer_ffi_timer_tick(timer: *mut c_void) -> bool;
     fn timer_ffi_get_rust_timer(timer: *mut c_void) -> *mut c_void;
 }

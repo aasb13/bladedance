@@ -95,26 +95,6 @@ extern "C" {
         return ServerInstance->Time();
     }
     
-    __attribute__((visibility("default"))) void timer_ffi_add_timer(void* cpp_timer)
-    {
-        Timer* timer = static_cast<Timer*>(cpp_timer);
-        if (timer)
-        {
-            // Use public AddTimer method instead of direct access
-            ServerInstance->Timers.AddTimer(timer);
-        }
-    }
-    
-    __attribute__((visibility("default"))) void timer_ffi_del_timer(void* cpp_timer)
-    {
-        Timer* timer = static_cast<Timer*>(cpp_timer);
-        if (timer)
-        {
-            // Use public DelTimer method instead of direct access
-            ServerInstance->Timers.DelTimer(timer);
-        }
-    }
-    
     __attribute__((visibility("default"))) bool timer_ffi_timer_tick(void* cpp_timer)
     {
         Timer* timer = static_cast<Timer*>(cpp_timer);
