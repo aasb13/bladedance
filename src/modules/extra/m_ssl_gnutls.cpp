@@ -789,7 +789,7 @@ private:
 		{
 			certinfo->error = INSP_FORMAT("Certificate not active for {} (on {})",
 				Duration::ToLongString(certinfo->activation - ServerInstance->Time(), true),
-				Time::ToString(certinfo->activation));
+				ToString(certinfo->activation));
 		}
 
 		certinfo->expiration = gnutls_x509_crt_get_expiration_time(cert);
@@ -802,7 +802,7 @@ private:
 		{
 			certinfo->error = INSP_FORMAT("Certificate expired {} ago (on {})",
 				Duration::ToLongString(ServerInstance->Time() - certinfo->expiration, true),
-				Time::ToString(certinfo->expiration));
+				ToString(certinfo->expiration));
 		}
 
 info_done_dealloc:

@@ -221,7 +221,7 @@ public:
 					if (oper->IsAway())
 					{
 						const std::string awayperiod = Duration::ToLongString(ServerInstance->Time() - oper->away->time, true);
-						const std::string awaytime = Time::ToString(oper->away->time);
+						const std::string awaytime = ToString(oper->away->time);
 
 						extra = INSP_FORMAT(": away for {} [since {}] ({})", awayperiod, awaytime, oper->away->message);
 					}
@@ -230,7 +230,7 @@ public:
 					if (loper)
 					{
 						const std::string idleperiod = Duration::ToLongString(ServerInstance->Time() - loper->idle_lastmsg, true);
-						const std::string idletime = Time::ToString(loper->idle_lastmsg);
+						const std::string idletime = ToString(loper->idle_lastmsg);
 
 						extra += INSP_FORMAT("{} idle for {} [since {}]",  extra.empty() ? ':' : ',', idleperiod, idletime);
 					}

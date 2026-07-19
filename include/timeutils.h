@@ -71,38 +71,35 @@ namespace Duration
 	__attribute__ ((visibility ("default"))) bool TryFrom(const std::string& str, unsigned long& duration);
 }
 
-namespace Time
+/** A short time format picked for being readable (e.g. "Sun 23 Mar 2025 10:20:30") */
+inline constexpr const char* DEFAULT_SHORT = "%a %d %b %Y %H:%M:%S";
+
+/** A long time format picked for being readable (e.g. "Sunday, 23 March 2025 @ 10:20:30 GMT"). */
+inline constexpr const char* DEFAULT_LONG = "%A, %d %B %Y @ %H:%M:%S %Z";
+
+/** The time format specified in ISO 8601 (e.g. "2025-03-23T10:20:30+0000") */
+inline constexpr const char* ISO_8601 = "%Y-%m-%dT%H:%M:%S%z";
+
+/** The time format specified in RFC 1123 (e.g. "Sun, 23 Mar 2025 10:20:30 GMT") */
+inline constexpr const char* RFC_1123 = "%a, %d %b %Y %H:%M:%S %Z";
+
+/** Converts a UNIX timestamp to a time string.
+ *
+ * @param ts The timestamp to convert to a string.
+ * @param format A snprintf format string to output the timestamp in.
+ * @param utc If the timestamp is a UTC timestamp then true or false if the
+ *            timestamp is a local timestamp.
+ */
+__attribute__ ((visibility ("default"))) std::string ToString(time_t ts, const char* format = nullptr, bool utc = false);
+
+/** Converts a duration from now to a time string.
+ *
+ * @param duration The duration from now to convert to a string.
+ * @param format A snprintf format string to output the timestamp in.
+ * @param utc If the timestamp is a UTC timestamp then true or false if the
+ *            timestamp is a local timestamp.
+ */
+inline std::string FromNow(unsigned long duration, const char* format = nullptr, bool utc = false)
 {
-	/** A short time format picked for being readable (e.g. "Sun 23 Mar 2025 10:20:30") */
-	inline constexpr const char* DEFAULT_SHORT = "%a %d %b %Y %H:%M:%S";
-
-	/** A long time format picked for being readable (e.g. "Sunday, 23 March 2025 @ 10:20:30 GMT"). */
-	inline constexpr const char* DEFAULT_LONG = "%A, %d %B %Y @ %H:%M:%S %Z";
-
-	/** The time format specified in ISO 8601 (e.g. "2025-03-23T10:20:30+0000") */
-	inline constexpr const char* ISO_8601 = "%Y-%m-%dT%H:%M:%S%z";
-
-	/** The time format specified in RFC 1123 (e.g. "Sun, 23 Mar 2025 10:20:30 GMT") */
-	inline constexpr const char* RFC_1123 = "%a, %d %b %Y %H:%M:%S %Z";
-
-	/** Converts a UNIX timestamp to a time string.
-	 *
-	 * @param ts The timestamp to convert to a string.
-	 * @param format A snprintf format string to output the timestamp in.
-	 * @param utc If the timestamp is a UTC timestamp then true or false if the
-	 *            timestamp is a local timestamp.
-	 */
-	__attribute__ ((visibility ("default"))) std::string ToString(time_t ts, const char* format = nullptr, bool utc = false);
-
-	/** Converts a duration from now to a time string.
-	 *
-	 * @param duration The duration from now to convert to a string.
-	 * @param format A snprintf format string to output the timestamp in.
-	 * @param utc If the timestamp is a UTC timestamp then true or false if the
-	 *            timestamp is a local timestamp.
-	 */
-	inline std::string FromNow(unsigned long duration, const char* format = nullptr, bool utc = false)
-	{
-		return ToString(ServerInstance->Time() + duration, format, utc);
-	}
+	return ToString(ServerInstance->Time() + duration, format, utc);
 }

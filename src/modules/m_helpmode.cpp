@@ -103,7 +103,7 @@ public:
 			if (helper->IsAway())
 			{
 				const std::string awayperiod = Duration::ToLongString(ServerInstance->Time() - helper->away->time, true);
-				const std::string awaytime = Time::ToString(helper->away->time);
+				const std::string awaytime = ToString(helper->away->time);
 
 				extra = INSP_FORMAT(": away for {} [since {}] ({})", awayperiod, awaytime, helper->away->message);
 			}
@@ -112,7 +112,7 @@ public:
 			if (lhelper)
 			{
 				const std::string idleperiod = Duration::ToLongString(ServerInstance->Time() - lhelper->idle_lastmsg, true);
-				const std::string idletime = Time::ToString(lhelper->idle_lastmsg);
+				const std::string idletime = ToString(lhelper->idle_lastmsg);
 
 				extra += INSP_FORMAT("{} idle for {} [since {}]",  extra.empty() ? ':' : ',', idleperiod, idletime);
 			}

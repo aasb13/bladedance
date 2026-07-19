@@ -89,7 +89,7 @@ CmdResult CommandGline::Handle(User* user, const Params& parameters)
 			else
 			{
 				ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed G-line on {}, expires in {} (on {}): {}",
-					user->nick, target, Duration::ToLongString(duration), Time::FromNow(duration), gl->reason);
+					user->nick, target, Duration::ToLongString(duration), FromNow(duration), gl->reason);
 			}
 
 			ServerInstance->XLines->ApplyLines();

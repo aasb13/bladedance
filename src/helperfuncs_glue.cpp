@@ -216,7 +216,7 @@ std::string Duration::ToLongString(unsigned long duration, bool brief)
 	return str;
 }
 
-std::string Time::ToString(time_t curtime, const char* format, bool utc)
+std::string ToString(time_t curtime, const char* format, bool utc)
 {
 	char* result = helperfuncs_time_to_string(static_cast<int64_t>(curtime), format, utc ? 1 : 0);
 	if (!result)

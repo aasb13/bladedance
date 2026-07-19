@@ -82,7 +82,7 @@ CmdResult CommandEline::Handle(User* user, const Params& parameters)
 			else
 			{
 				ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed E-line on {}, expires in {} (on {}): {}",
-					user->nick, target, Duration::ToLongString(duration), Time::FromNow(duration), el->reason);
+					user->nick, target, Duration::ToLongString(duration), FromNow(duration), el->reason);
 			}
 		}
 		else

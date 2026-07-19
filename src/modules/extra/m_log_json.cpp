@@ -93,7 +93,7 @@ public:
 		if (prevtime != time)
 		{
 			prevtime = time;
-			timestr = Time::ToString(prevtime, Time::ISO_8601);
+			timestr = ToString(prevtime, ISO_8601);
 		}
 
 		const auto* levelstr = Log::LevelToString(level);
@@ -179,7 +179,7 @@ public:
 		if (target.empty())
 			throw CoreException("<log:target> must be specified for JSON logger at " + tag->source.str());
 
-		const std::string fulltarget = ServerInstance->Config->Paths.PrependLog(Time::ToString(ServerInstance->Time(), target.c_str()));
+		const std::string fulltarget = ServerInstance->Config->Paths.PrependLog(ToString(ServerInstance->Time(), target.c_str()));
 		auto* fh = fopen(fulltarget.c_str(), "a");
 		if (!fh)
 		{

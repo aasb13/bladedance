@@ -84,7 +84,7 @@ public:
 				{
 					ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed Z-line on {}, expires in {} (on {}): {}",
 						zl->source, u->GetAddress(), Duration::ToLongString(zl->duration),
-						Time::ToString(zl->duration), zl->reason);
+						ToString(zl->duration), zl->reason);
 				}
 				addedzline = true;
 			}
@@ -186,7 +186,7 @@ public:
 					else
 					{
 						ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed R-line on {}, expires in {} (on {}): {}",
-							user->nick, parameters[0], Duration::ToLongString(duration), Time::FromNow(duration), r->reason);
+							user->nick, parameters[0], Duration::ToLongString(duration), FromNow(duration), r->reason);
 					}
 
 					ServerInstance->XLines->ApplyLines();
