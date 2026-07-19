@@ -486,6 +486,9 @@ InspIRCd::InspIRCd(int argc, char** argv)
 		::Logs.Critical("STARTUP","- For TCP/IP listeners try using a public IP address in <bind:address> instead");
 		::Logs.Critical("STARTUP","  of * or leaving it blank.");
 		::Logs.Critical("STARTUP","- For UNIX socket listeners try enabling <bind:replace> to replace old sockets.");
+		
+		::Logs.Critical("STARTUP", "Exiting...");
+		Exit(EXIT_FAILURE);
 	}
 
 	inspircd_async_init();
