@@ -31,8 +31,6 @@
 #include "compat.h"
 #include <string>
 
-#include "utility/uncopiable.h"
-
 /** The base class for inspircd classes that support reference counting.
  * Any objects that do not have a well-defined lifetime should inherit from
  * this, and should be assigned to a reference<type> object to establish their
@@ -47,12 +45,13 @@
  * will avoid the slight overhead of changing the reference count.
  */
 class __attribute__ ((visibility ("default"))) refcountbase
-	: private insp::uncopiable
 {
 	mutable unsigned int refcount = 0;
 public:
 	refcountbase();
 	virtual ~refcountbase();
+	refcountbase(const refcountbase&) = delete;
+	refcountbase& operator=(const refcountbase&) = delete;
 	inline unsigned int GetReferenceCount() const { return refcount; }
 	static inline void* operator new(size_t, void* m) { return m; }
 	static void* operator new(size_t);
@@ -67,12 +66,13 @@ public:
  * Safe for use as a second parent class; will not add a second vtable.
  */
 class __attribute__ ((visibility ("default"))) usecountbase
-	: private insp::uncopiable
 {
 	mutable unsigned int usecount = 0;
 public:
 	usecountbase() = default;
 	~usecountbase();
+	usecountbase(const usecountbase&) = delete;
+	usecountbase& operator=(const usecountbase&) = delete;
 	inline unsigned int GetUseCount() const { return usecount; }
 	inline void refcount_inc() const { usecount++; }
 	inline bool refcount_dec() const { usecount--; return false; }

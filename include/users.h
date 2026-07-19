@@ -155,10 +155,11 @@ public:
 
 /** Represents an \<opertype> from the server config. */
 class __attribute__ ((visibility ("default"))) OperType
-	: public insp::uncopiable
 {
 protected:
 	friend class OperAccount;
+	OperType(const OperType&) = delete;
+	OperType& operator=(const OperType&) = delete;
 
 	/** Oper-only channel modes that an oper of this type can use. */
 	ModeParser::ModeStatus chanmodes;

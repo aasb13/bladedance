@@ -304,7 +304,6 @@ public:
 
 	/** Encapsulates the result of calling ReadFile. */
 	class __attribute__ ((visibility ("default"))) ReadResult final
-		: private insp::uncopiable
 	{
 	public:
 		/* If the read succeeded then the contents of the file. */
@@ -314,6 +313,8 @@ public:
 		const std::string error;
 
 		ReadResult(const std::string& c, const std::string& e);
+		ReadResult(const ReadResult&) = delete;
+		ReadResult& operator=(const ReadResult&) = delete;
 
 		/** Allows nicer evaluation of a read result */
 		inline operator bool() const { return error.empty(); }
