@@ -60,8 +60,11 @@ extern "C" {
     // Rust FFI functions
     char* inspircd_expand_path(const char* path);
     void inspircd_check_root();
-    void inspircd_void_signal_handler();
+    void inspircd_void_signal_handler(int signal);
     void inspircd_free_string(char* ptr);
+    void rust_init_signals();
+    int rust_get_last_signal();
+    void rust_reset_last_signal();
 
     struct ParseOptionsResult {
         char* config_path;
@@ -97,6 +100,12 @@ extern "C" {
         sleep(seconds);
 #endif
     }
+
+    // C++ signal handler that can be called from Rust
+    extern "C" CoreExport void inspircd_handle_signal(int signal) {
+        if (ServerInstance)
+            ServerInstance->HandleSignal(signal);
+    }
 }
 
 // 1 for now
@@ -110,9 +119,6 @@ Log::Manager Logs;
 const unsigned char* national_case_insensitive_map = ascii_case_insensitive_map;
 namespace
 {
-	[[noreturn]]
-	void VoidSignalHandler(int);
-
 	// Warns a user running as root that they probably shouldn't.
 	void CheckRoot()
 	{
@@ -233,9 +239,9 @@ namespace
 	void ForkIntoBackground()
 	{
 #ifndef _WIN32
-		// We use VoidSignalHandler whilst forking to avoid breaking daemon scripts
+		// We use inspircd_void_signal_handler whilst forking to avoid breaking daemon scripts
 		// if the parent process exits with SIGTERM (15) instead of EXIT_SUCCESS (0).
-		signal(SIGTERM, VoidSignalHandler);
+		signal(SIGTERM, inspircd_void_signal_handler);
 
 		errno = 0;
 		int childpid = fork();
@@ -257,7 +263,8 @@ namespace
 		else
 		{
 			setsid();
-			signal(SIGTERM, InspIRCd::SetSignal);
+			// Re-initialize Rust signal handlers in the child process
+			rust_init_signals();
 			SocketEngine::RecoverFromFork();
 		}
 #endif
@@ -312,26 +319,9 @@ namespace
 		ServerInstance->Config->CommandLine.writepid = result.writepid;
 	}
 
-	// Sets handlers for various process signals.
-	void SetSignals()
-	{
-#ifndef _WIN32
-		signal(SIGALRM, SIG_IGN);
-		signal(SIGCHLD, SIG_IGN);
-		signal(SIGHUP, InspIRCd::SetSignal);
-		signal(SIGPIPE, SIG_IGN);
-		signal(SIGUSR1, SIG_IGN);
-		signal(SIGUSR2, SIG_IGN);
-		signal(SIGXFSZ, SIG_IGN);
-#endif
-		signal(SIGTERM, InspIRCd::SetSignal);
-	}
 
-	// Required for returning the proper value of EXIT_SUCCESS for the parent process.
-	void VoidSignalHandler(int)
-	{
-		inspircd_void_signal_handler();
-	}
+
+
 }
 
 void InspIRCd::Cleanup()
@@ -432,7 +422,9 @@ InspIRCd::InspIRCd(int argc, char** argv)
 		Exit(EXIT_FAILURE);
 	}
 
-	SetSignals();
+	// Initialize Rust signal handlers
+	rust_init_signals();
+	
 	if (!Config->CommandLine.runasroot)
 		CheckRoot();
 	if (!Config->CommandLine.nofork)
@@ -649,10 +641,12 @@ void InspIRCd::Run()
 		/* if any users were quit, take them out */
 	AtomicActions.Run();
 
-		if (lastsignal)
+		// Check for signals from Rust
+		int signal = rust_get_last_signal();
+		if (signal != 0)
 		{
-			HandleSignal(lastsignal);
-			lastsignal = 0;
+			HandleSignal(signal);
+			rust_reset_last_signal();
 		}
 	}
 }
@@ -665,13 +659,6 @@ void InspIRCd::ActionList::Run()
 		delete action;
 	}
 	list.clear();
-}
-
-sig_atomic_t InspIRCd::lastsignal = 0;
-
-void InspIRCd::SetSignal(int signal)
-{
-	lastsignal = signal;
 }
 
 #ifdef _WIN32

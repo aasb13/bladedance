@@ -4,6 +4,7 @@
 
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
+use std::sync::atomic::{AtomicI32, Ordering};
 use clap::{Parser, CommandFactory};
 use tracing::{warn, error, info};
 
@@ -11,6 +12,9 @@ unsafe extern "C" {
     fn inspircd_ffi_exit(code: c_int);
     fn inspircd_ffi_isatty(fd: c_int) -> c_int;
     fn inspircd_ffi_sleep(seconds: c_int);
+    
+    // C++ signal handler callback
+    fn inspircd_handle_signal(signal: c_int);
 }
 
 #[derive(Parser, Debug)]
@@ -117,8 +121,9 @@ pub extern "C" fn inspircd_check_root() {
 }
 
 /// Signal handler that exits with success
+/// This is used during fork to ensure parent exits cleanly
 #[unsafe(no_mangle)]
-pub extern "C" fn inspircd_void_signal_handler() {
+pub extern "C" fn inspircd_void_signal_handler(_signal: c_int) {
     unsafe { inspircd_ffi_exit(0); }
 }
 
@@ -217,6 +222,71 @@ pub extern "C" fn inspircd_free_string(ptr: *mut c_char) {
     if !ptr.is_null() {
         unsafe {
             let _ = CString::from_raw(ptr);
+        }
+    }
+}
+
+// Global to store the last received signal for polling by C++
+static LAST_SIGNAL: AtomicI32 = AtomicI32::new(0);
+
+/// Returns the last signal received (for C++ to poll)
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_get_last_signal() -> c_int {
+    LAST_SIGNAL.load(Ordering::SeqCst)
+}
+
+/// Resets the last signal (for C++ to call after handling)
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_reset_last_signal() {
+    LAST_SIGNAL.store(0, Ordering::SeqCst);
+}
+
+/// Signal handler for SIGTERM and SIGHUP that stores the signal
+/// for C++ to poll in the main loop.
+/// We don't call C++ directly from the signal handler to avoid
+/// potential issues with signal handler context.
+extern "C" fn rust_signal_handler(signal: c_int) {
+    // Store the signal for C++ to poll
+    LAST_SIGNAL.store(signal, Ordering::SeqCst);
+}
+
+/// Initializes Rust signal handlers
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_init_signals() {
+    #[cfg(unix)]
+    {
+        use nix::sys::signal::{self, Signal, SigHandler, SigAction, SaFlags, SigSet};
+        use nix::unistd::getpid;
+        
+        info!("Initializing Rust signal handlers for PID {}", getpid().as_raw());
+        
+        // Create a sigaction that uses our handler
+        let sa = SigAction::new(
+            SigHandler::Handler(rust_signal_handler),
+            SaFlags::empty(),
+            SigSet::empty(),
+        );
+        
+        // Register handlers for all signals that the C++ code might want to see.
+        // This matches the original behavior where all signals were stored and
+        // C++ decided which ones to act on.
+        let signals_to_handle = [
+            Signal::SIGALRM,
+            Signal::SIGCHLD,
+            Signal::SIGHUP,
+            Signal::SIGPIPE,
+            Signal::SIGTERM,
+            Signal::SIGUSR1,
+            Signal::SIGUSR2,
+            Signal::SIGXFSZ,
+        ];
+        
+        for sig in signals_to_handle.iter() {
+            if let Err(e) = unsafe { signal::sigaction(*sig, &sa) } {
+                error!("Failed to set signal handler for {:?}: {}", sig, e);
+            } else {
+                info!("Set signal handler for {:?}", sig);
+            }
         }
     }
 }

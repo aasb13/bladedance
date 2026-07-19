@@ -158,8 +158,6 @@ public:
 class __attribute__ ((visibility ("default"))) InspIRCd final
 {
 private:
-	/** The last signal that was received from the operating system. */
-	static sig_atomic_t lastsignal;
 
 	/** A 64k buffer used to read socket data into. */
 	char readbuffer[65535];
@@ -173,15 +171,14 @@ private:
 	/** Prepares the server for restart or shutdown. */
 	void Cleanup();
 
-	/** Handles an stored signal in the main loop.
-	 * @param signal The signal received from the operating system.
-	 */
-	void HandleSignal(sig_atomic_t signal);
-
 	/** Attempt to write the process id to a file. */
 	void WritePID();
 
 public:
+	/** Handles an stored signal in the main loop.
+	 * @param signal The signal received from the operating system.
+	 */
+	void HandleSignal(sig_atomic_t signal);
 	/** Base class for actions that must happen outside of the current call stack. */
 	class ActionBase
 	{
@@ -393,10 +390,7 @@ public:
 	 */
 	static void ProcessColors(std::string& str);
 
-	/** Stores an incoming signal when received from the operating system.
-	 * @param signal The signal received from the operating system.
-	 */
-	static void SetSignal(int signal);
+
 
 	/* Removes IRC colors from the specified string.
 	 * @param str The string to strip colors from.
