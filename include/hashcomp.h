@@ -58,6 +58,8 @@ __attribute__ ((visibility ("default"))) extern const unsigned char ascii_case_i
 
 /** The irc namespace contains a number of helper classes.
  */
+struct RustTokenStream;
+
 namespace irc
 {
 	/** Check if two IRC object (e.g. nick or channel) names are equal.
@@ -213,7 +215,6 @@ namespace irc
 		size_t position = 0;
 		
 		/** Pointer to Rust implementation */
-		struct RustTokenStream;
 		RustTokenStream* rust_stream = nullptr;
 
 	public:

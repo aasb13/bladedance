@@ -35,12 +35,12 @@ public:
 
 	bool IsMatch(const std::string& text) override
 	{
-		return InspIRCd::Match(text, GetPattern());
+		return Match(text, GetPattern());
 	}
 
 	std::optional<Regex::MatchCollection> Matches(const std::string& text) override
 	{
-		if (!InspIRCd::Match(text, GetPattern()))
+		if (!Match(text, GetPattern()))
 			return std::nullopt;
 
 		// The glob engine does not support any kind of capture.

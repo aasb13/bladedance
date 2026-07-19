@@ -291,25 +291,25 @@ bool CommandWho::MatchUser(LocalUser* source, User* user, WhoData& data)
 	// The source wants to match against users' away messages.
 	bool match = false;
 	if (data.flags['A'])
-		match = user->IsAway() && InspIRCd::Match(user->away->message, data.matchtext, ascii_case_insensitive_map);
+		match = user->IsAway() && Match(user->away->message, data.matchtext, ascii_case_insensitive_map);
 
 	// The source wants to match against users' account names.
 	else if (data.flags['a'])
 	{
 		const std::string* account = accountapi ? accountapi->GetAccountName(user) : nullptr;
-		match = account && InspIRCd::Match(*account, data.matchtext);
+		match = account && Match(*account, data.matchtext);
 	}
 
 	// The source wants to match against users' hostnames.
 	else if (data.flags['h'])
 	{
 		const std::string host = user->GetHost(source_can_see_target && data.flags['x']);
-		match = InspIRCd::Match(host, data.matchtext, ascii_case_insensitive_map);
+		match = Match(host, data.matchtext, ascii_case_insensitive_map);
 	}
 
 	// The source wants to match against users' IP addresses.
 	else if (data.flags['i'])
-		match = source_can_see_target && InspIRCd::MatchCIDR(user->GetAddress(), data.matchtext, ascii_case_insensitive_map);
+		match = source_can_see_target && MatchCIDR(user->GetAddress(), data.matchtext, ascii_case_insensitive_map);
 
 	// The source wants to match against users' modes.
 	else if (data.flags['m'])
@@ -345,7 +345,7 @@ bool CommandWho::MatchUser(LocalUser* source, User* user, WhoData& data)
 
 	// The source wants to match against users' nicks.
 	else if (data.flags['n'])
-		match = InspIRCd::Match(user->nick, data.matchtext);
+		match = Match(user->nick, data.matchtext);
 
 	// The source wants to match against users' connection ports.
 	else if (data.flags['p'])
@@ -368,13 +368,13 @@ bool CommandWho::MatchUser(LocalUser* source, User* user, WhoData& data)
 
 	// The source wants to match against users' real names.
 	else if (data.flags['r'])
-		match = InspIRCd::Match(user->GetRealName(), data.matchtext, ascii_case_insensitive_map);
+		match = Match(user->GetRealName(), data.matchtext, ascii_case_insensitive_map);
 
 	else if (data.flags['s'])
 	{
 		bool show_real_server_name = ServerInstance->Config->HideServer.empty() || (source->HasPrivPermission("servers/auspex") && data.flags['x']);
 		const std::string server = show_real_server_name ? user->server->GetName() : ServerInstance->Config->HideServer;
-		match = InspIRCd::Match(server, data.matchtext, ascii_case_insensitive_map);
+		match = Match(server, data.matchtext, ascii_case_insensitive_map);
 	}
 
 	// The source wants to match against users' connection times.
@@ -389,7 +389,7 @@ bool CommandWho::MatchUser(LocalUser* source, User* user, WhoData& data)
 	else if (data.flags['u'])
 	{
 		const std::string username = user->GetUser(source_can_see_target && data.flags['x']);
-		match = InspIRCd::Match(username, data.matchtext, ascii_case_insensitive_map);
+		match = Match(username, data.matchtext, ascii_case_insensitive_map);
 	}
 
 	// The <name> passed to WHO is matched against users' host, server,
@@ -397,20 +397,20 @@ bool CommandWho::MatchUser(LocalUser* source, User* user, WhoData& data)
 	else
 	{
 		const std::string hostname = user->GetHost(source_can_see_target && data.flags['x']);
-		match = InspIRCd::Match(hostname, data.matchtext, ascii_case_insensitive_map);
+		match = Match(hostname, data.matchtext, ascii_case_insensitive_map);
 
 		if (!match)
 		{
 			bool show_real_server_name = ServerInstance->Config->HideServer.empty() || (source->HasPrivPermission("servers/auspex") && data.flags['x']);
 			const std::string server = show_real_server_name ? user->server->GetName() : ServerInstance->Config->HideServer;
-			match = InspIRCd::Match(server, data.matchtext, ascii_case_insensitive_map);
+			match = Match(server, data.matchtext, ascii_case_insensitive_map);
 		}
 
 		if (!match)
-			match = InspIRCd::Match(user->GetRealName(), data.matchtext, ascii_case_insensitive_map);
+			match = Match(user->GetRealName(), data.matchtext, ascii_case_insensitive_map);
 
 		if (!match)
-			match = InspIRCd::Match(user->nick, data.matchtext);
+			match = Match(user->nick, data.matchtext);
 	}
 
 	return match;

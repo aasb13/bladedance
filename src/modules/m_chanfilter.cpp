@@ -86,7 +86,7 @@ class ModuleChanFilter final
 
 		for (const auto& entry : *list)
 		{
-			if (InspIRCd::Match(text, entry.mask))
+			if (::Match(text, entry.mask))
 				return &entry;
 		}
 

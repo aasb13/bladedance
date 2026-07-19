@@ -61,10 +61,10 @@ private:
 		// Allow if the source matches an <securehost> entry.
 		for (const auto& allowhost : allowlist)
 		{
-			if (InspIRCd::Match(user->GetRealUserHost(), allowhost, ascii_case_insensitive_map))
+			if (Match(user->GetRealUserHost(), allowhost, ascii_case_insensitive_map))
 				return true;
 
-			if (InspIRCd::Match(user->GetUserAddress(), allowhost, ascii_case_insensitive_map))
+			if (Match(user->GetUserAddress(), allowhost, ascii_case_insensitive_map))
 				return true;
 		}
 

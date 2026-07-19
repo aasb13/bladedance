@@ -101,5 +101,5 @@ CmdResult CommandQline::Handle(User* user, const Params& parameters)
 
 bool CommandQline::NickMatcher::Check(User* user, const std::string& nick) const
 {
-	return InspIRCd::Match(user->nick, nick);
+	return Match(user->nick, nick);
 }

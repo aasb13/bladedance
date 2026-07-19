@@ -136,7 +136,7 @@ private:
 
 		// If the current server name matches the server name glob then send
 		// the message out to the local users.
-		if (InspIRCd::Match(ServerInstance->Config->ServerName, servername))
+		if (Match(ServerInstance->Config->ServerName, servername))
 		{
 			CTCTags::TagMessage message(source, "$*", msgdetails.tags_out);
 			message.SetSideEffect(true);

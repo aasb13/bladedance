@@ -121,7 +121,7 @@ public:
 			bool whitelisted = false;
 			for (const auto& goodchan : goodchans)
 			{
-				if (InspIRCd::Match(badchan.redirect, goodchan))
+				if (Match(badchan.redirect, goodchan))
 				{
 					whitelisted = true;
 					break;
@@ -134,7 +134,7 @@ public:
 			// If the redirect channel is not blacklisted then it is okay.
 			for (const auto& badchanredir : badchans)
 			{
-				if (InspIRCd::Match(badchan.redirect, badchanredir.name))
+				if (Match(badchan.redirect, badchanredir.name))
 					throw ModuleException(this, "<badchan:redirect> cannot be a blacklisted channel name");
 			}
 		}
@@ -152,7 +152,7 @@ public:
 		for (const auto& badchan : badchannels)
 		{
 			// If the channel does not match the current entry we have nothing else to do.
-			if (!InspIRCd::Match(cname, badchan.name))
+			if (!Match(cname, badchan.name))
 				continue;
 
 			// If the user is an oper and opers are allowed to enter this blacklisted channel
@@ -162,7 +162,7 @@ public:
 
 			// If the channel matches a whitelist then allow the join.
 			for (const auto& goodchan : goodchannels)
-				if (InspIRCd::Match(cname, goodchan))
+				if (Match(cname, goodchan))
 					return MOD_RES_PASSTHRU;
 
 			// If there is no redirect chan, the user has enabled the antiredirect mode, or

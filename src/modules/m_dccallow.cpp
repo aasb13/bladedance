@@ -443,7 +443,7 @@ public:
 					{
 						for (const auto& dccallow : *dl)
 						{
-							if (InspIRCd::Match(user->GetMask(), dccallow.hostmask))
+							if (Match(user->GetMask(), dccallow.hostmask))
 								return MOD_RES_PASSTHRU;
 						}
 					}
@@ -484,7 +484,7 @@ public:
 						bool found = false;
 						for (const auto& bf : bfl)
 						{
-							if (InspIRCd::Match(filename, bf.filemask, ascii_case_insensitive_map))
+							if (Match(filename, bf.filemask, ascii_case_insensitive_map))
 							{
 								/* We have a matching badfile entry, override whatever the default action is */
 								if (insp::equalsci(bf.action, "allow"))

@@ -573,7 +573,7 @@ void ServerConfig::ApplyModules(User* user) const
 	for (const auto& [modname, mod] : removed_modules)
 	{
 		// Don't remove core_*, just remove m_*
-		if (InspIRCd::Match(modname, "core_*", ascii_case_insensitive_map))
+		if (Match(modname, "core_*", ascii_case_insensitive_map))
 			continue;
 
 		if (ServerInstance->Modules.Unload(mod))

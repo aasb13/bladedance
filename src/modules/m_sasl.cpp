@@ -55,7 +55,7 @@ private:
 		if (sasl_target == "*")
 			return;
 
-		if (InspIRCd::Match(server->GetName(), sasl_target))
+		if (Match(server->GetName(), sasl_target))
 		{
 			::Logs.Debug(MODNAME, "SASL target server \"{}\" {}", sasl_target, (linked ? "came online" : "went offline"));
 			online = linked;
@@ -93,7 +93,7 @@ public:
 		ServerInstance->PI->GetServerList(servers);
 		for (const auto& server : servers)
 		{
-			if (InspIRCd::Match(server.servername, sasl_target))
+			if (Match(server.servername, sasl_target))
 			{
 				online = true;
 				break;

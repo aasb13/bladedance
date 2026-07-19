@@ -81,7 +81,7 @@ public:
 			// As user prefix modes don't have a GetList() method, let's iterate through the channel's users.
 			for (const auto& [u, memb] : chan->GetUsers())
 			{
-				if (!InspIRCd::Match(u->nick, pattern))
+				if (!Match(u->nick, pattern))
 					continue;
 
 				if (memb->HasMode(pm) && !((u == user) && (pm->GetPrefixRank() > VOICE_VALUE)))
@@ -93,7 +93,7 @@ public:
 			auto* targuser = parameters.size() > 2 ? ServerInstance->Users.FindNick(parameters[2]) : nullptr;
 			for (const auto& entry : *ml)
 			{
-				if (targuser ? chan->CheckBan(targuser, entry.mask) : InspIRCd::Match(entry.mask, pattern))
+				if (targuser ? chan->CheckBan(targuser, entry.mask) : Match(entry.mask, pattern))
 					changelist.push_remove(mh, entry.mask);
 			}
 		}

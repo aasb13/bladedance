@@ -602,10 +602,10 @@ bool KLine::Matches(User* u) const
 	if (lu && lu->exempt)
 		return false;
 
-	if (InspIRCd::Match(u->GetRealUser(), this->usermask, ascii_case_insensitive_map))
+	if (Match(u->GetRealUser(), this->usermask, ascii_case_insensitive_map))
 	{
-		if (InspIRCd::MatchCIDR(u->GetRealHost(), this->hostmask, ascii_case_insensitive_map) ||
-			InspIRCd::MatchCIDR(u->GetAddress(), this->hostmask, ascii_case_insensitive_map))
+		if (MatchCIDR(u->GetRealHost(), this->hostmask, ascii_case_insensitive_map) ||
+			MatchCIDR(u->GetAddress(), this->hostmask, ascii_case_insensitive_map))
 		{
 			return true;
 		}
@@ -625,10 +625,10 @@ bool GLine::Matches(User* u) const
 	if (lu && lu->exempt)
 		return false;
 
-	if (InspIRCd::Match(u->GetRealUser(), this->usermask, ascii_case_insensitive_map))
+	if (Match(u->GetRealUser(), this->usermask, ascii_case_insensitive_map))
 	{
-		if (InspIRCd::MatchCIDR(u->GetRealHost(), this->hostmask, ascii_case_insensitive_map) ||
-			InspIRCd::MatchCIDR(u->GetAddress(), this->hostmask, ascii_case_insensitive_map))
+		if (MatchCIDR(u->GetRealHost(), this->hostmask, ascii_case_insensitive_map) ||
+			MatchCIDR(u->GetAddress(), this->hostmask, ascii_case_insensitive_map))
 		{
 			return true;
 		}
@@ -644,10 +644,10 @@ void GLine::Apply(User* u)
 
 bool ELine::Matches(User* u) const
 {
-	if (InspIRCd::Match(u->GetRealUser(), this->usermask, ascii_case_insensitive_map))
+	if (Match(u->GetRealUser(), this->usermask, ascii_case_insensitive_map))
 	{
-		if (InspIRCd::MatchCIDR(u->GetRealHost(), this->hostmask, ascii_case_insensitive_map) ||
-			InspIRCd::MatchCIDR(u->GetAddress(), this->hostmask, ascii_case_insensitive_map))
+		if (MatchCIDR(u->GetRealHost(), this->hostmask, ascii_case_insensitive_map) ||
+			MatchCIDR(u->GetAddress(), this->hostmask, ascii_case_insensitive_map))
 		{
 			return true;
 		}
@@ -662,7 +662,7 @@ bool ZLine::Matches(User* u) const
 	if (lu && lu->exempt)
 		return false;
 
-	return InspIRCd::MatchCIDR(u->GetAddress(), this->ipaddr);
+	return MatchCIDR(u->GetAddress(), this->ipaddr);
 }
 
 void ZLine::Apply(User* u)
@@ -672,7 +672,7 @@ void ZLine::Apply(User* u)
 
 bool QLine::Matches(User* u) const
 {
-	return InspIRCd::Match(u->nick, this->nick);
+	return Match(u->nick, this->nick);
 }
 
 void QLine::Apply(User* u)
@@ -684,27 +684,27 @@ void QLine::Apply(User* u)
 
 bool ZLine::Matches(const std::string& str) const
 {
-	return InspIRCd::MatchCIDR(str, this->ipaddr);
+	return MatchCIDR(str, this->ipaddr);
 }
 
 bool QLine::Matches(const std::string& str) const
 {
-	return InspIRCd::Match(str, this->nick);
+	return Match(str, this->nick);
 }
 
 bool ELine::Matches(const std::string& str) const
 {
-	return InspIRCd::MatchCIDR(str, matchtext);
+	return MatchCIDR(str, matchtext);
 }
 
 bool KLine::Matches(const std::string& str) const
 {
-	return InspIRCd::MatchCIDR(str, matchtext);
+	return MatchCIDR(str, matchtext);
 }
 
 bool GLine::Matches(const std::string& str) const
 {
-	return InspIRCd::MatchCIDR(str, matchtext);
+	return MatchCIDR(str, matchtext);
 }
 
 void ELine::OnAdd()

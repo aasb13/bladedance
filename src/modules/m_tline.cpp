@@ -43,14 +43,14 @@ public:
 
 		for (const auto& [_, u] : ServerInstance->Users.GetUsers())
 		{
-			if (InspIRCd::Match(u->GetRealMask(), parameters[0]))
+			if (Match(u->GetRealMask(), parameters[0]))
 			{
 				n_matched++;
 				n_match_host++;
 			}
 			else
 			{
-				if (InspIRCd::MatchCIDR(u->GetUserAddress(), parameters[0]))
+				if (MatchCIDR(u->GetUserAddress(), parameters[0]))
 				{
 					n_matched++;
 					n_match_ip++;

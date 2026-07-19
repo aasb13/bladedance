@@ -49,7 +49,7 @@ public:
 		// Replace spaces with underscores as they're prohibited in mode parameters.
 		std::string opername(user->oper->GetName());
 		std::replace(opername.begin(), opername.end(), ' ', '_');
-		return InspIRCd::Match(opername, text);
+		return Match(opername, text);
 	}
 };
 
@@ -71,7 +71,7 @@ public:
 		// Replace spaces with underscores as they're prohibited in mode parameters.
 		std::string opername(user->oper->GetType());
 		std::replace(opername.begin(), opername.end(), ' ', '_');
-		return InspIRCd::Match(opername, text);
+		return Match(opername, text);
 	}
 };
 

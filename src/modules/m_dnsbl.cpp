@@ -652,7 +652,7 @@ public:
 
 		for (const auto& mark : *match)
 		{
-			if (InspIRCd::Match(mark, dnsbl))
+			if (Match(mark, dnsbl))
 				return MOD_RES_PASSTHRU;
 		}
 

@@ -45,7 +45,7 @@ public:
 		}
 		for (auto* memb : user->chans)
 		{
-			if (!InspIRCd::Match(memb->chan->name, target))
+			if (!Match(memb->chan->name, target))
 				continue;
 			if (!status || memb->GetRank() >= mh->GetPrefixRank())
 				return true;

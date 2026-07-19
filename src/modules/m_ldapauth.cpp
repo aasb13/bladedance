@@ -405,7 +405,7 @@ public:
 	{
 		for (const auto& exemption : exemptions)
 		{
-			if (InspIRCd::MatchCIDR(user->GetRealMask(), exemption) || InspIRCd::MatchCIDR(user->GetMask(), exemption))
+			if (MatchCIDR(user->GetRealMask(), exemption) || MatchCIDR(user->GetMask(), exemption))
 			{
 				ldapAuthed.Set(user, true);
 				return MOD_RES_PASSTHRU;

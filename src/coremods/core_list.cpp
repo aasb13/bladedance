@@ -159,11 +159,11 @@ CmdResult CommandList::Handle(User* user, const Params& parameters)
 			continue;
 
 		// Attempt to match a glob pattern.
-		if (!match.empty() && !InspIRCd::Match(chan->name, match) && !InspIRCd::Match(chan->topic, match))
+		if (!match.empty() && !Match(chan->name, match) && !Match(chan->topic, match))
 			continue;
 
 		// Attempt to match an inverted glob pattern.
-		if (!notmatch.empty() && (InspIRCd::Match(chan->name, notmatch) || InspIRCd::Match(chan->topic, notmatch)))
+		if (!notmatch.empty() && (Match(chan->name, notmatch) || Match(chan->topic, notmatch)))
 			continue;
 
 		// if the channel is not private/secret, OR the user is on the channel anyway

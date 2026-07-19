@@ -70,7 +70,7 @@ public:
 
 CmdResult CommandUnloadmodule::Handle(User* user, const Params& parameters)
 {
-	if (InspIRCd::Match(parameters[0], "core_*", ascii_case_insensitive_map))
+	if (Match(parameters[0], "core_*", ascii_case_insensitive_map))
 	{
 		user->WriteNumeric(ERR_CANTUNLOADMODULE, parameters[0], "You cannot unload core commands!");
 		return CmdResult::FAILURE;

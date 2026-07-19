@@ -411,7 +411,7 @@ void ParseStack::DoInclude(const std::shared_ptr<ConfigTag>& tag, int flags)
 					continue;
 
 				const std::string path = entry.path().string();
-				if (InspIRCd::Match(path, "*.conf"))
+				if (Match(path, "*.conf"))
 					configs.insert(path);
 			}
 		}

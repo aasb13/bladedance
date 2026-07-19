@@ -273,7 +273,7 @@ public:
 		/* Does it match the pattern? */
 		if (!a.format.empty())
 		{
-			if (!InspIRCd::Match(stripped, a.format))
+			if (!Match(stripped, a.format))
 				return 0;
 		}
 

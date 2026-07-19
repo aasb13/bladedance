@@ -60,7 +60,7 @@ public:
 
 	bool Matches(const std::string& s) const override
 	{
-		return InspIRCd::Match(s, matchtext);
+		return Match(s, matchtext);
 	}
 
 	const std::string& Displayable() const override

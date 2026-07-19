@@ -55,7 +55,7 @@ CmdResult CommandRehash::Handle(User* user, const Params& parameters)
 	else if (param.find_first_of("*.") != std::string::npos)
 	{
 		// rehash of servers by server name (with wildcard)
-		if (!InspIRCd::Match(ServerInstance->Config->ServerName, parameters[0]))
+		if (!Match(ServerInstance->Config->ServerName, parameters[0]))
 		{
 			// Doesn't match us. PreRehash is already done, nothing left to do
 			return CmdResult::SUCCESS;

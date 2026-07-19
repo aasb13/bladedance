@@ -60,11 +60,11 @@ public:
 		for (const auto& mask : hostmasks)
 		{
 			// Does the user's hostname match this hostmask?
-			if (InspIRCd::Match(user->GetRealHost(), mask, ascii_case_insensitive_map))
+			if (Match(user->GetRealHost(), mask, ascii_case_insensitive_map))
 				return true;
 
 			// Does the user's IP address match this hostmask?
-			if (InspIRCd::MatchCIDR(user->GetAddress(), mask, ascii_case_insensitive_map))
+			if (MatchCIDR(user->GetAddress(), mask, ascii_case_insensitive_map))
 				return true;
 		}
 
@@ -127,11 +127,11 @@ public:
 		for (const auto& mask : hostmasks)
 		{
 			// Does the user's hostname match this hostmask?
-			if (InspIRCd::Match(user->GetRealHost(), mask, ascii_case_insensitive_map))
+			if (Match(user->GetRealHost(), mask, ascii_case_insensitive_map))
 				return true;
 
 			// Does the user's IP address match this hostmask?
-			if (InspIRCd::MatchCIDR(user->GetAddress(), mask, ascii_case_insensitive_map))
+			if (MatchCIDR(user->GetAddress(), mask, ascii_case_insensitive_map))
 				return true;
 		}
 
@@ -236,7 +236,7 @@ public:
 	bool IsMatch(User* user, Channel* channel, const std::string& text) override
 	{
 		const std::string* gatewayname = gateway.Get(user);
-		return gatewayname ? InspIRCd::Match(*gatewayname, text) : false;
+		return gatewayname ? Match(*gatewayname, text) : false;
 	}
 };
 
@@ -438,7 +438,7 @@ public:
 
 		// If the gateway matches the <connect:webirc> constraint then
 		// allow the check to continue. Otherwise, reject it.
-		if (!InspIRCd::Match(*gateway, webirc))
+		if (!Match(*gateway, webirc))
 		{
 			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as the WebIRC gateway name ({}) does not match {}.",
 				klass->GetName(), *gateway, webirc);

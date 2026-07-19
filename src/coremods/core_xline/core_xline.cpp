@@ -54,8 +54,8 @@ bool InsaneBan::MatchesEveryone(const std::string& mask, MatcherBase& test, User
 
 bool InsaneBan::IPHostMatcher::Check(User* user, const std::string& mask) const
 {
-	return ((InspIRCd::MatchCIDR(user->GetRealUserHost(), mask, ascii_case_insensitive_map)) ||
-			(InspIRCd::MatchCIDR(user->GetUserAddress(), mask, ascii_case_insensitive_map)));
+	return ((MatchCIDR(user->GetRealUserHost(), mask, ascii_case_insensitive_map)) ||
+			(MatchCIDR(user->GetUserAddress(), mask, ascii_case_insensitive_map)));
 }
 
 class CoreModXLine final

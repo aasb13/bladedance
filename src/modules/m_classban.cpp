@@ -41,7 +41,7 @@ public:
 		// Replace spaces with underscores as they're prohibited in mode parameters.
 		std::string classname(luser->GetClass()->name);
 		std::replace(classname.begin(), classname.end(), ' ', '_');
-		return InspIRCd::Match(classname, text);
+		return Match(classname, text);
 	}
 
 

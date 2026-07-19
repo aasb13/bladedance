@@ -53,7 +53,7 @@ private:
 		// Before advertising an STS persistence policy over a secure connection, servers SHOULD verify whether the
 		// hostname provided by clients, for example, via TLS Server Name Indication (SNI), has been whitelisted by
 		// administrators in the server configuration.
-		return InspIRCd::Match(snihost, host, ascii_case_insensitive_map);
+		return Match(snihost, host, ascii_case_insensitive_map);
 	}
 
 	bool OnRequest(LocalUser* user, bool adding) override

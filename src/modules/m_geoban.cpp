@@ -43,7 +43,7 @@ public:
 		const std::string code = location ? location->GetCode() : "XX";
 
 		// Does this user match against the ban?
-		return InspIRCd::Match(code, text);
+		return Match(code, text);
 	}
 };
 
@@ -73,7 +73,7 @@ public:
 
 		Geolocation::Location* location = geoapi ? geoapi->GetLocation(user) : nullptr;
 		const std::string code = location ? location->GetCode() : "XX";
-		return InspIRCd::Match(code, request.matchtext, ascii_case_insensitive_map) ? MOD_RES_ALLOW : MOD_RES_DENY;
+		return Match(code, request.matchtext, ascii_case_insensitive_map) ? MOD_RES_ALLOW : MOD_RES_DENY;
 	}
 
 	void OnWhois(Whois::Context& whois) override

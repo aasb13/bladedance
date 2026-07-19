@@ -263,25 +263,25 @@ public:
 			/* hostname or other */
 			for (const auto& [_, u] : ServerInstance->Users.GetUsers())
 			{
-				if (InspIRCd::Match(u->nick, parameters[0], ascii_case_insensitive_map))
+				if (Match(u->nick, parameters[0], ascii_case_insensitive_map))
 					matches.push_back("nick");
 
-				if (InspIRCd::Match(u->GetRealUser(), parameters[0], ascii_case_insensitive_map))
+				if (Match(u->GetRealUser(), parameters[0], ascii_case_insensitive_map))
 					matches.push_back("ruser");
 
-				if (InspIRCd::Match(u->GetDisplayedUser(), parameters[0], ascii_case_insensitive_map))
+				if (Match(u->GetDisplayedUser(), parameters[0], ascii_case_insensitive_map))
 					matches.push_back("duser");
 
-				if (InspIRCd::Match(u->GetRealHost(), parameters[0], ascii_case_insensitive_map))
+				if (Match(u->GetRealHost(), parameters[0], ascii_case_insensitive_map))
 					matches.push_back("rhost");
 
-				if (InspIRCd::Match(u->GetDisplayedHost(), parameters[0], ascii_case_insensitive_map))
+				if (Match(u->GetDisplayedHost(), parameters[0], ascii_case_insensitive_map))
 					matches.push_back("dhost");
 
-				if (InspIRCd::MatchCIDR(u->GetAddress(), parameters[0]))
+				if (MatchCIDR(u->GetAddress(), parameters[0]))
 					matches.push_back("ipaddr");
 
-				if (InspIRCd::MatchCIDR(u->GetRealName(), parameters[0]))
+				if (MatchCIDR(u->GetRealName(), parameters[0]))
 					matches.push_back("realname");
 
 				if (!matches.empty())

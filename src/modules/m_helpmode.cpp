@@ -132,7 +132,7 @@ public:
 
 		for (const auto& [helpchan, prefix] : helpchans)
 		{
-			if (InspIRCd::Match(cname, helpchan))
+			if (Match(cname, helpchan))
 			{
 				privs.append(prefix);
 				break;

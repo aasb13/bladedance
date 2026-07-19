@@ -323,7 +323,7 @@ public:
 
 				for (const auto& redirect : *redirects)
 				{
-					if (InspIRCd::Match(user->GetRealMask(), redirect.banmask) || InspIRCd::Match(user->GetMask(), redirect.banmask) || InspIRCd::MatchCIDR(ipmask, redirect.banmask))
+					if (Match(user->GetRealMask(), redirect.banmask) || Match(user->GetMask(), redirect.banmask) || MatchCIDR(ipmask, redirect.banmask))
 					{
 						/* This prevents recursion when a user sets multiple ban redirects in a chain
 						 * (thanks Potter)

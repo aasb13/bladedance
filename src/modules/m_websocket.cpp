@@ -436,7 +436,7 @@ class WebSocketHook final
 			const std::string origin = originheader.ExtractValue(recvq);
 			for (const auto& cfgorigin : config.allowedorigins)
 			{
-				if (InspIRCd::Match(origin, cfgorigin, ascii_case_insensitive_map))
+				if (Match(origin, cfgorigin, ascii_case_insensitive_map))
 				{
 					allowedorigin = true;
 					if (luser)
@@ -485,7 +485,7 @@ class WebSocketHook final
 			}
 			for (const auto& proxyrange : config.proxyranges)
 			{
-				if (InspIRCd::MatchCIDR(luser->GetAddress(), proxyrange, ascii_case_insensitive_map))
+				if (MatchCIDR(luser->GetAddress(), proxyrange, ascii_case_insensitive_map))
 				{
 					// Give the user their real IP address.
 					if (realsa != luser->client_sa)

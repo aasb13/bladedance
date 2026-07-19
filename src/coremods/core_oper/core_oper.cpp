@@ -87,7 +87,7 @@ public:
 	ModResult OnPreOperLogin(LocalUser* user, const std::shared_ptr<OperAccount>& oper, bool automatic) override
 	{
 		const std::string hosts = oper->GetConfig()->getString("host");
-		if (InspIRCd::MatchMask(hosts, user->GetRealUserHost(), user->GetUserAddress()))
+		if (MatchMask(hosts, user->GetRealUserHost(), user->GetUserAddress()))
 			return MOD_RES_PASSTHRU; // Host matches.
 
 		if (!automatic)

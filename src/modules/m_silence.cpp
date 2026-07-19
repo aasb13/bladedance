@@ -454,7 +454,7 @@ private:
 			if (!(entry.flags & flag))
 				continue;
 
-			if (InspIRCd::Match(source->GetMask(), entry.mask))
+			if (Match(source->GetMask(), entry.mask))
 			{
 				if (flags)
 					*flags = entry.flags;

@@ -184,7 +184,7 @@ public:
 		bool hostmatches = false;
 		for (const auto& host : klass->GetHosts())
 		{
-			if (InspIRCd::MatchCIDR(user->GetAddress(), host) || InspIRCd::MatchCIDR(user->GetRealHost(), host))
+			if (MatchCIDR(user->GetAddress(), host) || MatchCIDR(user->GetRealHost(), host))
 			{
 				hostmatches = true;
 				break;

@@ -46,7 +46,7 @@ private:
 
 		for (const auto& allowchan : allowchans)
 		{
-			if (InspIRCd::Match(name, allowchan))
+			if (Match(name, allowchan))
 				return true;
 		}
 

@@ -119,5 +119,5 @@ CmdResult CommandZline::Handle(User* user, const Params& parameters)
 
 bool CommandZline::IPMatcher::Check(User* user, const std::string& ip) const
 {
-	return InspIRCd::MatchCIDR(user->GetAddress(), ip, ascii_case_insensitive_map);
+	return MatchCIDR(user->GetAddress(), ip, ascii_case_insensitive_map);
 }

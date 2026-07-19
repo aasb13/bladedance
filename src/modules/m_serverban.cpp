@@ -38,7 +38,7 @@ public:
 	bool IsMatch(User* user, Channel* channel, const std::string& text) override
 	{
 		const auto* server = user->server;
-		return InspIRCd::Match(operonly ? server->GetName() : server->GetPublicName(), text);
+		return Match(operonly ? server->GetName() : server->GetPublicName(), text);
 	}
 
 	bool Validate(ListModeBase* lm, LocalUser* user, Channel* channel, std::string& text) override

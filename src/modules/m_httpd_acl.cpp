@@ -132,7 +132,7 @@ public:
 
 			for (const auto& acl : acl_list)
 			{
-				if (InspIRCd::Match(http->GetPath(), acl.path, ascii_case_insensitive_map))
+				if (Match(http->GetPath(), acl.path, ascii_case_insensitive_map))
 				{
 					if (!acl.blacklist.empty())
 					{
@@ -142,7 +142,7 @@ public:
 
 						while (sep.GetToken(entry))
 						{
-							if (InspIRCd::Match(http->GetIP(), entry, ascii_case_insensitive_map))
+							if (Match(http->GetIP(), entry, ascii_case_insensitive_map))
 							{
 								::Logs.Debug(MODNAME, "Denying access to blacklisted resource {} (matched by pattern {}) from ip {} (matched by entry {})",
 										http->GetPath(), acl.path, http->GetIP(), entry);
@@ -160,7 +160,7 @@ public:
 
 						while (sep.GetToken(entry))
 						{
-							if (InspIRCd::Match(http->GetIP(), entry, ascii_case_insensitive_map))
+							if (Match(http->GetIP(), entry, ascii_case_insensitive_map))
 								allow_access = true;
 						}
 

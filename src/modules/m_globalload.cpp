@@ -41,7 +41,7 @@ public:
 	{
 		std::string servername = parameters.size() > 1 ? parameters[1] : "*";
 
-		if (InspIRCd::Match(ServerInstance->Config->ServerName, servername))
+		if (Match(ServerInstance->Config->ServerName, servername))
 		{
 			if (ServerInstance->Modules.Load(parameters[0]))
 			{
@@ -78,7 +78,7 @@ public:
 
 	CmdResult Handle(User* user, const Params& parameters) override
 	{
-		if (InspIRCd::Match(parameters[0], "core_*", ascii_case_insensitive_map))
+		if (Match(parameters[0], "core_*", ascii_case_insensitive_map))
 		{
 			user->WriteRemoteNumeric(ERR_CANTUNLOADMODULE, parameters[0], "You cannot unload core commands!");
 			return CmdResult::FAILURE;
@@ -86,7 +86,7 @@ public:
 
 		std::string servername = parameters.size() > 1 ? parameters[1] : "*";
 
-		if (InspIRCd::Match(ServerInstance->Config->ServerName, servername))
+		if (Match(ServerInstance->Config->ServerName, servername))
 		{
 			Module* m = ServerInstance->Modules.Find(parameters[0]);
 			if (m)
@@ -131,7 +131,7 @@ public:
 	{
 		std::string servername = parameters.size() > 1 ? parameters[1] : "*";
 
-		if (InspIRCd::Match(ServerInstance->Config->ServerName, servername))
+		if (Match(ServerInstance->Config->ServerName, servername))
 		{
 			Module* m = ServerInstance->Modules.Find(parameters[0]);
 			if (m)

@@ -186,7 +186,7 @@ private:
 
 		// If the current server name matches the server name glob then send
 		// the message out to the local users.
-		if (InspIRCd::Match(ServerInstance->Config->ServerName, servername))
+		if (Match(ServerInstance->Config->ServerName, servername))
 		{
 			// Create the outgoing message and message event.
 			ClientProtocol::Messages::Privmsg message(ClientProtocol::Messages::Privmsg::nocopy, source, "$*", msgdetails.text, msgdetails.type);

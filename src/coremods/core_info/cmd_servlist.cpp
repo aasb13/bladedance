@@ -40,10 +40,10 @@ CmdResult CommandServList::HandleLocal(LocalUser* user, const Params& parameters
 	const bool has_type = parameters.size() > 1;
 	for (const auto* serviceuser : ServerInstance->Users.all_services)
 	{
-		if (serviceuser->IsModeSet(invisiblemode) || !InspIRCd::Match(serviceuser->nick, mask))
+		if (serviceuser->IsModeSet(invisiblemode) || !Match(serviceuser->nick, mask))
 			continue;
 
-		if (has_type && (!serviceuser->IsOper() || !InspIRCd::Match(serviceuser->oper->GetType(), parameters[2])))
+		if (has_type && (!serviceuser->IsOper() || !Match(serviceuser->oper->GetType(), parameters[2])))
 			continue;
 
 		Numeric::Numeric numeric(RPL_SERVLIST);

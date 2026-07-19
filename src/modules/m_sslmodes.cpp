@@ -63,7 +63,7 @@ public:
 
 		for (const auto& fingerprint : sslapi->GetFingerprints(user))
 		{
-			if (InspIRCd::Match(fingerprint, text))
+			if (Match(fingerprint, text))
 				return true;
 		}
 		return false;

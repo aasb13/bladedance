@@ -288,17 +288,17 @@ bool Channel::CheckBan(User* user, const std::string& mask)
 		return false;
 
 	const std::string prefix(mask, 0, at);
-	if (!InspIRCd::Match(user->nick + "!" + user->GetDisplayedUser(), prefix) &&
-		!InspIRCd::Match(user->nick + "!" + user->GetRealUser(), prefix))
+	if (!Match(user->nick + "!" + user->GetDisplayedUser(), prefix) &&
+		!Match(user->nick + "!" + user->GetRealUser(), prefix))
 	{
 		// Neither the nick!user or nick!duser.
 		return false;
 	}
 
 	const std::string suffix(mask, at + 1);
-	return InspIRCd::Match(user->GetRealHost(), suffix) ||
-		InspIRCd::Match(user->GetDisplayedHost(), suffix) ||
-		InspIRCd::MatchCIDR(user->GetAddress(), suffix);
+	return Match(user->GetRealHost(), suffix) ||
+		Match(user->GetDisplayedHost(), suffix) ||
+		MatchCIDR(user->GetAddress(), suffix);
 }
 
 void Channel::PartUser(const MemberMap::iterator& membiter, const std::string& reason)

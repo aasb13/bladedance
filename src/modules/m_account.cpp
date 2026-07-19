@@ -147,13 +147,13 @@ public:
 		{
 			for (const auto& nick : *nicks)
 			{
-				if (InspIRCd::Match(nick, text))
+				if (Match(nick, text))
 					return true;
 			}
 		}
 
 		const auto* account = accountapi.GetAccountName(user);
-		return account && InspIRCd::Match(*account, text);
+		return account && Match(*account, text);
 	}
 };
 

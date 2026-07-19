@@ -50,7 +50,7 @@ public:
 		std::replace(realname.begin(), realname.end(), ' ', '_');
 
 		// Check whether the user's real name matches.
-		return InspIRCd::Match(realname, text.substr(divider + 1));
+		return Match(realname, text.substr(divider + 1));
 	}
 };
 
@@ -70,7 +70,7 @@ public:
 		std::replace(realname.begin(), realname.end(), ' ', '_');
 
 		// Check whether the user's real name matches.
-		return InspIRCd::Match(realname, text);
+		return Match(realname, text);
 
 	}
 };

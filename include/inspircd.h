@@ -373,50 +373,6 @@ public:
 	 */
 	static bool IsValidMask(const std::string& mask);
 
-	/** Matches two strings using glob pattern matching, optionally with a case map to use instead
-	 * of the server case map.
-	 * @param str The literal string to match against
-	 * @param pattern The glob pattern to match against.
-	 * @param map The character map to use when matching.
-	 * @return True if the string matches the mask; otherwise, false.
-	 */
-	static bool Match(const std::string& str, const std::string& pattern, const unsigned char* map = nullptr);
-
-	/** Matches two strings using glob pattern matching, optionally with a case map to use instead
-	 * of the server case map.
-	 * @param str The literal string to match against
-	 * @param pattern The glob pattern to match against.
-	 * @param map The character map to use when matching.
-	 * @return True if the string matches the pattern; otherwise, false.
-	 */
-	static bool Match(const char* str, const char* pattern, const unsigned char* map = nullptr);
-
-	/** Matches two strings using glob pattern and CIDR range matching, optionally with a case map
-	 * to use instead of the server case map.
-	 * @param str The literal string to match against
-	 * @param pattern The glob pattern to match against.
-	 * @param map The character map to use when matching.
-	 * @return True if the string matches the pattern; otherwise, false.
-	 */
-	static bool MatchCIDR(const std::string& str, const std::string& pattern, const unsigned char* map = nullptr);
-
-	/** Matches two strings using glob pattern and CIDR range matching, optionally with a case map
-	 * to use instead of the server case map.
-	 * @param str The literal string to match against
-	 * @param pattern The glob pattern to match against.
-	 * @param map The character map to use when matching.
-	 * @return True if the string matches the pattern; otherwise, false.
-	 */
-	static bool MatchCIDR(const char* str, const char* pattern, const unsigned char* map = nullptr);
-
-	/** Matches a hostname and address against a space delimited list of hostmasks.
-	 * @param masks The space delimited masks to match against.
-	 * @param hostname The hostname to try and match.
-	 * @param address The IP address or UNIX socket path to try and match.
-	 * @return True if a mask matches the hostname or address; otherwise, false.
-	 */
-	static bool MatchMask(const std::string& masks, const std::string& hostname, const std::string& address);
-
 	/** Reloads the server configuration.
 	 * @param uuid If non-empty then the uuid of the user who started the rehash.
 	 */
@@ -471,6 +427,50 @@ public:
 	/** Updates the current cached time. Don't call this unless you have reason to do so. */
 	void UpdateTime();
 };
+
+/** Matches two strings using glob pattern matching, optionally with a case map to use instead
+ * of the server case map.
+ * @param str The literal string to match against
+ * @param pattern The glob pattern to match against.
+ * @param map The character map to use when matching.
+ * @return True if the string matches the mask; otherwise, false.
+ */
+__attribute__ ((visibility ("default"))) bool Match(const std::string& str, const std::string& pattern, const unsigned char* map = nullptr);
+
+/** Matches two strings using glob pattern matching, optionally with a case map to use instead
+ * of the server case map.
+ * @param str The literal string to match against
+ * @param pattern The glob pattern to match against.
+ * @param map The character map to use when matching.
+ * @return True if the string matches the pattern; otherwise, false.
+ */
+__attribute__ ((visibility ("default"))) bool Match(const char* str, const char* pattern, const unsigned char* map = nullptr);
+
+/** Matches two strings using glob pattern and CIDR range matching, optionally with a case map
+ * to use instead of the server case map.
+ * @param str The literal string to match against
+ * @param pattern The glob pattern to match against.
+ * @param map The character map to use when matching.
+ * @return True if the string matches the pattern; otherwise, false.
+ */
+__attribute__ ((visibility ("default"))) bool MatchCIDR(const std::string& str, const std::string& pattern, const unsigned char* map = nullptr);
+
+/** Matches two strings using glob pattern and CIDR range matching, optionally with a case map
+ * to use instead of the server case map.
+ * @param str The literal string to match against
+ * @param pattern The glob pattern to match against.
+ * @param map The character map to use when matching.
+ * @return True if the string matches the pattern; otherwise, false.
+ */
+__attribute__ ((visibility ("default"))) bool MatchCIDR(const char* str, const char* pattern, const unsigned char* map = nullptr);
+
+/** Matches a hostname and address against a space delimited list of hostmasks.
+ * @param masks The space delimited masks to match against.
+ * @param hostname The hostname to try and match.
+ * @param address The IP address or UNIX socket path to try and match.
+ * @return True if a mask matches the hostname or address; otherwise, false.
+ */
+__attribute__ ((visibility ("default"))) bool MatchMask(const std::string& masks, const std::string& hostname, const std::string& address);
 
 
 inline void Channel::Write(ClientProtocol::EventProvider& protoevprov, ClientProtocol::Message& msg, char status, const CUList& except_list) const

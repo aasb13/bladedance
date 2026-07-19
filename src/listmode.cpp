@@ -110,7 +110,7 @@ size_t ListModeBase::FindLimit(const std::string& channame)
 {
 	for (const auto& chanlimit : chanlimits)
 	{
-		if (InspIRCd::Match(channame, chanlimit.mask))
+		if (Match(channame, chanlimit.mask))
 		{
 			// We have a pattern matching the channel
 			return chanlimit.limit;

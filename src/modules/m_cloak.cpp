@@ -422,11 +422,11 @@ public:
 				continue; // This is checked by the core.
 
 			std::string cloakmask = user->nick + "!" + user->GetRealUser() + "@" + cloak;
-			if (InspIRCd::Match(cloakmask, mask))
+			if (Match(cloakmask, mask))
 				return MOD_RES_DENY;
 
 			cloakmask = user->nick + "!" + user->GetDisplayedUser() + "@" + cloak;
-			if (InspIRCd::Match(cloakmask, mask))
+			if (Match(cloakmask, mask))
 				return MOD_RES_DENY;
 		}
 		return MOD_RES_PASSTHRU;
