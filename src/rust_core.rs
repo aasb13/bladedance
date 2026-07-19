@@ -16,6 +16,7 @@ pub mod modules;
 pub mod timer;
 pub mod users;
 pub mod server;
+pub mod serverconfig;
 pub mod traits;
 pub mod account;
 pub mod configreader;
