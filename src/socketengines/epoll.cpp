@@ -1,6 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
+ *   Copyright (C) 2021 Mistral AI
  *   Copyright (C) 2017, 2019, 2022-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2014-2015 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2014, 2016 Adam <Adam@anope.org>
@@ -31,14 +32,19 @@
 #include <sys/epoll.h>
 #include <sys/resource.h>
 
-/** A specialisation of the SocketEngine class, designed to use linux 2.6 epoll().
+/** Rust FFI declarations for epoll socket engine */
+extern "C" bool rust_socketengine_epoll_init();
+extern "C" void rust_socketengine_epoll_deinit();
+extern "C" bool rust_socketengine_epoll_recover_from_fork();
+extern "C" bool rust_socketengine_epoll_add_fd(int fd, int event_mask, void* eh_ptr);
+extern "C" bool rust_socketengine_epoll_mod_fd(int fd, int event_mask, void* eh_ptr);
+extern "C" bool rust_socketengine_epoll_del_fd(int fd);
+extern "C" int rust_socketengine_epoll_wait(struct epoll_event* events, int max_events, int timeout_ms);
+
+/** These are used by epoll() to hold socket events
  */
 namespace
 {
-	int EngineHandle;
-
-	/** These are used by epoll() to hold socket events
-	 */
 	std::vector<struct epoll_event> events(16);
 }
 
@@ -46,20 +52,21 @@ void SocketEngine::Init()
 {
 	LookupMaxFds();
 
-	// 128 is not a maximum, just a hint at the eventual number of sockets that may be polled,
-	// and it is completely ignored by 2.6.8 and later kernels, except it must be larger than zero.
-	EngineHandle = epoll_create(128);
-	if (EngineHandle == -1)
+	// Initialize Rust epoll engine
+	if (!rust_socketengine_epoll_init())
 		InitError();
 }
 
 void SocketEngine::RecoverFromFork()
 {
+	// Recover Rust epoll engine after fork
+	rust_socketengine_epoll_recover_from_fork();
 }
 
 void SocketEngine::Deinit()
 {
-	Close(EngineHandle);
+	// Clean up Rust epoll engine
+	rust_socketengine_epoll_deinit();
 }
 
 static unsigned mask_to_epoll(int event_mask)
@@ -100,12 +107,8 @@ bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
 		return false;
 	}
 
-	struct epoll_event ev;
-	memset(&ev, 0, sizeof(ev));
-	ev.events = mask_to_epoll(event_mask);
-	ev.data.ptr = static_cast<void*>(eh);
-	int i = epoll_ctl(EngineHandle, EPOLL_CTL_ADD, fd, &ev);
-	if (i < 0)
+	// Use Rust implementation
+	if (!rust_socketengine_epoll_add_fd(fd, event_mask, static_cast<void*>(eh)))
 	{
 		ServerInstance->Logs.Debug("SOCKET", "Error adding fd: {} to socketengine: {}", fd, strerror(errno));
 		return false;
@@ -125,12 +128,8 @@ void SocketEngine::OnSetEvent(EventHandler* eh, int old_mask, int new_mask)
 	unsigned new_events = mask_to_epoll(new_mask);
 	if (old_events != new_events)
 	{
-		// ok, we actually have something to tell the kernel about
-		struct epoll_event ev;
-		memset(&ev, 0, sizeof(ev));
-		ev.events = new_events;
-		ev.data.ptr = static_cast<void*>(eh);
-		epoll_ctl(EngineHandle, EPOLL_CTL_MOD, eh->GetFd(), &ev);
+		// Use Rust implementation to modify the event
+		rust_socketengine_epoll_mod_fd(eh->GetFd(), new_mask, static_cast<void*>(eh));
 	}
 }
 
@@ -143,16 +142,8 @@ void SocketEngine::DelFd(EventHandler* eh)
 		return;
 	}
 
-	// Do not initialize epoll_event because for EPOLL_CTL_DEL operations the event is ignored and can be NULL.
-	// In kernel versions before 2.6.9, the EPOLL_CTL_DEL operation required a non-NULL pointer in event,
-	// even though this argument is ignored. Since Linux 2.6.9, event can be specified as NULL when using EPOLL_CTL_DEL.
-	struct epoll_event ev;
-	int i = epoll_ctl(EngineHandle, EPOLL_CTL_DEL, fd, &ev);
-
-	if (i < 0)
-	{
-		ServerInstance->Logs.Debug("SOCKET", "epoll_ctl can't remove socket: {}", strerror(errno));
-	}
+	// Use Rust implementation to remove the fd
+	rust_socketengine_epoll_del_fd(fd);
 
 	SocketEngine::DelFdRef(eh);
 
@@ -161,7 +152,8 @@ void SocketEngine::DelFd(EventHandler* eh)
 
 int SocketEngine::DispatchEvents()
 {
-	int i = epoll_wait(EngineHandle, events.data(), static_cast<int>(events.size()), 1000);
+	// Use Rust implementation to wait for events
+	int i = rust_socketengine_epoll_wait(events.data(), static_cast<int>(events.size()), 1000);
 	ServerInstance->UpdateTime();
 
 	stats.TotalEvents += i;

@@ -7,7 +7,7 @@ use std::os::raw::c_void;
 use std::sync::Mutex;
 
 #[cfg(not(target_os = "windows"))]
-use libc::{epoll_create, epoll_ctl, close, EPOLLIN, EPOLLOUT, EPOLLET, EPOLL_CTL_ADD, EPOLL_CTL_MOD, EPOLL_CTL_DEL, epoll_event};
+use libc::{epoll_create, epoll_wait, epoll_ctl, close, EPOLLIN, EPOLLOUT, EPOLLET, EPOLL_CTL_ADD, EPOLL_CTL_MOD, EPOLL_CTL_DEL, epoll_event};
 
 // Event mask constants from socketengine.h
 type EventMask = c_int;
@@ -32,6 +32,9 @@ const FD_WRITE_WILL_BLOCK: EventMask = 0x8000;
 
 /// Global epoll engine state
 static EPOLL_ENGINE: Mutex<Option<EpollEngine>> = Mutex::new(None);
+
+// Maximum number of events to return from epoll_wait
+const MAX_EVENTS: usize = 128;
 
 #[repr(C)]
 pub struct EpollEngine {
@@ -180,6 +183,46 @@ pub unsafe extern "C" fn rust_socketengine_epoll_del_fd(fd: c_int) -> bool {
     guard.as_ref().map_or(false, |engine| {
         engine.del_fd(fd)
     })
+}
+
+/// Wait for events and return the number of events available
+/// This function uses the Rust-managed epoll handle
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_socketengine_epoll_wait(
+    events_ptr: *mut libc::epoll_event,
+    max_events: c_int,
+    timeout_ms: c_int,
+) -> c_int {
+    let guard = EPOLL_ENGINE.lock().unwrap();
+    guard.as_ref().map_or(0, |engine| {
+        // Create a buffer for events
+        let mut temp_events = vec![std::mem::MaybeUninit::<libc::epoll_event>::uninit(); MAX_EVENTS];
+        
+        let result = epoll_wait(
+            engine.engine_handle,
+            temp_events.as_mut_ptr() as *mut libc::epoll_event,
+            max_events.min(MAX_EVENTS as c_int),
+            timeout_ms,
+        );
+        
+        if result > 0 && !events_ptr.is_null() {
+            // Copy the events to the provided buffer
+            std::ptr::copy_nonoverlapping(
+                temp_events.as_ptr() as *const libc::epoll_event,
+                events_ptr,
+                result as usize,
+            );
+        }
+        
+        result
+    })
+}
+
+/// Get the Rust-managed epoll file descriptor
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_socketengine_epoll_get_handle() -> c_int {
+    let guard = EPOLL_ENGINE.lock().unwrap();
+    guard.as_ref().map_or(-1, |engine| engine.engine_handle)
 }
 
 
