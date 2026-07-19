@@ -372,15 +372,6 @@ pub extern "C" fn hashcomp_sepstream_free(stream: *mut RustSepStream) {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn hashcomp_free_string(ptr: *mut c_char) {
-    if !ptr.is_null() {
-        unsafe {
-            let _ = CString::from_raw(ptr);
-        }
-    }
-}
-
 // TokenStream FFI exports
 
 #[unsafe(no_mangle)]

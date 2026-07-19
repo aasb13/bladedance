@@ -628,14 +628,6 @@ pub extern "C" fn serverconfig_free_tags(ptr: *mut Vec<ConfigTag>) {
     }
 }
 
-/// FFI function to free a string allocated by Rust
-#[unsafe(no_mangle)]
-pub extern "C" fn serverconfig_free_string(ptr: *mut c_char) {
-    if !ptr.is_null() {
-        unsafe { CString::from_raw(ptr); }
-    }
-}
-
 /// FFI function to parse a config file and return a new ServerConfig
 /// Returns a pointer to a newly allocated ServerConfig filled from the file
 #[unsafe(no_mangle)]

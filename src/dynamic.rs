@@ -352,12 +352,3 @@ pub unsafe extern "C" fn DLLManager_LibraryName(ptr: *mut c_void) -> *mut c_char
         Err(_) => ptr::null_mut(),
     }
 }
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn DLLManager_FreeString(ptr: *mut c_char) {
-    if !ptr.is_null() {
-        unsafe {
-            let _ = CString::from_raw(ptr);
-        }
-    }
-}

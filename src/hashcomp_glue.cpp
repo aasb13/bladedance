@@ -47,9 +47,9 @@ extern "C" {
 	bool hashcomp_tokenstream_get_middle(RustTokenStream* stream, char** token);
 	bool hashcomp_tokenstream_get_trailing(RustTokenStream* stream, char** token);
 	void hashcomp_tokenstream_free(RustTokenStream* stream);
-	
-	void hashcomp_free_string(char* ptr);
 }
+
+#include "ffiutils.h"
 
 /******************************************************
  *
@@ -153,7 +153,7 @@ bool irc::tokenstream::GetMiddle(std::string& token)
 		if (result && rust_token)
 		{
 			token = rust_token;
-			hashcomp_free_string(rust_token);
+			rust_ffi_free_string(rust_token);
 		}
 		else
 		{
@@ -192,7 +192,7 @@ bool irc::tokenstream::GetTrailing(std::string& token)
 		if (result && rust_token)
 		{
 			token = rust_token;
-			hashcomp_free_string(rust_token);
+			rust_ffi_free_string(rust_token);
 		}
 		else
 		{
@@ -274,7 +274,7 @@ bool irc::sepstream::GetToken(std::string& token)
 	if (result && rust_token)
 	{
 		token = rust_token;
-		hashcomp_free_string(rust_token);
+		rust_ffi_free_string(rust_token);
 	}
 	else
 	{
@@ -296,7 +296,7 @@ std::string irc::sepstream::GetRemaining()
 	if (remaining)
 	{
 		std::string result(remaining);
-		hashcomp_free_string(remaining);
+		rust_ffi_free_string(remaining);
 		return result;
 	}
 	return "";

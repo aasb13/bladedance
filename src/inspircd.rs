@@ -216,16 +216,6 @@ pub extern "C" fn inspircd_parse_options(
     result
 }
 
-/// Frees a string allocated by Rust
-#[unsafe(no_mangle)]
-pub extern "C" fn inspircd_free_string(ptr: *mut c_char) {
-    if !ptr.is_null() {
-        unsafe {
-            let _ = CString::from_raw(ptr);
-        }
-    }
-}
-
 // Global to store the last received signal for polling by C++
 static LAST_SIGNAL: AtomicI32 = AtomicI32::new(0);
 

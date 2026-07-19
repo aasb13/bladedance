@@ -46,7 +46,6 @@ extern "C" {
 	char* helperfuncs_time_to_string(int64_t curtime, const char* format, int utc);
 	void helperfuncs_strip_color(char* line);
 	void helperfuncs_process_colors(char* line);
-	void helperfuncs_free_string(char* ptr);
 	int helperfuncs_is_sid(const char* sid);
 	int helperfuncs_is_nick(const char* nick, size_t max_len);
 	int helperfuncs_is_user(const char* user, size_t max_len);
@@ -58,6 +57,7 @@ extern "C" {
 	void helperfuncs_default_gen_random(uint8_t* output, size_t max);
 }
 
+#include "ffiutils.h"
 bool InspIRCd::CheckPassword(const std::string& password, const std::string& passwordhash, const std::string& value)
 {
 	ModResult res;
@@ -202,7 +202,7 @@ std::string Duration::ToString(unsigned long duration)
 	if (!result)
 		return "0s";
 	std::string str(result);
-	helperfuncs_free_string(result);
+	rust_ffi_free_string(result);
 	return str;
 }
 
@@ -212,7 +212,7 @@ std::string Duration::ToLongString(unsigned long duration, bool brief)
 	if (!result)
 		return "0 seconds";
 	std::string str(result);
-	helperfuncs_free_string(result);
+	rust_ffi_free_string(result);
 	return str;
 }
 
@@ -222,7 +222,7 @@ std::string Time::ToString(time_t curtime, const char* format, bool utc)
 	if (!result)
 		return "";
 	std::string str(result);
-	helperfuncs_free_string(result);
+	rust_ffi_free_string(result);
 	return str;
 }
 
@@ -233,7 +233,7 @@ std::string InspIRCd::GenRandomStr(size_t length) const
 	if (!rust_str)
 		return "";
 	std::string result(rust_str);
-	helperfuncs_free_string(rust_str);
+	rust_ffi_free_string(rust_str);
 	return result;
 }
 

@@ -100,3 +100,14 @@ pub extern "C" fn inspircd_async_get_handle() -> *const std::ffi::c_void {
 pub fn get_async_handle() -> Option<Handle> {
     Some(HANDLE.clone())
 }
+
+/// Centralized FFI function to free a string allocated by Rust
+/// All glue files should use this instead of their own free_string functions
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_ffi_free_string(ptr: *mut std::ffi::c_char) {
+    if !ptr.is_null() {
+        unsafe {
+            let _ = std::ffi::CString::from_raw(ptr);
+        }
+    }
+}

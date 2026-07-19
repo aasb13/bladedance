@@ -24,8 +24,9 @@ extern "C" {
 	// Rust FFI functions
 	char* clientprotocol_escape_tag(const char* value);
 	char* clientprotocol_unescape_tag(const char* value);
-	void clientprotocol_free_string(char* ptr);
 }
+
+#include "ffiutils.h"
 
 ClientProtocol::Serializer::Serializer(Module* mod, const std::string& Name)
 	: DataProvider(mod, "serializer/" + Name)
@@ -82,7 +83,7 @@ std::string ClientProtocol::Message::EscapeTag(const std::string& value)
 	if (result)
 	{
 		std::string str(result);
-		clientprotocol_free_string(result);
+		rust_ffi_free_string(result);
 		return str;
 	}
 	return "";
@@ -95,7 +96,7 @@ std::string ClientProtocol::Message::UnescapeTag(const std::string& value)
 	if (result)
 	{
 		std::string str(result);
-		clientprotocol_free_string(result);
+		rust_ffi_free_string(result);
 		return str;
 	}
 	return "";

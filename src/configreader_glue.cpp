@@ -42,13 +42,14 @@ extern "C" {
     void serverconfig_fill_defaults(void* ptr);
     void serverconfig_set_string(void* ptr, const char* field_name, const char* value);
     char* serverconfig_get_string(const void* ptr, const char* field_name);
-    void serverconfig_free_string(char* ptr);
     void* serverconfig_read_config_file(const char* path);
     void serverconfig_free_tags(void* ptr);
     void* serverconfig_parse_file(const char* path);
     int serverconfig_is_sid(const char* sid);
     char* serverconfig_get_hostname();
 }
+
+#include "ffiutils.h"
 
 ServerConfig::ReadResult::ReadResult(const std::string& c, const std::string& e)
 	: contents(c)
@@ -377,25 +378,25 @@ void ServerConfig::Fill()
 		value = serverconfig_get_string(rust_config_ptr, "server_name");
 		if (value && *value) {
 			ServerName = value;
-			serverconfig_free_string(value);
+			rust_ffi_free_string(value);
 		}
 		
 		value = serverconfig_get_string(rust_config_ptr, "server_id");
 		if (value && *value) {
 			ServerId = value;
-			serverconfig_free_string(value);
+			rust_ffi_free_string(value);
 		}
 		
 		value = serverconfig_get_string(rust_config_ptr, "server_desc");
 		if (value && *value) {
 			ServerDesc = value;
-			serverconfig_free_string(value);
+			rust_ffi_free_string(value);
 		}
 		
 		value = serverconfig_get_string(rust_config_ptr, "network");
 		if (value && *value) {
 			Network = value;
-			serverconfig_free_string(value);
+			rust_ffi_free_string(value);
 		}
 		
 		// Clean up Rust config

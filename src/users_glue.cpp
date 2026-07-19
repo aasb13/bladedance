@@ -42,7 +42,6 @@ extern "C" std::size_t rust_users_filter_irc_line(const unsigned char* inp, std:
 extern "C" bool rust_user_is_notice_mask_set(const User* user, unsigned char sm);
 extern "C" bool rust_user_is_mode_set(User* user, unsigned char m);
 extern "C" char* rust_user_get_mode_letters(User* user, bool includeparams);
-extern "C" void rust_users_free_c_string(char* p);
 extern "C" void rust_user_invalidate_cache(User* user);
 extern "C" void rust_user_fill_cached_user_address(User* user);
 extern "C" void rust_user_fill_cached_user_host(User* user);
@@ -60,6 +59,7 @@ extern "C" bool rust_user_is_away(const User* user);
 extern "C" bool rust_user_is_oper(const User* user);
 extern "C" bool rust_user_shares_channel_with(const User* user, User* other);
 
+#include "ffiutils.h"
 extern "C" CoreExport void user_ffi_write_remote_notice(User* user, const char* message) {
 	if (!user || !message) {
 		return;
@@ -85,7 +85,7 @@ std::string User::GetModeLetters(bool includeparams) const
 	if (!raw)
 		return "+";
 	std::string ret(raw);
-	rust_users_free_c_string(raw);
+	rust_ffi_free_string(raw);
 	return ret;
 }
 

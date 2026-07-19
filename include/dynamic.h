@@ -96,4 +96,3 @@ extern "C" void* DLLManager_CallInit(void* ptr);
 extern "C" const void* DLLManager_GetSymbol(void* ptr, const char* name);
 extern "C" char* DLLManager_LastError(void* ptr);
 extern "C" char* DLLManager_LibraryName(void* ptr);
-extern "C" void DLLManager_FreeString(char* ptr);

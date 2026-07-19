@@ -27,6 +27,7 @@
 #include "dynamic.h"
 #include <dlfcn.h>
 #include "rust_module.h"
+#include "ffiutils.h"
 
 // Static error string for FFI
 static std::string g_error_string;
@@ -92,7 +93,7 @@ DLLManager::DLLManager(const std::string& name)
         if (error && *error)
         {
             err = error;
-            DLLManager_FreeString(error);
+            rust_ffi_free_string(error);
         }
     }
     else
@@ -122,7 +123,7 @@ Module* DLLManager::CallInit()
         if (error)
         {
             err = error;
-            DLLManager_FreeString(error);
+            rust_ffi_free_string(error);
         }
     }
     return static_cast<Module*>(module_ptr);

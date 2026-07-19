@@ -609,13 +609,6 @@ pub unsafe extern "C" fn rust_user_get_mode_letters(u: *mut User, includeparams:
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn rust_users_free_c_string(p: *mut c_char) {
-    if !p.is_null() {
-        drop(CString::from_raw(p));
-    }
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_user_fill_cached_user_address(u: *mut User) {
     let mut pr = ptr::null();
     let mut lr = 0usize;

@@ -71,15 +71,6 @@ pub extern "C" fn clientprotocol_unescape_tag(value: *const c_char) -> *mut c_ch
     CString::new(unescape_tag(str)).unwrap().into_raw()
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn clientprotocol_free_string(ptr: *mut c_char) {
-    if !ptr.is_null() {
-        unsafe {
-            let _ = CString::from_raw(ptr);
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

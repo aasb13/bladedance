@@ -61,7 +61,6 @@ extern "C" {
     char* inspircd_expand_path(const char* path);
     void inspircd_check_root();
     void inspircd_void_signal_handler(int signal);
-    void inspircd_free_string(char* ptr);
     void rust_init_signals();
     int rust_get_last_signal();
     void rust_reset_last_signal();
@@ -79,6 +78,8 @@ extern "C" {
     };
 
     ParseOptionsResult inspircd_parse_options(int argc, char** argv, const char* default_config);
+
+#include "ffiutils.h"
 
     // C++ helper functions called from Rust
     extern "C" CoreExport void inspircd_ffi_exit(int code) {
@@ -229,7 +230,7 @@ namespace
 		if (expanded)
 		{
 			std::string result(expanded);
-			inspircd_free_string(expanded);
+			rust_ffi_free_string(expanded);
 			return result;
 		}
 		return path;
@@ -301,7 +302,7 @@ namespace
 		if (result.should_exit)
 		{
 			if (result.config_path)
-				inspircd_free_string(result.config_path);
+				rust_ffi_free_string(result.config_path);
 			ServerInstance->Exit(result.exit_code);
 		}
 
