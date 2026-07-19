@@ -202,6 +202,46 @@ public:
 	friend class SocketEngine;
 };
 
+/** Socket engine statistics: count of various events, bandwidth usage
+ */
+class __attribute__ ((visibility ("default"))) Statistics
+{
+	mutable size_t indata = 0;
+	mutable size_t outdata = 0;
+	mutable time_t lastempty = 0;
+
+	/** Reset the byte counters and lastempty if there wasn't a reset in this second.
+	 */
+	void CheckFlush() const;
+
+public:
+	/** Update counters for network data received.
+	 * This should be called after every read-type syscall.
+	 * @param len_in Number of bytes received, or -1 for error, as typically
+	 * returned by a read-style syscall.
+	 */
+	void UpdateReadCounters(ssize_t len_in);
+
+	/** Update counters for network data sent.
+	 * This should be called after every write-type syscall.
+	 * @param len_out Number of bytes sent, or -1 for error, as typically
+	 * returned by a read-style syscall.
+	 */
+	void UpdateWriteCounters(ssize_t len_out);
+
+	/** Get data transfer statistics.
+	 * @param kbitpersec_in Filled with incoming traffic in this second in kbit/s.
+	 * @param kbitpersec_out Filled with outgoing traffic in this second in kbit/s.
+	 * @param kbitpersec_total Filled with total traffic in this second in kbit/s.
+	 */
+	void __attribute__ ((visibility ("default"))) GetBandwidth(float& kbitpersec_in, float& kbitpersec_out, float& kbitpersec_total) const;
+
+	unsigned long TotalEvents = 0;
+	unsigned long ReadEvents = 0;
+	unsigned long WriteEvents = 0;
+	unsigned long ErrorEvents = 0;
+};
+
 /** Provides basic file-descriptor-based I/O support.
  * The actual socketengine class presents the
  * same interface on all operating systems, but
@@ -213,45 +253,6 @@ public:
 class __attribute__ ((visibility ("default"))) SocketEngine final
 {
 public:
-	/** Socket engine statistics: count of various events, bandwidth usage
-	 */
-	class Statistics
-	{
-		mutable size_t indata = 0;
-		mutable size_t outdata = 0;
-		mutable time_t lastempty = 0;
-
-		/** Reset the byte counters and lastempty if there wasn't a reset in this second.
-		 */
-		void CheckFlush() const;
-
-	public:
-		/** Update counters for network data received.
-		 * This should be called after every read-type syscall.
-		 * @param len_in Number of bytes received, or -1 for error, as typically
-		 * returned by a read-style syscall.
-		 */
-		void UpdateReadCounters(ssize_t len_in);
-
-		/** Update counters for network data sent.
-		 * This should be called after every write-type syscall.
-		 * @param len_out Number of bytes sent, or -1 for error, as typically
-		 * returned by a read-style syscall.
-		 */
-		void UpdateWriteCounters(ssize_t len_out);
-
-		/** Get data transfer statistics.
-		 * @param kbitpersec_in Filled with incoming traffic in this second in kbit/s.
-		 * @param kbitpersec_out Filled with outgoing traffic in this second in kbit/s.
-		 * @param kbitpersec_total Filled with total traffic in this second in kbit/s.
-		 */
-		void __attribute__ ((visibility ("default"))) GetBandwidth(float& kbitpersec_in, float& kbitpersec_out, float& kbitpersec_total) const;
-
-		unsigned long TotalEvents = 0;
-		unsigned long ReadEvents = 0;
-		unsigned long WriteEvents = 0;
-		unsigned long ErrorEvents = 0;
-	};
 
 private:
 	/** Reference table, contains all current handlers

@@ -71,7 +71,7 @@ size_t SocketEngine::MaxSetSize = 0;
 
 /** Socket engine statistics: count of various events, bandwidth usage
  */
-SocketEngine::Statistics SocketEngine::stats;
+Statistics SocketEngine::stats;
 
 void EventHandler::SetFd(int FD)
 {
@@ -239,7 +239,7 @@ ssize_t SocketEngine::Recv(EventHandler* eh, void* buf, size_t len, int flags)
 	return nbRecvd;
 }
 
-ssize_t SocketEngine::SendTo(EventHandler* eh, const void* buf, size_t len, int flags, const sockaddrs& address)
+ssize_t SocketEngine::SendTo(EventHandler* eh, const void* buf, size_t len, int flags, const irc::sockets::sockaddrs& address)
 {
 	ssize_t nbSent = rust_socketengine_sendto(eh->GetFd(), buf, len, flags, &address.sa, address.sa_size());
 	stats.UpdateWriteCounters(nbSent);
@@ -272,7 +272,7 @@ int SocketEngine::WriteV(EventHandler* eh, const iovec* iovec, int count)
 }
 #endif
 
-int SocketEngine::Connect(EventHandler* eh, const sockaddrs& address)
+int SocketEngine::Connect(EventHandler* eh, const irc::sockets::sockaddrs& address)
 {
 	return rust_socketengine_connect(eh->GetFd(), &address.sa, address.sa_size());
 }
@@ -282,7 +282,7 @@ int SocketEngine::Shutdown(EventHandler* eh, int how)
 	return rust_socketengine_shutdown(eh->GetFd(), how);
 }
 
-int SocketEngine::Bind(EventHandler* eh, const sockaddrs& addr)
+int SocketEngine::Bind(EventHandler* eh, const irc::sockets::sockaddrs& addr)
 {
 	return rust_socketengine_bind(eh->GetFd(), &addr.sa, addr.sa_size());
 }
@@ -292,21 +292,21 @@ int SocketEngine::Listen(EventHandler* eh, int backlog)
 	return rust_socketengine_listen(eh->GetFd(), backlog);
 }
 
-void SocketEngine::Statistics::UpdateReadCounters(ssize_t len_in)
+void Statistics::UpdateReadCounters(ssize_t len_in)
 {
 	CheckFlush();
 
 	rust_socketengine_stats_update_read_counters(len_in, &ReadEvents, &indata, &ErrorEvents);
 }
 
-void SocketEngine::Statistics::UpdateWriteCounters(ssize_t len_out)
+void Statistics::UpdateWriteCounters(ssize_t len_out)
 {
 	CheckFlush();
 
 	rust_socketengine_stats_update_write_counters(len_out, &WriteEvents, &outdata, &ErrorEvents);
 }
 
-void SocketEngine::Statistics::CheckFlush() const
+void Statistics::CheckFlush() const
 {
 	// Reset the in/out byte counters if it has been more than a second
 	time_t now = ServerInstance->Time();
@@ -317,7 +317,7 @@ void SocketEngine::Statistics::CheckFlush() const
 	}
 }
 
-void SocketEngine::Statistics::GetBandwidth(float& kbitpersec_in, float& kbitpersec_out, float& kbitpersec_total) const
+void Statistics::GetBandwidth(float& kbitpersec_in, float& kbitpersec_out, float& kbitpersec_total) const
 {
 	CheckFlush();
 	rust_socketengine_stats_get_bandwidth(indata, outdata, &kbitpersec_in, &kbitpersec_out, &kbitpersec_total);

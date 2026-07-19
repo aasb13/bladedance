@@ -223,7 +223,7 @@ void CommandStats::DoStats(Stats::Context& stats)
 		break;
 		case 'E':
 		{
-			const SocketEngine::Statistics& sestats = SocketEngine::GetStats();
+			const Statistics& sestats = SocketEngine::GetStats();
 			stats.AddRow(249, "Total events: "+ConvToStr(sestats.TotalEvents));
 			stats.AddRow(249, "Read events:  "+ConvToStr(sestats.ReadEvents));
 			stats.AddRow(249, "Write events: "+ConvToStr(sestats.WriteEvents));
