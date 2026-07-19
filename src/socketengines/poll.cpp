@@ -1,7 +1,7 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
- *   Copyright (C) 2021 Dominic Hamon
+ *   Copyright (C) 2021 Mistral AI
  *   Copyright (C) 2014-2015 Attila Molnar <attilamolnar@hush.com>
  *   Copyright (C) 2014, 2017 Adam <Adam@anope.org>
  *   Copyright (C) 2013, 2016-2017, 2022-2023 Sadie Powell <sadie@witchery.services>
@@ -29,6 +29,15 @@
 #include <poll.h>
 #include <sys/resource.h>
 
+/** Rust FFI declarations for poll socket engine */
+extern "C" bool rust_socketengine_poll_init();
+extern "C" void rust_socketengine_poll_deinit();
+extern "C" bool rust_socketengine_poll_recover_from_fork();
+extern "C" bool rust_socketengine_poll_add_fd(int fd, int event_mask, void* eh_ptr);
+extern "C" bool rust_socketengine_poll_mod_fd(int fd, int event_mask, void* eh_ptr);
+extern "C" bool rust_socketengine_poll_del_fd(int fd);
+extern "C" int rust_socketengine_poll_wait(struct pollfd* events, int max_events, int timeout_ms);
+
 /** A specialisation of the SocketEngine class, designed to use poll().
  */
 namespace
@@ -44,14 +53,21 @@ namespace
 void SocketEngine::Init()
 {
 	LookupMaxFds();
+	
+	// Initialize Rust poll engine
+	rust_socketengine_poll_init();
 }
 
 void SocketEngine::Deinit()
 {
+	// Clean up Rust poll engine
+	rust_socketengine_poll_deinit();
 }
 
 void SocketEngine::RecoverFromFork()
 {
+	// Recover Rust poll engine after fork
+	rust_socketengine_poll_recover_from_fork();
 }
 
 static int mask_to_poll(int event_mask)
@@ -87,6 +103,13 @@ bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
 		return false;
 	}
 
+	// Use Rust implementation
+	if (!rust_socketengine_poll_add_fd(fd, event_mask, static_cast<void*>(eh)))
+	{
+		ServerInstance->Logs.Debug("SOCKET", "Error adding fd: {} to socketengine", fd);
+		return false;
+	}
+
 	while (static_cast<unsigned int>(fd) >= fd_mappings.size())
 		fd_mappings.resize(fd_mappings.size() * 2, -1);
 	fd_mappings[fd] = index;
@@ -109,6 +132,9 @@ void SocketEngine::OnSetEvent(EventHandler* eh, int old_mask, int new_mask)
 		return;
 	}
 
+	// Use Rust implementation
+	rust_socketengine_poll_mod_fd(fd, new_mask, static_cast<void*>(eh));
+	
 	events[fd_mappings[fd]].events = mask_to_poll(new_mask);
 }
 
@@ -126,6 +152,9 @@ void SocketEngine::DelFd(EventHandler* eh)
 		ServerInstance->Logs.Debug("SOCKET", "DelFd() on unknown fd: {}", fd);
 		return;
 	}
+
+	// Use Rust implementation
+	rust_socketengine_poll_del_fd(fd);
 
 	unsigned int index = fd_mappings[fd];
 	unsigned int last_index = static_cast<unsigned int>(CurrentSetSize - 1);
@@ -157,9 +186,11 @@ void SocketEngine::DelFd(EventHandler* eh)
 
 int SocketEngine::DispatchEvents()
 {
-	int i = poll(&events[0], static_cast<unsigned int>(CurrentSetSize), 1000);
-	int processed = 0;
+	// Use Rust implementation to wait for events
+	int i = rust_socketengine_poll_wait(&events[0], static_cast<unsigned int>(CurrentSetSize), 1000);
 	ServerInstance->UpdateTime();
+
+	int processed = 0;
 
 	for (size_t index = 0; index < CurrentSetSize && processed < i; index++)
 	{

@@ -146,8 +146,8 @@ pub unsafe extern "C" fn rust_socketengine_epoll_deinit() {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_socketengine_epoll_recover_from_fork() -> bool {
     // Close existing handle if any
-    rust_socketengine_epoll_deinit();
-    rust_socketengine_epoll_init()
+    unsafe { rust_socketengine_epoll_deinit() };
+    unsafe { rust_socketengine_epoll_init() }
 }
 
 /// Add a file descriptor to the epoll engine
@@ -198,20 +198,22 @@ pub unsafe extern "C" fn rust_socketengine_epoll_wait(
         // Create a buffer for events
         let mut temp_events = vec![std::mem::MaybeUninit::<libc::epoll_event>::uninit(); MAX_EVENTS];
         
-        let result = epoll_wait(
+        let result = unsafe { epoll_wait(
             engine.engine_handle,
             temp_events.as_mut_ptr() as *mut libc::epoll_event,
             max_events.min(MAX_EVENTS as c_int),
             timeout_ms,
-        );
+        ) };
         
         if result > 0 && !events_ptr.is_null() {
             // Copy the events to the provided buffer
-            std::ptr::copy_nonoverlapping(
-                temp_events.as_ptr() as *const libc::epoll_event,
-                events_ptr,
-                result as usize,
-            );
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    temp_events.as_ptr() as *const libc::epoll_event,
+                    events_ptr,
+                    result as usize,
+                );
+            }
         }
         
         result
