@@ -325,7 +325,7 @@ namespace GnuTLS
 				if (gnutls_priority_init(&test, ret.c_str(), nullptr) < 0)
 				{
 					// The new token broke the priority string, revert to the previously working one
-					ServerInstance->Logs.Debug(MODNAME, "Priority string token not recognized: \"{}\"", token);
+					::Logs.Debug(MODNAME, "Priority string token not recognized: \"{}\"", token);
 					ret.erase(prevpos);
 				}
 				else
@@ -512,12 +512,12 @@ namespace GnuTLS
 				{
 					// Stripping failed, act as if a prio string wasn't set
 					stripped = GnuTLS::Priority::RemoveUnknownTokens(GnuTLS::Priority::GetDefault());
-					ServerInstance->Logs.Normal(MODNAME, "Priority string for profile \"{}\" contains unknown tokens and stripping it didn't yield a working one either, falling back to \"{}\"", profilename, stripped);
+					::Logs.Normal(MODNAME, "Priority string for profile \"{}\" contains unknown tokens and stripping it didn't yield a working one either, falling back to \"{}\"", profilename, stripped);
 				}
 				else if ((found) && (stripped != priostr))
 				{
 					// Prio string was set in the config and we ended up with something that works but different
-					ServerInstance->Logs.Warning(MODNAME, "Priority string for profile \"{}\" contains unknown tokens, stripped to \"{}\"", profilename, stripped);
+					::Logs.Warning(MODNAME, "Priority string for profile \"{}\" contains unknown tokens, stripped to \"{}\"", profilename, stripped);
 				}
 				priostr.swap(stripped);
 			}
@@ -1145,14 +1145,14 @@ class ModuleSSLGnuTLS final
 		{
 			if (!insp::equalsci(tag->getString("provider", "gnutls", 1), "gnutls"))
 			{
-				ServerInstance->Logs.Debug(MODNAME, "Ignoring non-GnuTLS <sslprofile> tag at {}", tag->source.str());
+				::Logs.Debug(MODNAME, "Ignoring non-GnuTLS <sslprofile> tag at {}", tag->source.str());
 				continue;
 			}
 
 			const std::string name = tag->getString("name");
 			if (name.empty())
 			{
-				ServerInstance->Logs.Warning(MODNAME, "Ignoring <sslprofile> tag without name at {}", tag->source.str());
+				::Logs.Warning(MODNAME, "Ignoring <sslprofile> tag without name at {}", tag->source.str());
 				continue;
 			}
 
@@ -1188,7 +1188,7 @@ public:
 
 	void init() override
 	{
-		ServerInstance->Logs.Normal(MODNAME, "Module was compiled against GnuTLS version {} and is running against version {}",
+		::Logs.Normal(MODNAME, "Module was compiled against GnuTLS version {} and is running against version {}",
 			GNUTLS_VERSION, gnutls_check_version(nullptr));
 		ServerInstance->GenRandom = &GnuTLS::GenRandom;
 	}

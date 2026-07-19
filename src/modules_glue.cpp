@@ -372,7 +372,7 @@ bool ModuleManager::PrioritizeHooks()
 			break;
 		if (tries == 19)
 		{
-			ServerInstance->Logs.Debug("MODULE", "Hook priority dependency loop detected");
+			::Logs.Debug("MODULE", "Hook priority dependency loop detected");
 			return false;
 		}
 	}
@@ -386,7 +386,7 @@ bool ModuleManager::CanUnload(Module* mod)
 	if ((modfind == Modules.end()) || (modfind->second != mod) || (mod->dying))
 	{
 		LastModuleError = "Module " + mod->ModuleFile + " is not loaded, cannot unload it!";
-		ServerInstance->Logs.Critical("MODULE", LastModuleError);
+		::Logs.Critical("MODULE", LastModuleError);
 		return false;
 	}
 
@@ -468,7 +468,7 @@ void ModuleManager::DoSafeUnload(Module* mod)
 
 	Modules.erase(modfind);
 
-	ServerInstance->Logs.Normal("MODULE", "The {} module was unloaded", mod->ModuleFile);
+	::Logs.Normal("MODULE", "The {} module was unloaded", mod->ModuleFile);
 
 	delete mod;
 }
@@ -533,10 +533,10 @@ void ModuleManager::LoadAll()
 			continue;
 
 		this->NewServices = &servicemap[name];
-		ServerInstance->Logs.Normal("MODULE", "Loading {}", name);
+		::Logs.Normal("MODULE", "Loading {}", name);
 		if (!this->Load(name, true))
 		{
-			ServerInstance->Logs.Normal("MODULE", "Failed to load module: {}", LastError());
+			::Logs.Normal("MODULE", "Failed to load module: {}", LastError());
 			ServerInstance->Exit(EXIT_FAILURE);
 		}
 	}
@@ -546,7 +546,7 @@ void ModuleManager::LoadAll()
 	{
 		try
 		{
-			ServerInstance->Logs.Debug("MODULE", "Initializing {}", modname);
+			::Logs.Debug("MODULE", "Initializing {}", modname);
 			AttachAll(mod);
 			AddServices(servicemap[modname]);
 			mod->init();
@@ -554,7 +554,7 @@ void ModuleManager::LoadAll()
 		catch (const CoreException& modexcept)
 		{
 			LastModuleError = "Unable to initialize " + modname + ": " + modexcept.GetReason();
-			ServerInstance->Logs.Critical("MODULE", LastModuleError);
+			::Logs.Critical("MODULE", LastModuleError);
 			ServerInstance->Exit(EXIT_FAILURE);
 		}
 	}
@@ -569,13 +569,13 @@ void ModuleManager::LoadAll()
 	{
 		try
 		{
-			ServerInstance->Logs.Debug("MODULE", "Reading configuration for {}", modname);
+			::Logs.Debug("MODULE", "Reading configuration for {}", modname);
 			mod->ReadConfig(confstatus);
 		}
 		catch (const CoreException& modexcept)
 		{
 			LastModuleError = "Unable to read the configuration for " + modname + ": " + modexcept.GetReason();
-			ServerInstance->Logs.Critical("MODULE", LastModuleError);
+			::Logs.Critical("MODULE", LastModuleError);
 			ServerInstance->Exit(EXIT_FAILURE);
 		}
 	}
@@ -597,7 +597,7 @@ void ModuleManager::AddServices(const ServiceList& list)
 
 void ModuleManager::AddService(ServiceProvider& item)
 {
-	ServerInstance->Logs.Debug("SERVICE", "Adding {} {} provided by {}", item.name,
+	::Logs.Debug("SERVICE", "Adding {} {} provided by {}", item.name,
 		item.GetTypeString(), item.creator ? item.creator->ModuleFile : "the core");
 	switch (item.service)
 	{
@@ -627,7 +627,7 @@ void ModuleManager::AddService(ServiceProvider& item)
 
 void ModuleManager::DelService(ServiceProvider& item)
 {
-	ServerInstance->Logs.Debug("SERVICE", "Deleting {} {} provided by {}", item.name,
+	::Logs.Debug("SERVICE", "Deleting {} {} provided by {}", item.name,
 		item.GetTypeString(), item.creator ? item.creator->ModuleFile : "the core");
 	switch (item.service)
 	{

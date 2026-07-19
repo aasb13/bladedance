@@ -38,7 +38,7 @@ public:
 		bool depriv = tag->getBool("depriv", true);
 		this->Update(rank, setrank, unsetrank, depriv);
 
-		ServerInstance->Logs.Debug(MODNAME, "Created the {} prefix: letter={} prefix={} rank={} ranktoset={} ranktounset={} depriv={}",
+		::Logs.Debug(MODNAME, "Created the {} prefix: letter={} prefix={} rank={} ranktoset={} ranktounset={} depriv={}",
 			name, GetModeChar(), GetPrefix(), GetPrefixRank(), GetLevelRequired(true), GetLevelRequired(false),
 			CanSelfRemove() ? "yes" : "no");
 	}
@@ -83,7 +83,7 @@ public:
 				bool depriv = tag->getBool("depriv", pm->CanSelfRemove());
 				pm->Update(rank, setrank, unsetrank, depriv);
 
-				ServerInstance->Logs.Debug(MODNAME, "Changed the {} prefix: letter={} prefix={} rank={} ranktoset={} ranktounset={} depriv={}",
+				::Logs.Debug(MODNAME, "Changed the {} prefix: letter={} prefix={} rank={} ranktoset={} ranktounset={} depriv={}",
 					name, pm->GetModeChar(), pm->GetPrefix(), pm->GetPrefixRank(), pm->GetLevelRequired(true),
 					pm->GetLevelRequired(false), pm->CanSelfRemove() ? "yes" : "no");
 				continue;

@@ -67,6 +67,10 @@
 
 __attribute__ ((visibility ("default"))) extern InspIRCd* ServerInstance;
 
+// Flattened: Log::Manager is now a global instance
+namespace Log { class Manager; }
+__attribute__ ((visibility ("default"))) extern Log::Manager Logs;
+
 #include "config.h"
 #include "dynref.h"
 #include "extensible.h"
@@ -208,10 +212,6 @@ public:
 
 	/* Manager for the extension system. */
 	ExtensionManager Extensions;
-
-
-	/** Manager for the logging system. */
-	Log::Manager Logs;
 
 	/* Manager for the mode handlers. */
 	ModeParser Modes;

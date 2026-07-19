@@ -144,7 +144,7 @@ public:
 				break;
 		}
 
-		ServerInstance->Logs.Debug(MODNAME, "Cleaned {} for cloak: {} => {}",
+		::Logs.Debug(MODNAME, "Cleaned {} for cloak: {} => {}",
 			GetName(), middle, safemiddle);
 
 		if (safemiddle.empty())

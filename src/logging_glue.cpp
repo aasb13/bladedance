@@ -55,7 +55,7 @@ Log::Engine::Engine(Module* Creator, const std::string& Name)
 Log::Engine::~Engine()
 {
 	if (creator)
-		ServerInstance->Logs.UnloadEngine(this);
+		::Logs.UnloadEngine(this);
 }
 
 Log::FileEngine::FileEngine(Module* Creator)

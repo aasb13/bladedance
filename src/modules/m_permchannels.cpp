@@ -78,7 +78,7 @@ static bool WriteDatabase(PermChannel& permchanmode, bool save_listmodes, unsign
 	std::ofstream stream(permchannelsnewconf);
 	if (!stream.is_open())
 	{
-		ServerInstance->Logs.Critical(MODNAME, "Cannot create database \"{}\"! {} ({})", permchannelsnewconf, strerror(errno), errno);
+		::Logs.Critical(MODNAME, "Cannot create database \"{}\"! {} ({})", permchannelsnewconf, strerror(errno), errno);
 		ServerInstance->SNO.WriteToSnoMask('a', "database: cannot create new permchan db \"{}\": {} ({})", permchannelsnewconf, strerror(errno), errno);
 		return false;
 	}
@@ -171,7 +171,7 @@ static bool WriteDatabase(PermChannel& permchanmode, bool save_listmodes, unsign
 
 	if (stream.fail())
 	{
-		ServerInstance->Logs.Critical(MODNAME, "Cannot write to new database \"{}\"! {} ({})", permchannelsnewconf, strerror(errno), errno);
+		::Logs.Critical(MODNAME, "Cannot write to new database \"{}\"! {} ({})", permchannelsnewconf, strerror(errno), errno);
 		ServerInstance->SNO.WriteToSnoMask('a', "database: cannot write to new permchan db \"{}\": {} ({})", permchannelsnewconf, strerror(errno), errno);
 		return false;
 	}
@@ -183,7 +183,7 @@ static bool WriteDatabase(PermChannel& permchanmode, bool save_listmodes, unsign
 	// Use rename to move temporary to new db - this is guaranteed not to fuck up, even in case of a crash.
 	if (rename(permchannelsnewconf.c_str(), permchannelsconf.c_str()) < 0)
 	{
-		ServerInstance->Logs.Critical(MODNAME, "Cannot replace old database \"{}\" with new database \"{}\"! {} ({})", permchannelsconf, permchannelsnewconf, strerror(errno), errno);
+		::Logs.Critical(MODNAME, "Cannot replace old database \"{}\" with new database \"{}\"! {} ({})", permchannelsconf, permchannelsnewconf, strerror(errno), errno);
 		ServerInstance->SNO.WriteToSnoMask('a', "database: cannot replace old permchan db \"{}\" with new db \"{}\": {} ({})", permchannelsconf, permchannelsnewconf, strerror(errno), errno);
 		return false;
 	}
@@ -243,7 +243,7 @@ public:
 
 			if (!ServerInstance->Channels.IsChannel(channel))
 			{
-				ServerInstance->Logs.Warning(MODNAME, "Ignoring permchannels tag with invalid channel name (\"" + channel + "\")");
+				::Logs.Warning(MODNAME, "Ignoring permchannels tag with invalid channel name (\"" + channel + "\")");
 				continue;
 			}
 
@@ -266,7 +266,7 @@ public:
 					c->SetTopic(ServerInstance->FakeClient, topic, topicset, &topicsetby);
 				}
 
-				ServerInstance->Logs.Debug(MODNAME, "Added {} with topic {}", channel, c->topic);
+				::Logs.Debug(MODNAME, "Added {} with topic {}", channel, c->topic);
 
 				irc::spacesepstream modes(tag->getString("modes"));
 				std::string modechars;
@@ -337,7 +337,7 @@ public:
 				// Back off a bit to avoid spamming opers.
 				if (backoff > 1)
 					SetInterval(std::min(GetInterval() * backoff, maxbackoff), false);
-				ServerInstance->Logs.Debug(MODNAME, "Trying again in {}", Duration::ToLongString(GetInterval()));
+				::Logs.Debug(MODNAME, "Trying again in {}", Duration::ToLongString(GetInterval()));
 			}
 		}
 		return true;
@@ -368,7 +368,7 @@ public:
 			}
 			catch (const CoreException& e)
 			{
-				ServerInstance->Logs.Critical(MODNAME, "Error loading permchannels database: {}", e.what());
+				::Logs.Critical(MODNAME, "Error loading permchannels database: {}", e.what());
 			}
 		}
 	}

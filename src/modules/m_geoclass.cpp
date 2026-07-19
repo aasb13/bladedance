@@ -53,7 +53,7 @@ public:
 		{
 			if (token.length() != 2)
 			{
-				ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class contains an invalid country code: {}",
+				::Logs.Debug("CONNECTCLASS", "The {} connect class contains an invalid country code: {}",
 					klass->GetName(), token);
 				continue;
 			}
@@ -66,7 +66,7 @@ public:
 
 		// A list of country codes were specified but the user didn't match
 		// any of them.
-		ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as the origin country ({}) is not any of {}.",
+		::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as the origin country ({}) is not any of {}.",
 			klass->GetName(), code, country);
 		return MOD_RES_DENY;
 	}

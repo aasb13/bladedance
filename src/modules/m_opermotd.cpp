@@ -105,7 +105,7 @@ private:
 		if (!file)
 		{
 			// We can't process the file if it doesn't exist.
-			ServerInstance->Logs.Warning(MODNAME, "Unable to read server operator motd for oper {} \"{}\" at {}: {}",
+			::Logs.Warning(MODNAME, "Unable to read server operator motd for oper {} \"{}\" at {}: {}",
 				type, oper->GetName(), oper->GetConfig()->source.str(), file.error);
 			return;
 		}

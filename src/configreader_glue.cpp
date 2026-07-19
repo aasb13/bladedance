@@ -508,7 +508,7 @@ void ServerConfig::Apply(ServerConfig* old, const std::string& useruid)
 
 	if (!valid)
 	{
-		ServerInstance->Logs.Normal("CONFIG", "There were errors in your configuration file:");
+		::Logs.Normal("CONFIG", "There were errors in your configuration file:");
 		Classes.clear();
 	}
 
@@ -627,7 +627,7 @@ const std::shared_ptr<ConfigTag>& ServerConfig::ConfValue(const std::string& tag
 
 	if (tags.count() > 1)
 	{
-		ServerInstance->Logs.Warning("CONFIG", "Multiple ({}) <{}> tags found; only the first will be used (first at {}, last at {})",
+		::Logs.Warning("CONFIG", "Multiple ({}) <{}> tags found; only the first will be used (first at {}, last at {})",
 			tags.count(), tag, tags.begin()->second->source.str(), std::prev(tags.end())->second->source.str());
 	}
 	return tags.begin()->second;
@@ -672,7 +672,7 @@ std::vector<std::string> ServerConfig::GetModules() const
 		const std::string shortname = ModuleManager::ShrinkModName(tag->getString("name"));
 		if (shortname.empty())
 		{
-			ServerInstance->Logs.Warning("CONFIG", "Malformed <module> tag at " + tag->source.str() + "; skipping ...");
+			::Logs.Warning("CONFIG", "Malformed <module> tag at " + tag->source.str() + "; skipping ...");
 			continue;
 		}
 
@@ -728,7 +728,7 @@ void ConfigReaderThread::OnStart()
 void ConfigReaderThread::OnStop()
 {
 	ServerConfig* old = ServerInstance->Config;
-	ServerInstance->Logs.Normal("CONFIG", "Switching to new configuration...");
+	::Logs.Normal("CONFIG", "Switching to new configuration...");
 	ServerInstance->Config = this->Config;
 	Config->Apply(old, UUID);
 
@@ -749,12 +749,12 @@ void ConfigReaderThread::OnStop()
 		{
 			try
 			{
-				ServerInstance->Logs.Debug("MODULE", "Rehashing {}", modname);
+				::Logs.Debug("MODULE", "Rehashing {}", modname);
 				mod->ReadConfig(status);
 			}
 			catch (const CoreException& modex)
 			{
-				ServerInstance->Logs.Critical("MODULE", "Unable to read the configuration for {}: {}",
+				::Logs.Critical("MODULE", "Unable to read the configuration for {}: {}",
 					mod->ModuleFile, modex.what());
 				if (user)
 					user->WriteNotice(modname + ": " + modex.GetReason());
@@ -767,12 +767,12 @@ void ConfigReaderThread::OnStop()
 
 		try
 		{
-			ServerInstance->Logs.CloseLogs();
-			ServerInstance->Logs.OpenLogs(true);
+			::Logs.CloseLogs();
+			::Logs.OpenLogs(true);
 		}
 		catch (const CoreException& ex)
 		{
-			ServerInstance->Logs.Critical("LOG", "Cannot open log files: " + ex.GetReason());
+			::Logs.Critical("LOG", "Cannot open log files: " + ex.GetReason());
 			if (user)
 				user->WriteNotice("Cannot open log files: " + ex.GetReason());
 		}

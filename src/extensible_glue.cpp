@@ -47,7 +47,7 @@ Extensible::~Extensible()
 {
 	if ((!extensible_store_is_empty(store) || !culled) && ServerInstance)
 	{
-		ServerInstance->Logs.Debug("CULL", "Extensible was deleted without being culled: @{}",
+		::Logs.Debug("CULL", "Extensible was deleted without being culled: @{}",
 			fmt::ptr(this));
 	}
 	extensible_store_free(store);

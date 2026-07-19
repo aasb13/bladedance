@@ -53,7 +53,7 @@ private:
 		if (pos + name.length() + 2 > output_size)
 			throw DNS::Exception(creator, "Unable to pack name");
 
-		ServerInstance->Logs.Debug(MODNAME, "Packing name {}", name);
+		::Logs.Debug(MODNAME, "Packing name {}", name);
 
 		irc::sepstream sep(name, '.');
 		std::string token;
@@ -125,7 +125,7 @@ private:
 		if (name.empty())
 			throw DNS::Exception(creator, "Unable to unpack name - no name");
 
-		ServerInstance->Logs.Debug(MODNAME, "Unpack name {}", name);
+		::Logs.Debug(MODNAME, "Unpack name {}", name);
 
 		return name;
 	}
@@ -248,7 +248,7 @@ private:
 		}
 
 		if (!record.name.empty() && !record.rdata.empty())
-			ServerInstance->Logs.Debug(MODNAME, "{} -> {}", record.name, record.rdata);
+			::Logs.Debug(MODNAME, "{} -> {}", record.name, record.rdata);
 
 		return record;
 	}
@@ -294,7 +294,7 @@ public:
 		unsigned short arcount = (input[packet_pos] << 8) | input[packet_pos + 1];
 		packet_pos += 2;
 
-		ServerInstance->Logs.Debug(MODNAME, "qdcount: {} ancount: {} nscount: {} arcount: {}",
+		::Logs.Debug(MODNAME, "qdcount: {} ancount: {} nscount: {} arcount: {}",
 			qdcount, ancount, nscount, arcount);
 
 		if (qdcount != 1)
@@ -406,7 +406,7 @@ class MyManager final
 	 */
 	bool CheckCache(DNS::Request* req, const DNS::Question& question)
 	{
-		ServerInstance->Logs.Debug(MODNAME, "cache: Checking cache for {}", question.name);
+		::Logs.Debug(MODNAME, "cache: Checking cache for {}", question.name);
 
 		cache_map::iterator it = this->cache.find(question);
 		if (it == this->cache.end())
@@ -419,7 +419,7 @@ class MyManager final
 			return false;
 		}
 
-		ServerInstance->Logs.Debug(MODNAME, "cache: Using cached result for {}", question.name);
+		::Logs.Debug(MODNAME, "cache: Using cached result for {}", question.name);
 		record.cached = true;
 		req->OnLookupComplete(&record);
 		return true;
@@ -445,7 +445,7 @@ class MyManager final
 		auto& rr = r.answers.front();
 		// Set TTL to what we've determined to be the lowest
 		rr.ttl = cachettl;
-		ServerInstance->Logs.Debug(MODNAME, "cache: added cache for {} -> {} ttl: {}", rr.name, rr.rdata, rr.ttl);
+		::Logs.Debug(MODNAME, "cache: added cache for {} -> {} ttl: {}", rr.name, rr.rdata, rr.ttl);
 		this->cache[r.question] = r;
 	}
 
@@ -516,7 +516,7 @@ public:
 			return;
 		}
 
-		ServerInstance->Logs.Debug(MODNAME, "Processing request to lookup {} of type {} to {}",
+		::Logs.Debug(MODNAME, "Processing request to lookup {} of type {} to {}",
 			req->question.name, (int)req->question.type, this->myserver.addr());
 
 		/* Create an id */
@@ -564,7 +564,7 @@ public:
 		 */
 		if (req->use_cache && this->CheckCache(req, p.question))
 		{
-			ServerInstance->Logs.Debug(MODNAME, "Using cached result");
+			::Logs.Debug(MODNAME, "Using cached result");
 			delete req;
 			return;
 		}
@@ -639,7 +639,7 @@ public:
 
 	void OnEventHandlerError(int errcode) override
 	{
-		ServerInstance->Logs.Debug(MODNAME, "UDP socket got an error event");
+		::Logs.Debug(MODNAME, "UDP socket got an error event");
 	}
 
 	void OnEventHandlerRead() override
@@ -657,7 +657,7 @@ public:
 		{
 			std::string server1 = from.str();
 			std::string server2 = myserver.str();
-			ServerInstance->Logs.Debug(MODNAME, "Got a result from the wrong server! Bad NAT or DNS forging attempt? '{}' != '{}'",
+			::Logs.Debug(MODNAME, "Got a result from the wrong server! Bad NAT or DNS forging attempt? '{}' != '{}'",
 				server1, server2);
 			return;
 		}
@@ -672,21 +672,21 @@ public:
 		}
 		catch (const DNS::Exception& ex)
 		{
-			ServerInstance->Logs.Debug(MODNAME, ex.GetReason());
+			::Logs.Debug(MODNAME, ex.GetReason());
 		}
 
 		// recv_packet.id must be filled in here
 		DNS::Request* request = this->requests[recv_packet.id];
 		if (!request)
 		{
-			ServerInstance->Logs.Debug(MODNAME, "Received an answer for something we didn't request");
+			::Logs.Debug(MODNAME, "Received an answer for something we didn't request");
 			return;
 		}
 
 		if (request->question != recv_packet.question)
 		{
 			// This can happen under high latency, drop it silently, do not fail the request
-			ServerInstance->Logs.Debug(MODNAME, "Received an answer that isn't for a question we asked");
+			::Logs.Debug(MODNAME, "Received an answer that isn't for a question we asked");
 			return;
 		}
 
@@ -698,7 +698,7 @@ public:
 		}
 		else if (recv_packet.flags & DNS::QUERYFLAGS_OPCODE)
 		{
-			ServerInstance->Logs.Debug(MODNAME, "Received a nonstandard query");
+			::Logs.Debug(MODNAME, "Received a nonstandard query");
 			this->stats_failure++;
 			recv_packet.error = DNS::ERROR_NONSTANDARD_QUERY;
 			request->OnError(&recv_packet);
@@ -710,23 +710,23 @@ public:
 			switch (recv_packet.flags & DNS::QUERYFLAGS_RCODE)
 			{
 				case 1:
-					ServerInstance->Logs.Debug(MODNAME, "format error");
+					::Logs.Debug(MODNAME, "format error");
 					error = DNS::ERROR_FORMAT_ERROR;
 					break;
 				case 2:
-					ServerInstance->Logs.Debug(MODNAME, "server error");
+					::Logs.Debug(MODNAME, "server error");
 					error = DNS::ERROR_SERVER_FAILURE;
 					break;
 				case 3:
-					ServerInstance->Logs.Debug(MODNAME, "domain not found");
+					::Logs.Debug(MODNAME, "domain not found");
 					error = DNS::ERROR_DOMAIN_NOT_FOUND;
 					break;
 				case 4:
-					ServerInstance->Logs.Debug(MODNAME, "not implemented");
+					::Logs.Debug(MODNAME, "not implemented");
 					error = DNS::ERROR_NOT_IMPLEMENTED;
 					break;
 				case 5:
-					ServerInstance->Logs.Debug(MODNAME, "refused");
+					::Logs.Debug(MODNAME, "refused");
 					error = DNS::ERROR_REFUSED;
 					break;
 				default:
@@ -739,14 +739,14 @@ public:
 		}
 		else if (recv_packet.answers.empty())
 		{
-			ServerInstance->Logs.Debug(MODNAME, "No resource records returned");
+			::Logs.Debug(MODNAME, "No resource records returned");
 			this->stats_failure++;
 			recv_packet.error = DNS::ERROR_NO_RECORDS;
 			request->OnError(&recv_packet);
 		}
 		else
 		{
-			ServerInstance->Logs.Debug(MODNAME, "Lookup complete for {}", request->question.name);
+			::Logs.Debug(MODNAME, "Lookup complete for {}", request->question.name);
 			this->stats_success++;
 			request->OnLookupComplete(&recv_packet);
 			this->AddCache(recv_packet);
@@ -774,7 +774,7 @@ public:
 		}
 
 		if (expired)
-			ServerInstance->Logs.Debug(MODNAME, "cache: purged {} expired DNS entries", expired);
+			::Logs.Debug(MODNAME, "cache: purged {} expired DNS entries", expired);
 
 		return true;
 	}
@@ -809,23 +809,23 @@ public:
 			if (SocketEngine::Bind(this, bindto) < 0)
 			{
 				/* Failed to bind */
-				ServerInstance->Logs.Critical(MODNAME, "Error binding dns socket - hostnames will NOT resolve");
+				::Logs.Critical(MODNAME, "Error binding dns socket - hostnames will NOT resolve");
 				SocketEngine::Close(this->GetFd());
 				this->SetFd(-1);
 			}
 			else if (!SocketEngine::AddFd(this, FD_WANT_POLL_READ | FD_WANT_NO_WRITE))
 			{
-				ServerInstance->Logs.Critical(MODNAME, "Internal error starting DNS - hostnames will NOT resolve.");
+				::Logs.Critical(MODNAME, "Internal error starting DNS - hostnames will NOT resolve.");
 				SocketEngine::Close(this->GetFd());
 				this->SetFd(-1);
 			}
 
 			if (bindto.family() != myserver.family())
-				ServerInstance->Logs.Warning(MODNAME, "Nameserver address family differs from source address family - hostnames might not resolve");
+				::Logs.Warning(MODNAME, "Nameserver address family differs from source address family - hostnames might not resolve");
 		}
 		else
 		{
-			ServerInstance->Logs.Critical(MODNAME, "Error creating DNS socket - hostnames will NOT resolve");
+			::Logs.Critical(MODNAME, "Error creating DNS socket - hostnames will NOT resolve");
 		}
 	}
 };
@@ -843,7 +843,7 @@ class ModuleDNS final
 	{
 #ifdef _WIN32
 		// attempt to look up their nameserver from the system
-		ServerInstance->Logs.Normal(MODNAME, "WARNING: <dns:server> not defined, attempting to find a working server in the system settings...");
+		::Logs.Normal(MODNAME, "WARNING: <dns:server> not defined, attempting to find a working server in the system settings...");
 
 		PFIXED_INFO pFixedInfo;
 		DWORD dwBufferSize = sizeof(FIXED_INFO);
@@ -867,15 +867,15 @@ class ModuleDNS final
 
 			if (!DNSServer.empty())
 			{
-				ServerInstance->Logs.Normal(MODNAME, "<dns:server> set to '{}' as first active resolver in the system settings.", DNSServer);
+				::Logs.Normal(MODNAME, "<dns:server> set to '{}' as first active resolver in the system settings.", DNSServer);
 				return;
 			}
 		}
 
-		ServerInstance->Logs.Warning(MODNAME, "No viable nameserver found! Defaulting to nameserver '127.0.0.1'!");
+		::Logs.Warning(MODNAME, "No viable nameserver found! Defaulting to nameserver '127.0.0.1'!");
 #else
 		// attempt to look up their nameserver from /etc/resolv.conf
-		ServerInstance->Logs.Normal(MODNAME, "WARNING: <dns:server> not defined, attempting to find working server in /etc/resolv.conf...");
+		::Logs.Normal(MODNAME, "WARNING: <dns:server> not defined, attempting to find working server in /etc/resolv.conf...");
 
 		std::ifstream resolv("/etc/resolv.conf");
 
@@ -886,13 +886,13 @@ class ModuleDNS final
 				resolv >> DNSServer;
 				if (DNSServer.find_first_not_of("0123456789.") == std::string::npos || DNSServer.find_first_not_of("0123456789ABCDEFabcdef:") == std::string::npos)
 				{
-					ServerInstance->Logs.Normal(MODNAME, "<dns:server> set to '{}' as first resolver in /etc/resolv.conf.", DNSServer);
+					::Logs.Normal(MODNAME, "<dns:server> set to '{}' as first resolver in /etc/resolv.conf.", DNSServer);
 					return;
 				}
 			}
 		}
 
-		ServerInstance->Logs.Warning(MODNAME, "/etc/resolv.conf contains no viable nameserver entries! Defaulting to nameserver '127.0.0.1'!");
+		::Logs.Warning(MODNAME, "/etc/resolv.conf contains no viable nameserver entries! Defaulting to nameserver '127.0.0.1'!");
 #endif
 		DNSServer = "127.0.0.1";
 	}

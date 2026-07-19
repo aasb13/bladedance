@@ -302,7 +302,7 @@ public:
 
 	bool HandleConnectError(const char* reason)
 	{
-		ServerInstance->Logs.Critical(MODNAME, "Could not connect to the \"{}\" database: {}",
+		::Logs.Critical(MODNAME, "Could not connect to the \"{}\" database: {}",
 			GetId(), reason);
 		return false;
 	}
@@ -451,7 +451,7 @@ restart:
 
 	void Submit(SQL::Query* req, const std::string& q) override
 	{
-		ServerInstance->Logs.Debug(MODNAME, "Executing PostgreSQL query: {}", q);
+		::Logs.Debug(MODNAME, "Executing PostgreSQL query: {}", q);
 		if (qinprog.q.empty())
 		{
 			DoQuery(QueueItem(req, q));
@@ -480,7 +480,7 @@ restart:
 					int error;
 					size_t escapedsize = PQescapeStringConn(sql, buffer.data(), parm.data(), parm.length(), &error);
 					if (error)
-						ServerInstance->Logs.Debug(MODNAME, "BUG: Apparently PQescapeStringConn() failed");
+						::Logs.Debug(MODNAME, "BUG: Apparently PQescapeStringConn() failed");
 					res.append(buffer.data(), escapedsize);
 				}
 			}
@@ -511,7 +511,7 @@ restart:
 					int error;
 					size_t escapedsize = PQescapeStringConn(sql, buffer.data(), parm.data(), parm.length(), &error);
 					if (error)
-						ServerInstance->Logs.Debug(MODNAME, "BUG: Apparently PQescapeStringConn() failed");
+						::Logs.Debug(MODNAME, "BUG: Apparently PQescapeStringConn() failed");
 					res.append(buffer.data(), escapedsize);
 				}
 			}
@@ -586,7 +586,7 @@ public:
 			minor = revision;
 			revision = 0;
 		}
-		ServerInstance->Logs.Normal(MODNAME, "Module was compiled against libpq version {} and is running against version {}.{}.{}",
+		::Logs.Normal(MODNAME, "Module was compiled against libpq version {} and is running against version {}.{}.{}",
 			PG_VERSION, pqversion / 10000, minor, revision);
 	}
 

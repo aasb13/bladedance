@@ -108,7 +108,7 @@ bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
 	if (!rust_socketengine_kqueue_add_fd(fd, event_mask, udata_cast(eh)))
 		return false;
 
-	ServerInstance->Logs.Debug("SOCKET", "New file descriptor: {}", fd);
+	::Logs.Debug("SOCKET", "New file descriptor: {}", fd);
 
 	eh->SetEventMask(event_mask);
 	OnSetEvent(eh, 0, event_mask);
@@ -121,7 +121,7 @@ void SocketEngine::DelFd(EventHandler* eh)
 	int fd = eh->GetFd();
 	if (!eh->HasFd())
 	{
-		ServerInstance->Logs.Debug("SOCKET", "DelFd() on invalid fd: {}", fd);
+		::Logs.Debug("SOCKET", "DelFd() on invalid fd: {}", fd);
 		return;
 	}
 
@@ -130,7 +130,7 @@ void SocketEngine::DelFd(EventHandler* eh)
 
 	SocketEngine::DelFdRef(eh);
 
-	ServerInstance->Logs.Debug("SOCKET", "Remove file descriptor: {}", fd);
+	::Logs.Debug("SOCKET", "Remove file descriptor: {}", fd);
 }
 
 void SocketEngine::OnSetEvent(EventHandler* eh, int old_mask, int new_mask)

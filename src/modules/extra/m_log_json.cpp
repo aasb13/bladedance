@@ -232,10 +232,10 @@ public:
 	{
 #ifdef HAS_YYJSON
 		const auto yyversion = yyjson_version();
-		ServerInstance->Logs.Normal(MODNAME, "Module was compiled against yyjson version {} and is running against version {}.{}.{}",
+		::Logs.Normal(MODNAME, "Module was compiled against yyjson version {} and is running against version {}.{}.{}",
 			YYJSON_VERSION_STRING, (yyversion >> 16) & 0xFF, (yyversion >> 8) & 0xFF, yyversion & 0xFF);
 #else
-		ServerInstance->Logs.Normal(MODNAME, "Module was compiled against RapidJSON version {}",
+		::Logs.Normal(MODNAME, "Module was compiled against RapidJSON version {}",
 			RAPIDJSON_VERSION_STRING);
 #endif
 	}

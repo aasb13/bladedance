@@ -117,7 +117,7 @@ public:
 
 			if (hp->IsKDF())
 			{
-				ServerInstance->Logs.Normal(MODNAME, "Tried to use HMAC with {}, which does not support HMAC", type);
+				::Logs.Normal(MODNAME, "Tried to use HMAC with {}, which does not support HMAC", type);
 				return MOD_RES_DENY;
 			}
 

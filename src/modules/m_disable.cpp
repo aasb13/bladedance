@@ -57,7 +57,7 @@ private:
 					chr, field, tag->source.str());
 
 			// Disable the mode.
-			ServerInstance->Logs.Debug(MODNAME, "The {} ({}) {} mode has been disabled",
+			::Logs.Debug(MODNAME, "The {} ({}) {} mode has been disabled",
 				mh->GetModeChar(), mh->name, type == MODETYPE_CHANNEL ? "channel" : "user");
 			status.set(ModeParser::GetModeIndex(chr));
 		}
@@ -69,7 +69,7 @@ private:
 		if (notifyopers)
 			ServerInstance->SNO.WriteToSnoMask('a', message, std::forward<Args>(args)...);
 		else
-			ServerInstance->Logs.Normal(MODNAME, message, std::forward<Args>(args)...);
+			::Logs.Normal(MODNAME, message, std::forward<Args>(args)...);
 	}
 
 public:
@@ -98,7 +98,7 @@ public:
 				continue;
 
 			// Disable the command.
-			ServerInstance->Logs.Debug(MODNAME, "The {} command has been disabled", handler->name);
+			::Logs.Debug(MODNAME, "The {} command has been disabled", handler->name);
 			newcommands.push_back(handler->name);
 		}
 

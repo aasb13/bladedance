@@ -465,7 +465,7 @@ public:
 		if (request.GetPath().compare(0, 6, "/stats"))
 			return MOD_RES_PASSTHRU;
 
-		ServerInstance->Logs.Debug(MODNAME, "Handling HTTP request for {}", request.GetPath());
+		::Logs.Debug(MODNAME, "Handling HTTP request for {}", request.GetPath());
 
 		Stats::XMLSerializer serializer;
 		serializer.BeginBlock("inspircdstats");

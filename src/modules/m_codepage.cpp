@@ -384,7 +384,7 @@ public:
 				switch (newcodepage->AllowCharacter(pos, front))
 				{
 					case Codepage::AllowCharacterResult::OKAY:
-						ServerInstance->Logs.Debug(MODNAME, "Marked {} as allowed (front: {})",
+						::Logs.Debug(MODNAME, "Marked {} as allowed (front: {})",
 							GetPrintable(pos), front ? "yes" : "no");
 						break;
 
@@ -412,7 +412,7 @@ public:
 			if (!newcodepage->Map(upper, lower))
 				throw ModuleException(this, "Malformed <cpcase> tag at " + tag->source.str());
 
-			ServerInstance->Logs.Debug(MODNAME, "Marked {} as the lower case version of {}",
+			::Logs.Debug(MODNAME, "Marked {} as the lower case version of {}",
 				GetPrintable(lower), GetPrintable(upper));
 		}
 

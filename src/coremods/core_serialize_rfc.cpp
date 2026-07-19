@@ -65,7 +65,7 @@ bool RFCSerializer::Parse(LocalUser* user, const std::string& line, ClientProtoc
 		maxline += MAX_CLIENT_MESSAGE_TAG_LENGTH + 1;
 
 	irc::tokenstream tokens(line, start, maxline);
-	ServerInstance->Logs.RawIO("USERINPUT", "C[{}] I {}", user->uuid, tokens.GetMessage());
+	::Logs.RawIO("USERINPUT", "C[{}] I {}", user->uuid, tokens.GetMessage());
 
 	// This will always exist because of the check at the start of the function.
 	std::string token;

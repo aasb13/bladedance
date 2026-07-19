@@ -57,7 +57,7 @@ private:
 
 		if (InspIRCd::Match(server->GetName(), sasl_target))
 		{
-			ServerInstance->Logs.Debug(MODNAME, "SASL target server \"{}\" {}", sasl_target, (linked ? "came online" : "went offline"));
+			::Logs.Debug(MODNAME, "SASL target server \"{}\" {}", sasl_target, (linked ? "came online" : "went offline"));
 			online = linked;
 		}
 	}
@@ -256,7 +256,7 @@ public:
 				else if (msg[2] == "M")
 					this->user->WriteNumeric(RPL_SASLMECHS, msg[3], "are available SASL mechanisms");
 				else
-					ServerInstance->Logs.Debug(MODNAME, "Services sent an unknown SASL message \"{}\" \"{}\"", msg[2], msg[3]);
+					::Logs.Debug(MODNAME, "Services sent an unknown SASL message \"{}\" \"{}\"", msg[2], msg[3]);
 				break;
 
 			case SASL_DONE:
@@ -382,7 +382,7 @@ public:
 		auto* target = ServerInstance->Users.FindUUID(parameters[1]);
 		if (!target)
 		{
-			ServerInstance->Logs.Debug(MODNAME, "User not found in sasl ENCAP event: {}", parameters[1]);
+			::Logs.Debug(MODNAME, "User not found in sasl ENCAP event: {}", parameters[1]);
 			return CmdResult::FAILURE;
 		}
 
@@ -432,7 +432,7 @@ public:
 	void init() override
 	{
 		if (!ServerInstance->Modules.Find("account") || !ServerInstance->Modules.Find("cap"))
-			ServerInstance->Logs.Normal(MODNAME, "WARNING: the cap and services modules are not loaded! The sasl module will NOT function correctly until these two modules are loaded!");
+			::Logs.Normal(MODNAME, "WARNING: the cap and services modules are not loaded! The sasl module will NOT function correctly until these two modules are loaded!");
 	}
 
 	void ReadConfig(ConfigStatus& status) override

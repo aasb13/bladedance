@@ -99,7 +99,7 @@ public:
 				}
 			}
 
-			ServerInstance->Logs.Debug(MODNAME, "Read ACL: path={} pass={} whitelist={} blacklist={}", path,
+			::Logs.Debug(MODNAME, "Read ACL: path={} pass={} whitelist={} blacklist={}", path,
 					password, whitelist, blacklist);
 
 			new_acls.emplace_back(path, username, password, whitelist, blacklist);
@@ -109,7 +109,7 @@ public:
 
 	void BlockAccess(HTTPRequest* http, unsigned int returnval, const std::string& extraheaderkey = "", const std::string& extraheaderval="")
 	{
-		ServerInstance->Logs.Debug(MODNAME, "BlockAccess ({})", returnval);
+		::Logs.Debug(MODNAME, "BlockAccess ({})", returnval);
 
 		std::stringstream data;
 		data << "<html><head></head><body style='font-family: sans-serif; text-align: center'>"
@@ -128,7 +128,7 @@ public:
 	bool IsAccessAllowed(HTTPRequest* http)
 	{
 		{
-			ServerInstance->Logs.Debug(MODNAME, "Handling httpd acl event");
+			::Logs.Debug(MODNAME, "Handling httpd acl event");
 
 			for (const auto& acl : acl_list)
 			{
@@ -144,7 +144,7 @@ public:
 						{
 							if (InspIRCd::Match(http->GetIP(), entry, ascii_case_insensitive_map))
 							{
-								ServerInstance->Logs.Debug(MODNAME, "Denying access to blacklisted resource {} (matched by pattern {}) from ip {} (matched by entry {})",
+								::Logs.Debug(MODNAME, "Denying access to blacklisted resource {} (matched by pattern {}) from ip {} (matched by entry {})",
 										http->GetPath(), acl.path, http->GetIP(), entry);
 								BlockAccess(http, 403);
 								return false;
@@ -166,7 +166,7 @@ public:
 
 						if (!allow_access)
 						{
-							ServerInstance->Logs.Debug(MODNAME, "Denying access to whitelisted resource {} (matched by pattern {}) from ip {} (Not in whitelist)",
+							::Logs.Debug(MODNAME, "Denying access to whitelisted resource {} (matched by pattern {}) from ip {} (Not in whitelist)",
 									http->GetPath(), acl.path, http->GetIP());
 							BlockAccess(http, 403);
 							return false;
@@ -175,7 +175,7 @@ public:
 					if (!acl.password.empty() && !acl.username.empty())
 					{
 						/* Password auth, first look to see if we have a basic authentication header */
-						ServerInstance->Logs.Debug(MODNAME, "Checking HTTP auth password for resource {} (matched by pattern {}) from ip {}, against username {}",
+						::Logs.Debug(MODNAME, "Checking HTTP auth password for resource {} (matched by pattern {}) from ip {}, against username {}",
 								http->GetPath(), acl.path, http->GetIP(), acl.username);
 
 						if (http->headers->IsSet("Authorization"))
@@ -194,7 +194,7 @@ public:
 
 								sep.GetToken(base64);
 								std::string userpass = Base64::Decode(base64);
-								ServerInstance->Logs.Debug(MODNAME, "HTTP authorization: {} ({})", userpass, base64);
+								::Logs.Debug(MODNAME, "HTTP authorization: {} ({})", userpass, base64);
 
 								irc::sepstream userpasspair(userpass, ':');
 								if (userpasspair.GetToken(user))
@@ -204,34 +204,34 @@ public:
 									/* Access granted if username and password are correct */
 									if (InspIRCd::TimingSafeCompare(user, acl.username) && InspIRCd::TimingSafeCompare(pass, acl.password))
 									{
-										ServerInstance->Logs.Debug(MODNAME, "HTTP authorization: password and username match");
+										::Logs.Debug(MODNAME, "HTTP authorization: password and username match");
 										return true;
 									}
 									else
 									{
 										/* Invalid password */
-										ServerInstance->Logs.Debug(MODNAME, "HTTP authorization: password and username do not match");
+										::Logs.Debug(MODNAME, "HTTP authorization: password and username do not match");
 										BlockAccess(http, 401, "WWW-Authenticate", "Basic realm=\"Restricted Object\"");
 									}
 								}
 								else
 								{
 									/* Malformed user:pass pair */
-									ServerInstance->Logs.Debug(MODNAME, "HTTP authorization: password and username malformed");
+									::Logs.Debug(MODNAME, "HTTP authorization: password and username malformed");
 									BlockAccess(http, 401, "WWW-Authenticate", "Basic realm=\"Restricted Object\"");
 								}
 							}
 							else
 							{
 								/* Unsupported authentication type */
-								ServerInstance->Logs.Debug(MODNAME, "HTTP authorization: unsupported auth type: {}", authtype);
+								::Logs.Debug(MODNAME, "HTTP authorization: unsupported auth type: {}", authtype);
 								BlockAccess(http, 401, "WWW-Authenticate", "Basic realm=\"Restricted Object\"");
 							}
 						}
 						else
 						{
 							/* No password given at all, access denied */
-							ServerInstance->Logs.Debug(MODNAME, "HTTP authorization: password and username not sent");
+							::Logs.Debug(MODNAME, "HTTP authorization: password and username not sent");
 							BlockAccess(http, 401, "WWW-Authenticate", "Basic realm=\"Restricted Object\"");
 						}
 						return false;

@@ -66,14 +66,14 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
     if (validation_result.data && validation_result.length > 0)
     {
         LastModuleError = std::string(validation_result.data, validation_result.length);
-        ServerInstance->Logs.Critical("MODULE", LastModuleError);
+        ::Logs.Critical("MODULE", LastModuleError);
         return false;
     }
 
     if (Modules.find(filename) != Modules.end())
     {
         LastModuleError = "Module " + filename + " is already loaded, cannot load a module twice!";
-        ServerInstance->Logs.Critical("MODULE", LastModuleError);
+        ::Logs.Critical("MODULE", LastModuleError);
         return false;
     }
 
@@ -103,12 +103,12 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
                 newmod->init();
                 newmod->ReadConfig(confstatus);
 
-                ServerInstance->Logs.Normal("MODULE", "New module introduced: {} (version {}, properties {})",
+                ::Logs.Normal("MODULE", "New module introduced: {} (version {}, properties {})",
                     filename, newmod->GetVersion(), newmod->GetPropertyString());
 
                 if (newmod->properties & VF_DEPRECATED)
                 {
-                    ServerInstance->Logs.Warning("MODULE", "The {} module is deprecated and will be removed in the next version of InspIRCd!",
+                    ::Logs.Warning("MODULE", "The {} module is deprecated and will be removed in the next version of InspIRCd!",
                         ModuleManager::ShrinkModName(filename));
                 }
             }
@@ -116,7 +116,7 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
         else
         {
             LastModuleError = "Unable to load " + filename + ": " + newhandle->LastError();
-            ServerInstance->Logs.Critical("MODULE", LastModuleError);
+            ::Logs.Critical("MODULE", LastModuleError);
             delete newhandle;
             return false;
         }
@@ -135,7 +135,7 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
             delete newhandle;
         }
         LastModuleError = "Unable to load " + filename + ": " + modexcept.GetReason();
-        ServerInstance->Logs.Critical("MODULE", LastModuleError);
+        ::Logs.Critical("MODULE", LastModuleError);
         return false;
     }
 
@@ -149,7 +149,7 @@ bool ModuleManager::Load(const std::string& modname, bool defer)
 
 void ModuleManager::LoadCoreModules(std::map<std::string, ServiceList>& servicemap)
 {
-    ServerInstance->Logs.Normal("MODULE", "Loading core modules");
+    ::Logs.Normal("MODULE", "Loading core modules");
 
     try
     {
@@ -162,21 +162,21 @@ void ModuleManager::LoadCoreModules(std::map<std::string, ServiceList>& servicem
             if (!InspIRCd::Match(name, "core_*" DLL_EXTENSION))
                 continue;
 
-            ServerInstance->Logs.Debug("MODULE", "Loading {}", name);
+            ::Logs.Debug("MODULE", "Loading {}", name);
             this->NewServices = &servicemap[name];
 
             if (!Load(name, true))
             {
-                ServerInstance->Logs.Critical("MODULE", "Failed to load core module: {}", LastError());
+                ::Logs.Critical("MODULE", "Failed to load core module: {}", LastError());
                 ServerInstance->Exit(EXIT_FAILURE);
             }
         }
     }
     catch (const std::filesystem::filesystem_error& err)
     {
-        ServerInstance->Logs.Critical("MODULE", "Failed to load core modules: {}", err.what());
+        ::Logs.Critical("MODULE", "Failed to load core modules: {}", err.what());
         ServerInstance->Exit(EXIT_FAILURE);
     }
 
-    ServerInstance->Logs.Normal("MODULE", "Core modules loaded");
+    ::Logs.Normal("MODULE", "Core modules loaded");
 }

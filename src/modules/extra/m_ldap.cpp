@@ -614,7 +614,7 @@ class ModuleLDAP final
 public:
 	void init() override
 	{
-		ServerInstance->Logs.Normal(MODNAME, "Module was compiled against LDAP ({}) version {}.{}.{}",
+		::Logs.Normal(MODNAME, "Module was compiled against LDAP ({}) version {}.{}.{}",
 			LDAP_VENDOR_NAME, LDAP_VENDOR_VERSION_MAJOR, LDAP_VENDOR_VERSION_MINOR,
 			LDAP_VENDOR_VERSION_PATCH);
 	}

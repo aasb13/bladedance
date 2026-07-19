@@ -117,7 +117,7 @@ void ISupportManager::Build()
 	TokenMap newtokens;
 	for (const auto& klass : ServerInstance->Config->Classes)
 	{
-		ServerInstance->Logs.Debug(MODNAME, "Rebuilding isupport for {}", klass->GetName());
+		::Logs.Debug(MODNAME, "Rebuilding isupport for {}", klass->GetName());
 		newtokens[klass] = tokens;
 		BuildClass(newtokens[klass], newnumerics[klass], diffnumerics[klass], klass);
 	}
@@ -136,7 +136,7 @@ void ISupportManager::Build()
 			{
 				// The user is in a class which has been removed from the server
 				// config; we need to build a class for them.
-				ServerInstance->Logs.Debug(MODNAME, "Rebuilding isupport for {} (dead)", klass->GetName());
+				::Logs.Debug(MODNAME, "Rebuilding isupport for {} (dead)", klass->GetName());
 				newtokens[klass] = tokens;
 				BuildClass(newtokens[klass], newnumerics[klass], diffnumerics[klass], klass);
 				numerics = diffnumerics.find(klass);

@@ -107,21 +107,21 @@ public:
 		bool changed = false;
 		if (!irc::equals(host, newhost))
 		{
-			ServerInstance->Logs.Debug(MODNAME, "Changing STS SNI hostname from \"{}\" to \"{}\"", host, newhost);
+			::Logs.Debug(MODNAME, "Changing STS SNI hostname from \"{}\" to \"{}\"", host, newhost);
 			host = newhost;
 			changed = true;
 		}
 
 		if (plaintextpolicy != newplaintextpolicy)
 		{
-			ServerInstance->Logs.Debug(MODNAME, "Changing plaintext STS policy from \"{}\" to \"{}\"", plaintextpolicy, newplaintextpolicy);
+			::Logs.Debug(MODNAME, "Changing plaintext STS policy from \"{}\" to \"{}\"", plaintextpolicy, newplaintextpolicy);
 			plaintextpolicy.swap(newplaintextpolicy);
 			changed = true;
 		}
 
 		if (securepolicy != newsecurepolicy)
 		{
-			ServerInstance->Logs.Debug(MODNAME, "Changing secure STS policy from \"{}\" to \"{}\"", securepolicy, newsecurepolicy);
+			::Logs.Debug(MODNAME, "Changing secure STS policy from \"{}\" to \"{}\"", securepolicy, newsecurepolicy);
 			securepolicy.swap(newsecurepolicy);
 			changed = true;
 		}

@@ -143,7 +143,7 @@ public:
 			bitmask = tag->getNum<unsigned int>("bitmask", 0);
 			records = 0;
 
-			ServerInstance->Logs.Normal(MODNAME, "<dnsbl> tag at {} specifies a bitmask. This is deprecated and will be removed in the next major version of InspIRCd, consider migrating to records instead.",
+			::Logs.Normal(MODNAME, "<dnsbl> tag at {} specifies a bitmask. This is deprecated and will be removed in the next major version of InspIRCd, consider migrating to records instead.",
 				tag->source.str());
 		}
 		else if (insp::equalsci(typestr, "record"))
@@ -541,7 +541,7 @@ void SharedData::Lookup(LocalUser* user)
 		return; // The user's class is exempt from DNSBL lookups.
 
 	const std::string reversedip = ReverseIP(user->client_sa);
-	ServerInstance->Logs.Debug(MODNAME, "Reversed IP {} => {}", user->GetAddress(), reversedip);
+	::Logs.Debug(MODNAME, "Reversed IP {} => {}", user->GetAddress(), reversedip);
 
 	countext.Set(user, dnsbls.size());
 
@@ -560,7 +560,7 @@ void SharedData::Lookup(LocalUser* user)
 		catch (const DNS::Exception& ex)
 		{
 			delete r;
-			ServerInstance->Logs.Debug(MODNAME, "DNSBL lookup error: {}", ex.GetReason());
+			::Logs.Debug(MODNAME, "DNSBL lookup error: {}", ex.GetReason());
 		}
 
 		if (user->quitting)
@@ -645,7 +645,7 @@ public:
 		MarkExtItem::List* match = data.markext.Get(user);
 		if (!match)
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it requires a DNSBL mark.",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it requires a DNSBL mark.",
 				klass->GetName());
 			return MOD_RES_DENY;
 		}
@@ -656,7 +656,7 @@ public:
 				return MOD_RES_PASSTHRU;
 		}
 
-		ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as the DNSBL marks ({}) do not match {}.",
+		::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as the DNSBL marks ({}) do not match {}.",
 			klass->GetName(), insp::join(*match, ", "), dnsbl);
 		return MOD_RES_DENY;
 	}

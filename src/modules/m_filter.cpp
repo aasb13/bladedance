@@ -504,7 +504,7 @@ ModResult ModuleFilter::OnUserPreMessage(User* user, MessageTarget& msgtarget, M
 				delete zl;
 		}
 
-		ServerInstance->Logs.Normal(MODNAME, user->nick + " had their message filtered, target was " + msgtarget.GetName() + ": " + f->reason + " Action: " + ModuleFilter::FilterActionToString(f->action));
+		::Logs.Normal(MODNAME, user->nick + " had their message filtered, target was " + msgtarget.GetName() + ": " + f->reason + " Action: " + ModuleFilter::FilterActionToString(f->action));
 		return MOD_RES_DENY;
 	}
 	return MOD_RES_PASSTHRU;
@@ -773,7 +773,7 @@ void ModuleFilter::OnDecodeMetadata(Extensible* target, const std::string& extna
 		}
 		catch (const ModuleException& e)
 		{
-			ServerInstance->Logs.Debug(MODNAME, "Error when unserializing filter: {}", e.GetReason());
+			::Logs.Debug(MODNAME, "Error when unserializing filter: {}", e.GetReason());
 		}
 	}
 }
@@ -833,7 +833,7 @@ std::pair<bool, std::string> ModuleFilter::AddFilter(const std::string& freeform
 	}
 	catch (const ModuleException& e)
 	{
-		ServerInstance->Logs.Normal(MODNAME, "Error in regular expression '{}': {}", freeform, e.GetReason());
+		::Logs.Normal(MODNAME, "Error in regular expression '{}': {}", freeform, e.GetReason());
 		return std::make_pair(false, e.GetReason());
 	}
 	return std::make_pair(true, "");
@@ -912,7 +912,7 @@ void ModuleFilter::ReadFilters()
 		if (result.first)
 			removedfilters.erase(pattern);
 		else
-			ServerInstance->Logs.Warning(MODNAME, "Filter '{}' could not be added: {}", pattern, result.second);
+			::Logs.Warning(MODNAME, "Filter '{}' could not be added: {}", pattern, result.second);
 	}
 
 	if (!removedfilters.empty())
@@ -974,7 +974,7 @@ bool ModuleFilter::Tick()
 			// Back off a bit to avoid spamming opers.
 			if (backoff > 1)
 				SetInterval(std::min(GetInterval() * backoff, maxbackoff), false);
-			ServerInstance->Logs.Debug(MODNAME, "Trying again in {}", Duration::ToLongString(GetInterval()));
+			::Logs.Debug(MODNAME, "Trying again in {}", Duration::ToLongString(GetInterval()));
 		}
 	}
 	return true;

@@ -103,7 +103,7 @@ bool UTF8Serializer::Parse(LocalUser* user, const std::string& line, ClientProto
 		return false;
 	}
 
-	ServerInstance->Logs.RawIO("USERINPUT", "C[{}] I {}", user->uuid, tokens.GetMessage());
+	::Logs.RawIO("USERINPUT", "C[{}] I {}", user->uuid, tokens.GetMessage());
 	if (token[0] == '@')
 	{
 		// Check that the client tags fit within the client tag space.

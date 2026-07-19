@@ -358,7 +358,7 @@ public:
 
 		if (error)
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it requires the user to be logged into {}.",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it requires the user to be logged into {}.",
 				klass->GetName(), error);
 			return MOD_RES_DENY;
 		}

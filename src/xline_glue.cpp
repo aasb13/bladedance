@@ -591,7 +591,7 @@ void XLine::DefaultApply(User* u, bool bancache)
 
 	if (bancache)
 	{
-		ServerInstance->Logs.Debug("BANCACHE", "Adding positive hit ({}) for {}", type, u->GetAddress());
+		::Logs.Debug("BANCACHE", "Adding positive hit ({}) for {}", type, u->GetAddress());
 		ServerInstance->BanCache.AddHit(u->GetAddress(), this->type, banreason, (this->duration > 0 ? (this->expiry - ServerInstance->Time()) : 0));
 	}
 }

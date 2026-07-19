@@ -45,7 +45,7 @@ public:
 		if (request.GetPath() != "/config")
 			return MOD_RES_PASSTHRU;
 
-		ServerInstance->Logs.Debug(MODNAME, "Handling HTTP request for {}", request.GetPath());
+		::Logs.Debug(MODNAME, "Handling HTTP request for {}", request.GetPath());
 
 		std::stringstream buffer;
 		for (const auto& [_, tag] : ServerInstance->Config->GetConfig())

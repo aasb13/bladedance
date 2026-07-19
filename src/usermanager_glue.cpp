@@ -406,7 +406,7 @@ void um_ffi_log_listen_iohook_nonexistent(ListenSocket* via, size_t idx)
 {
 	ListenSocket::IOHookProvRef& ref = via->iohookprovs[idx];
 	const char* hooktype = idx == 0 ? "hook" : "sslprofile";
-	ServerInstance->Logs.Warning("USERS", "Non-existent I/O hook '{}' in <bind:{}> tag at {}",
+	::Logs.Warning("USERS", "Non-existent I/O hook '{}' in <bind:{}> tag at {}",
 		ref.GetProvider(), hooktype, via->bind_tag->source.str());
 }
 
@@ -441,7 +441,7 @@ LocalUser* um_ffi_local_user_new(int socket, const irc::sockets::sockaddrs* clie
 
 void um_ffi_log_users_new_fd(int socket)
 {
-	ServerInstance->Logs.Debug("USERS", "New user fd: {}", socket);
+	::Logs.Debug("USERS", "New user fd: {}", socket);
 }
 
 UserIOHandler* um_ffi_local_user_iohandler(LocalUser* lu)
@@ -461,7 +461,7 @@ bool um_ffi_socket_engine_add_fd(UserIOHandler* eh, int event_mask)
 
 void um_ffi_log_users_internal_error()
 {
-	ServerInstance->Logs.Debug("USERS", "Internal error on new connection");
+	::Logs.Debug("USERS", "Internal error on new connection");
 }
 
 void um_ffi_log_softlimit_warning()
@@ -513,12 +513,12 @@ const char* um_ffi_bancache_hit_reason_cstr(BanCacheHit* b)
 
 void um_ffi_log_bancache_positive(const char* addr)
 {
-	ServerInstance->Logs.Debug("BANCACHE", "Positive hit for {}", addr);
+	::Logs.Debug("BANCACHE", "Positive hit for {}", addr);
 }
 
 void um_ffi_log_bancache_negative(const char* addr)
 {
-	ServerInstance->Logs.Debug("BANCACHE", "Negative hit for {}", addr);
+	::Logs.Debug("BANCACHE", "Negative hit for {}", addr);
 }
 
 bool um_ffi_config_xline_message_empty()
@@ -580,12 +580,12 @@ LocalUser* um_ffi_user_as_local(User* u)
 
 void um_ffi_log_users_bug_quitting(const char* nick)
 {
-	ServerInstance->Logs.Debug("USERS", "BUG: Tried to quit quitting user: {}", nick);
+	::Logs.Debug("USERS", "BUG: Tried to quit quitting user: {}", nick);
 }
 
 void um_ffi_log_users_bug_server(const char* nick)
 {
-	ServerInstance->Logs.Debug("USERS", "BUG: Tried to quit server user: {}", nick);
+	::Logs.Debug("USERS", "BUG: Tried to quit server user: {}", nick);
 }
 
 bool um_ffi_quit_user_run_prequit(LocalUser* lu, const char* quitmessage, const char* operquitmessage_or_null)
@@ -631,7 +631,7 @@ void um_ffi_user_set_quitting(User* u)
 
 void um_ffi_log_quit_user(const char* uuid, const char* nick, const char* quitmessage)
 {
-	ServerInstance->Logs.Debug("USERS", "QuitUser: {}={} '{}'", uuid, nick, quitmessage);
+	::Logs.Debug("USERS", "QuitUser: {}={} '{}'", uuid, nick, quitmessage);
 }
 
 void um_ffi_local_user_send_error_quit(LocalUser* lu, const char* operquitmsg)
@@ -683,7 +683,7 @@ const char* um_ffi_user_get_address_cstr(User* u)
 
 void um_ffi_log_users_bug_nick_not_found(const char* nick)
 {
-	ServerInstance->Logs.Debug("USERS", "BUG: Nick not found in clientlist, cannot remove: {}", nick);
+	::Logs.Debug("USERS", "BUG: Nick not found in clientlist, cannot remove: {}", nick);
 }
 
 void um_ffi_user_purge_empty_channels(User* u)

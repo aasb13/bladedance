@@ -49,7 +49,7 @@ void InspIRCd::HandleSignal(sig_atomic_t signal)
 #endif
 
 		default:
-			ServerInstance->Logs.Debug("SIGNAL", "BUG: InspIRCd::SignalHandler: unknown signal: {}",
+			::Logs.Debug("SIGNAL", "BUG: InspIRCd::SignalHandler: unknown signal: {}",
 				signal);
 			break;
 	}

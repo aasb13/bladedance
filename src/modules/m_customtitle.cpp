@@ -126,7 +126,7 @@ public:
 			const std::string hash = tag->getString("hash", "plaintext", 1);
 			if (insp::equalsci(hash, "plaintext"))
 			{
-				ServerInstance->Logs.Normal(MODNAME, "<title> tag for {} at {} contains an plain text password, this is insecure!",
+				::Logs.Normal(MODNAME, "<title> tag for {} at {} contains an plain text password, this is insecure!",
 					name, tag->source.str());
 			}
 

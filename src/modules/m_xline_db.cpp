@@ -109,7 +109,7 @@ public:
 				// Back off a bit to avoid spamming opers.
 				if (backoff > 1)
 					SetInterval(std::min(GetInterval() * backoff, maxbackoff), false);
-				ServerInstance->Logs.Debug(MODNAME, "Trying again in {}", Duration::ToLongString(GetInterval()));
+				::Logs.Debug(MODNAME, "Trying again in {}", Duration::ToLongString(GetInterval()));
 			}
 		}
 		return true;
@@ -123,17 +123,17 @@ public:
 		 * Technically, that means that this can block, but I have *never* seen that.
 		 *     -- w00t
 		 */
-		ServerInstance->Logs.Debug(MODNAME, "Opening temporary database");
+		::Logs.Debug(MODNAME, "Opening temporary database");
 		const auto xlinenewdbpath = INSP_FORMAT("{}.new.{}", xlinedbpath, ServerInstance->Time());
 		std::ofstream stream(xlinenewdbpath);
 		if (!stream.is_open())
 		{
-			ServerInstance->Logs.Critical(MODNAME, "Cannot create database \"{}\"! {} ({})", xlinenewdbpath, strerror(errno), errno);
+			::Logs.Critical(MODNAME, "Cannot create database \"{}\"! {} ({})", xlinenewdbpath, strerror(errno), errno);
 			ServerInstance->SNO.WriteToSnoMask('x', "database: cannot create new xline db \"{}\": {} ({})", xlinenewdbpath, strerror(errno), errno);
 			return false;
 		}
 
-		ServerInstance->Logs.Debug(MODNAME, "Opened. Writing..");
+		::Logs.Debug(MODNAME, "Opened. Writing..");
 
 		/*
 		 * Now, much as I hate writing semi-unportable formats, additional
@@ -162,11 +162,11 @@ public:
 			}
 		}
 
-		ServerInstance->Logs.Debug(MODNAME, "Finished writing XLines. Checking for error..");
+		::Logs.Debug(MODNAME, "Finished writing XLines. Checking for error..");
 
 		if (stream.fail())
 		{
-			ServerInstance->Logs.Critical(MODNAME, "Cannot write to new database \"{}\"! {} ({})", xlinenewdbpath, strerror(errno), errno);
+			::Logs.Critical(MODNAME, "Cannot write to new database \"{}\"! {} ({})", xlinenewdbpath, strerror(errno), errno);
 			ServerInstance->SNO.WriteToSnoMask('x', "database: cannot write to new xline db \"{}\": {} ({})", xlinenewdbpath, strerror(errno), errno);
 			return false;
 		}
@@ -178,7 +178,7 @@ public:
 		// Use rename to move temporary to new db - this is guaranteed not to fuck up, even in case of a crash.
 		if (rename(xlinenewdbpath.c_str(), xlinedbpath.c_str()) < 0)
 		{
-			ServerInstance->Logs.Critical(MODNAME, "Cannot replace old database \"{}\" with new database \"{}\"! {} ({})", xlinedbpath, xlinenewdbpath, strerror(errno), errno);
+			::Logs.Critical(MODNAME, "Cannot replace old database \"{}\" with new database \"{}\"! {} ({})", xlinedbpath, xlinenewdbpath, strerror(errno), errno);
 			ServerInstance->SNO.WriteToSnoMask('x', "database: cannot replace old xline db \"{}\" with new db \"{}\": {} ({})", xlinedbpath, xlinenewdbpath, strerror(errno), errno);
 			return false;
 		}
@@ -196,7 +196,7 @@ public:
 		std::ifstream stream(xlinedbpath);
 		if (!stream.is_open())
 		{
-			ServerInstance->Logs.Critical(MODNAME, "Cannot read database \"{}\"! {} ({})", xlinedbpath, strerror(errno), errno);
+			::Logs.Critical(MODNAME, "Cannot read database \"{}\"! {} ({})", xlinedbpath, strerror(errno), errno);
 			ServerInstance->SNO.WriteToSnoMask('x', "database: cannot read xline db \"{}\": {} ({})", xlinedbpath, strerror(errno), errno);
 			return false;
 		}
@@ -216,14 +216,14 @@ public:
 				items++;
 			}
 
-			ServerInstance->Logs.Debug(MODNAME, "Processing {}", line);
+			::Logs.Debug(MODNAME, "Processing {}", line);
 
 			if (command_p[0] == "VERSION")
 			{
 				if (command_p[1] != "1")
 				{
 					stream.close();
-					ServerInstance->Logs.Critical(MODNAME, "I got database version {} - I don't understand it", command_p[1]);
+					::Logs.Critical(MODNAME, "I got database version {} - I don't understand it", command_p[1]);
 					ServerInstance->SNO.WriteToSnoMask('x', "database: I got a database version ({}) I don't understand", command_p[1]);
 					return false;
 				}

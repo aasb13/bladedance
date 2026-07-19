@@ -362,7 +362,7 @@ public:
 
 		if (!result)
 		{
-			ServerInstance->Logs.Critical(MODNAME, "Unable to connect to the {} MySQL server: {}",
+			::Logs.Critical(MODNAME, "Unable to connect to the {} MySQL server: {}",
 				GetId(), mysql_error(connection));
 			return false;
 		}
@@ -371,7 +371,7 @@ public:
 		const std::string charset = config->getString("charset");
 		if (!charset.empty() && mysql_set_character_set(connection, charset.c_str()))
 		{
-			ServerInstance->Logs.Critical(MODNAME, "Could not set character set for {} to \"{}\": {}",
+			::Logs.Critical(MODNAME, "Could not set character set for {} to \"{}\": {}",
 				GetId(), charset, mysql_error(connection));
 			return false;
 		}
@@ -380,7 +380,7 @@ public:
 		const std::string initialquery = config->getString("initialquery");
 		if (!initialquery.empty() && mysql_real_query(connection, initialquery.data(), initialquery.length()))
 		{
-			ServerInstance->Logs.Critical(MODNAME, "Could not execute initial query \"{}\" for {}: {}",
+			::Logs.Critical(MODNAME, "Could not execute initial query \"{}\" for {}: {}",
 				initialquery, name, mysql_error(connection));
 			return false;
 		}
@@ -422,7 +422,7 @@ public:
 
 	void Submit(SQL::Query* q, const std::string& qs) override
 	{
-		ServerInstance->Logs.Debug(MODNAME, "Executing MySQL query: {}", qs);
+		::Logs.Debug(MODNAME, "Executing MySQL query: {}", qs);
 		Parent()->Dispatcher->LockQueue();
 		Parent()->qq.emplace_back(q, qs, this);
 		Parent()->Dispatcher->UnlockQueueWakeup();
@@ -471,7 +471,7 @@ void ModuleSQL::init()
 	if (mysql_library_init(0, nullptr, nullptr))
 		throw ModuleException(this, "Unable to initialise the MySQL library!");
 
-	ServerInstance->Logs.Normal(MODNAME, "Module was compiled against MySQL version {}.{}.{} and is running against version {}",
+	::Logs.Normal(MODNAME, "Module was compiled against MySQL version {}.{}.{} and is running against version {}",
 		MYSQL_VERSION_ID / 10000, MYSQL_VERSION_ID / 100 % 100, MYSQL_VERSION_ID % 100, mysql_get_client_info());
 
 	Dispatcher = new DispatcherThread(this);

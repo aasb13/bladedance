@@ -112,7 +112,7 @@ public:
 			const std::string hash = tag->getString("hash", "plaintext", 1);
 			if (insp::equalsci(hash, "plaintext"))
 			{
-				ServerInstance->Logs.Warning(MODNAME, "<vhost> tag for {} at {} contains an plain text password, this is insecure!",
+				::Logs.Warning(MODNAME, "<vhost> tag for {} at {} contains an plain text password, this is insecure!",
 					username, tag->source.str());
 			}
 

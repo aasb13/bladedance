@@ -176,7 +176,7 @@ public:
 		bool conndone = user->connected != User::CONN_NONE;
 		if (klass->config->getBool("connected", klass->config->getBool("registered", conndone)) != conndone)
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it requires that the user is {}.",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it requires that the user is {}.",
 				klass->GetName(), conndone ? "not fully connected" : "fully connected");
 			return MOD_RES_DENY;
 		}
@@ -192,14 +192,14 @@ public:
 		}
 		if (!hostmatches)
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as neither the host ({}) nor the IP ({}) matches {}.",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as neither the host ({}) nor the IP ({}) matches {}.",
 				klass->GetName(), user->GetRealHost(), user->GetAddress(), insp::join(klass->GetHosts()));
 			return MOD_RES_DENY;
 		}
 
 		if (klass->limit && klass->use_count >= klass->limit)
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it has reached its user limit ({}/{}).",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it has reached its user limit ({}/{}).",
 				klass->GetName(), klass->use_count, klass->limit);
 			return MOD_RES_DENY;
 		}
@@ -207,7 +207,7 @@ public:
 		if (conndone && !klass->password.empty() && !InspIRCd::CheckPassword(klass->password, klass->passwordhash, user->password))
 		{
 			const char* error = user->password.empty() ? "one was not provided" : "the provided password was incorrect";
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as requires a password and {}.",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as requires a password and {}.",
 				klass->GetName(), error);
 
 			errnum = ERR_PASSWDMISMATCH;
@@ -217,7 +217,7 @@ public:
 
 		if (!klass->ports.empty() && !klass->ports.count(user->server_sa.port()))
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as the connection port ({}) is not any of {}.",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as the connection port ({}) is not any of {}.",
 				klass->GetName(), user->server_sa.port(), insp::join(klass->ports));
 			return MOD_RES_DENY;
 		}

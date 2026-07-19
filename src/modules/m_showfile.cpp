@@ -174,7 +174,7 @@ public:
 			}
 			catch (const CoreException& ex)
 			{
-				ServerInstance->Logs.Warning(MODNAME, "Error: " + ex.GetReason() + " at " + tag->source.str());
+				::Logs.Warning(MODNAME, "Error: " + ex.GetReason() + " at " + tag->source.str());
 			}
 		}
 

@@ -57,7 +57,7 @@ public:
 			for (const auto snomask : snomasks)
 			{
 				newlogs.emplace(snomask, channel);
-				ServerInstance->Logs.Normal(MODNAME, "Logging {} to {}", snomask, channel);
+				::Logs.Normal(MODNAME, "Logging {} to {}", snomask, channel);
 			}
 		}
 		logstreams.swap(newlogs);

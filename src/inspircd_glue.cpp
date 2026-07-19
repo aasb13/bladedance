@@ -104,6 +104,9 @@ __attribute__((visibility("default"), used, retain)) std::function<int(User*)> G
 
 InspIRCd* ServerInstance = nullptr;
 
+// Global flattened component instance
+Log::Manager Logs;
+
 const unsigned char* national_case_insensitive_map = ascii_case_insensitive_map;
 namespace
 {
@@ -175,20 +178,20 @@ namespace
 			errno = 0;
 			if (setgroups(0, nullptr) == -1)
 			{
-				ServerInstance->Logs.Critical("STARTUP", "setgroups() failed (wtf?): {}", strerror(errno));
+				::Logs.Critical("STARTUP", "setgroups() failed (wtf?): {}", strerror(errno));
 				exit(EXIT_FAILURE);
 			}
 
 			struct group* g = getgrnam(SetGroup.c_str());
 			if (!g)
 			{
-				ServerInstance->Logs.Critical("STARTUP", "getgrnam({}) failed (wrong group?): {}", SetGroup, strerror(errno));
+				::Logs.Critical("STARTUP", "getgrnam({}) failed (wrong group?): {}", SetGroup, strerror(errno));
 				exit(EXIT_FAILURE);
 			}
 
 			if (setgid(g->gr_gid) == -1)
 			{
-				ServerInstance->Logs.Critical("STARTUP", "setgid({}) failed (wrong group?): {}", g->gr_gid, strerror(errno));
+				::Logs.Critical("STARTUP", "setgid({}) failed (wrong group?): {}", g->gr_gid, strerror(errno));
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -200,13 +203,13 @@ namespace
 			struct passwd* u = getpwnam(SetUser.c_str());
 			if (!u)
 			{
-				ServerInstance->Logs.Critical("STARTUP", "getpwnam({}) failed (wrong user?): {}", SetUser, strerror(errno));
+				::Logs.Critical("STARTUP", "getpwnam({}) failed (wrong user?): {}", SetUser, strerror(errno));
 				exit(EXIT_FAILURE);
 			}
 
 			if (setuid(u->pw_uid) == -1)
 			{
-				ServerInstance->Logs.Critical("STARTUP", "setuid({}) failed (wrong user?): {}", u->pw_uid, strerror(errno));
+				::Logs.Critical("STARTUP", "setuid({}) failed (wrong user?): {}", u->pw_uid, strerror(errno));
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -238,7 +241,7 @@ namespace
 		int childpid = fork();
 		if (childpid < 0)
 		{
-		ServerInstance->Logs.Critical("STARTUP", "fork() failed: {}", strerror(errno));
+		::Logs.Critical("STARTUP", "fork() failed: {}", strerror(errno));
 		ServerInstance->Exit(EXIT_FAILURE);
 		}
 		else if (childpid > 0)
@@ -268,13 +271,13 @@ namespace
 		rlimit rl;
 		if (getrlimit(RLIMIT_CORE, &rl) == -1)
 		{
-			ServerInstance->Logs.Warning("STARTUP", "Unable to increase core dump size: getrlimit(RLIMIT_CORE) failed: {}", strerror(errno));
+			::Logs.Warning("STARTUP", "Unable to increase core dump size: getrlimit(RLIMIT_CORE) failed: {}", strerror(errno));
 			return;
 		}
 
 		rl.rlim_cur = rl.rlim_max;
 		if (setrlimit(RLIMIT_CORE, &rl) == -1)
-			ServerInstance->Logs.Warning("STARTUP", "Unable to increase core dump size: setrlimit(RLIMIT_CORE) failed: {}", strerror(errno));
+			::Logs.Warning("STARTUP", "Unable to increase core dump size: setrlimit(RLIMIT_CORE) failed: {}", strerror(errno));
 #endif
 	}
 
@@ -361,14 +364,14 @@ void InspIRCd::Cleanup()
 	stdalgo::delete_zero(this->XLines);
 	stdalgo::delete_zero(this->Config);
 	SocketEngine::Deinit();
-	Logs.CloseLogs();
+	::Logs.CloseLogs();
 }
 
 void InspIRCd::WritePID()
 {
 	if (!ServerInstance->Config->CommandLine.writepid)
 	{
-		this->Logs.Normal("STARTUP", "--nopid specified on command line; PID file not written.");
+		::Logs.Normal("STARTUP", "--nopid specified on command line; PID file not written.");
 		return;
 	}
 
@@ -381,7 +384,7 @@ void InspIRCd::WritePID()
 	}
 	else
 	{
-		this->Logs.Critical("STARTUP", "Failed to write PID-file '{}', exiting.", pidfile);
+		::Logs.Critical("STARTUP", "Failed to write PID-file '{}', exiting.", pidfile);
 		Exit(EXIT_FAILURE);
 	}
 }
@@ -414,18 +417,18 @@ InspIRCd::InspIRCd(int argc, char** argv)
 		Modules.AddServices(provs, sizeof(provs)/sizeof(provs[0]));
 	}
 
-	this->Logs.Normal("STARTUP", "InspIRCd - Internet Relay Chat Daemon");
-	this->Logs.Normal("STARTUP", "See /INFO for contributors & authors");
+	::Logs.Normal("STARTUP", "InspIRCd - Internet Relay Chat Daemon");
+	::Logs.Normal("STARTUP", "See /INFO for contributors & authors");
 
-	Logs.RegisterServices();
+	::Logs.RegisterServices();
 	if (Config->CommandLine.forcedebug)
-		Logs.EnableDebugMode();
+		::Logs.EnableDebugMode();
 
 	std::error_code ec;
 	if (!std::filesystem::is_regular_file(ConfigFileName, ec))
 	{
-		this->Logs.Critical("STARTUP", "Unable to open config file {}", ConfigFileName);
-		this->Logs.Critical("STARTUP", "Exiting...");
+		::Logs.Critical("STARTUP", "Unable to open config file {}", ConfigFileName);
+		::Logs.Critical("STARTUP", "Exiting...");
 		Exit(EXIT_FAILURE);
 	}
 
@@ -435,7 +438,7 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	if (!Config->CommandLine.nofork)
 		ForkIntoBackground();
 
-	this->Logs.Normal("STARTUP", "InspIRCd Process ID: {}", getpid());
+	::Logs.Normal("STARTUP", "InspIRCd Process ID: {}", getpid());
 
 	/* During startup we read the configuration now, not in
 	 * a separate thread
@@ -445,13 +448,13 @@ InspIRCd::InspIRCd(int argc, char** argv)
 
 	try
 	{
-		Logs.CloseLogs();
-		Logs.OpenLogs(false);
+		::Logs.CloseLogs();
+		::Logs.OpenLogs(false);
 	}
 	catch (const CoreException& ex)
 	{
-		this->Logs.Critical("STARTUP", "Cannot open log files: {}", ex.GetReason());
-		this->Logs.Critical("STARTUP", "Exiting...");
+		::Logs.Critical("STARTUP", "Cannot open log files: {}", ex.GetReason());
+		::Logs.Critical("STARTUP", "Exiting...");
 		Exit(EXIT_FAILURE);
 	}
 
@@ -476,21 +479,21 @@ InspIRCd::InspIRCd(int argc, char** argv)
 
 	if (!pl.empty())
 	{
-		this->Logs.Critical("STARTUP", "Some of your listeners failed to bind:");
+		::Logs.Critical("STARTUP", "Some of your listeners failed to bind:");
 
 		for (const auto& fp : pl)
 		{
 			if (fp.sa.family() != AF_UNSPEC)
-			this->Logs.Critical("STARTUP", "{}: ", fp.sa.str());
+			::Logs.Critical("STARTUP", "{}: ", fp.sa.str());
 
-			this->Logs.Critical("STARTUP", "{}.", fp.error);
-			this->Logs.Critical("STARTUP", "Created from <bind> tag at {}", fp.tag->source.str());
+			::Logs.Critical("STARTUP", "{}.", fp.error);
+			::Logs.Critical("STARTUP", "Created from <bind> tag at {}", fp.tag->source.str());
 		}
 
-		this->Logs.Critical("STARTUP", "Hints");
-		this->Logs.Critical("STARTUP","- For TCP/IP listeners try using a public IP address in <bind:address> instead");
-		this->Logs.Critical("STARTUP","  of * or leaving it blank.");
-		this->Logs.Critical("STARTUP","- For UNIX socket listeners try enabling <bind:replace> to replace old sockets.");
+		::Logs.Critical("STARTUP", "Hints");
+		::Logs.Critical("STARTUP","- For TCP/IP listeners try using a public IP address in <bind:address> instead");
+		::Logs.Critical("STARTUP","  of * or leaving it blank.");
+		::Logs.Critical("STARTUP","- For UNIX socket listeners try enabling <bind:replace> to replace old sockets.");
 	}
 
 	inspircd_async_init();
@@ -499,17 +502,17 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	try
 	{
 		// We reopen logs again after modules to allow module loggers to have a chance to register.
-		Logs.CloseLogs();
-		Logs.OpenLogs(true);
+		::Logs.CloseLogs();
+		::Logs.OpenLogs(true);
 	}
 	catch (const CoreException& ex)
 	{
-		this->Logs.Critical("STARTUP", "Cannot open log files: {}", ex.GetReason());
-		this->Logs.Critical("STARTUP", "Exiting...");
+		::Logs.Critical("STARTUP", "Cannot open log files: {}", ex.GetReason());
+		::Logs.Critical("STARTUP", "Exiting...");
 		Exit(EXIT_FAILURE);
 	}
 
-	this->Logs.Normal("STARTUP", "InspIRCd is now running as '{}'[{}] with {} max open sockets",
+	::Logs.Normal("STARTUP", "InspIRCd is now running as '{}'[{}] with {} max open sockets",
 		Config->ServerName, Config->ServerId, SocketEngine::GetMaxFds());
 
 #ifndef _WIN32
@@ -517,7 +520,7 @@ InspIRCd::InspIRCd(int argc, char** argv)
 	{
 		if (kill(getppid(), SIGTERM) == -1)
 		{
-			Logs.Warning("STARTUP", "Error killing parent process: {}", strerror(errno));
+			::Logs.Warning("STARTUP", "Error killing parent process: {}", strerror(errno));
 		}
 	}
 
@@ -540,11 +543,11 @@ InspIRCd::InspIRCd(int argc, char** argv)
 		fclose(stdout);
 
 		if (dup2(fd, STDIN_FILENO) < 0)
-			Logs.Warning("STARTUP", "Failed to dup /dev/null to stdin.");
+			::Logs.Warning("STARTUP", "Failed to dup /dev/null to stdin.");
 		if (dup2(fd, STDOUT_FILENO) < 0)
-			Logs.Warning("STARTUP", "Failed to dup /dev/null to stdout.");
+			::Logs.Warning("STARTUP", "Failed to dup /dev/null to stdout.");
 		if (dup2(fd, STDERR_FILENO) < 0)
-			Logs.Warning("STARTUP", "Failed to dup /dev/null to stderr.");
+			::Logs.Warning("STARTUP", "Failed to dup /dev/null to stderr.");
 		close(fd);
 	}
 	else
@@ -552,7 +555,7 @@ InspIRCd::InspIRCd(int argc, char** argv)
 		fflush(stderr);
 		fflush(stdout);
 
-		Logs.Normal("STARTUP", "Keeping pseudo-tty open as we are running in the foreground.");
+		::Logs.Normal("STARTUP", "Keeping pseudo-tty open as we are running in the foreground.");
 	}
 #else
 	/* Set win32 service as running, if we are running as a service */
@@ -569,7 +572,7 @@ InspIRCd::InspIRCd(int argc, char** argv)
 
 	DropRoot();
 
-	Logs.Normal("STARTUP", "Startup complete as '{}'[{}], {} max open sockets", Config->ServerName,
+	::Logs.Normal("STARTUP", "Startup complete as '{}'[{}], {} max open sockets", Config->ServerName,
 		Config->ServerId, SocketEngine::GetMaxFds());
 }
 
@@ -603,7 +606,7 @@ void InspIRCd::Run()
 		if (this->ConfigThread && this->ConfigThread->IsDone())
 		{
 			/* Rehash has completed */
-			this->Logs.Normal("CONFIG", "New configuration has been read, applying...");
+			::Logs.Normal("CONFIG", "New configuration has been read, applying...");
 			ConfigThread->Stop();
 			stdalgo::delete_zero(ConfigThread);
 		}

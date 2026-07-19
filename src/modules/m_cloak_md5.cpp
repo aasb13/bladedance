@@ -306,7 +306,7 @@ public:
 			if (key.length() < minkeylen)
 				throw ModuleException(creator, "Your cloaking key is not secure. It should be at least {} characters long, at {}", minkeylen, tag->source.str());
 
-			ServerInstance->Logs.Normal(MODNAME, "The {} cloak method is deprecated and will be removed in the next major version of InspIRCd. Consider migrating to cloak_sha256 instead. See " INSPIRCD_DOCS "modules/cloak_md5 for more information.",
+			::Logs.Normal(MODNAME, "The {} cloak method is deprecated and will be removed in the next major version of InspIRCd. Consider migrating to cloak_sha256 instead. See " INSPIRCD_DOCS "modules/cloak_md5 for more information.",
 				name.c_str() + 6);
 		}
 

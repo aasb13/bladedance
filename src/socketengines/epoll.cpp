@@ -97,24 +97,24 @@ bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
 	int fd = eh->GetFd();
 	if (!eh->HasFd())
 	{
-		ServerInstance->Logs.Debug("SOCKET", "AddFd out of range: (fd: {})", fd);
+		::Logs.Debug("SOCKET", "AddFd out of range: (fd: {})", fd);
 		return false;
 	}
 
 	if (!SocketEngine::AddFdRef(eh))
 	{
-		ServerInstance->Logs.Debug("SOCKET", "Attempt to add duplicate fd: {}", fd);
+		::Logs.Debug("SOCKET", "Attempt to add duplicate fd: {}", fd);
 		return false;
 	}
 
 	// Use Rust implementation
 	if (!rust_socketengine_epoll_add_fd(fd, event_mask, static_cast<void*>(eh)))
 	{
-		ServerInstance->Logs.Debug("SOCKET", "Error adding fd: {} to socketengine: {}", fd, strerror(errno));
+		::Logs.Debug("SOCKET", "Error adding fd: {} to socketengine: {}", fd, strerror(errno));
 		return false;
 	}
 
-	ServerInstance->Logs.Debug("SOCKET", "New file descriptor: {}", fd);
+	::Logs.Debug("SOCKET", "New file descriptor: {}", fd);
 
 	eh->SetEventMask(event_mask);
 	ResizeDouble(events);
@@ -138,7 +138,7 @@ void SocketEngine::DelFd(EventHandler* eh)
 	int fd = eh->GetFd();
 	if (!eh->HasFd())
 	{
-		ServerInstance->Logs.Debug("SOCKET", "DelFd out of range: (fd: {})", fd);
+		::Logs.Debug("SOCKET", "DelFd out of range: (fd: {})", fd);
 		return;
 	}
 
@@ -147,7 +147,7 @@ void SocketEngine::DelFd(EventHandler* eh)
 
 	SocketEngine::DelFdRef(eh);
 
-	ServerInstance->Logs.Debug("SOCKET", "Remove file descriptor: {}", fd);
+	::Logs.Debug("SOCKET", "Remove file descriptor: {}", fd);
 }
 
 int SocketEngine::DispatchEvents()

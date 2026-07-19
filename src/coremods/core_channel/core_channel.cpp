@@ -181,7 +181,7 @@ public:
 			const std::string restriction = current.substr(0, pos);
 			const char prefix = current[pos + 1];
 
-			ServerInstance->Logs.Debug(MODNAME, "Exempting prefix {} from {}", prefix, restriction);
+			::Logs.Debug(MODNAME, "Exempting prefix {} from {}", prefix, restriction);
 			exempts[restriction] = prefix;
 		}
 

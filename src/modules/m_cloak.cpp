@@ -126,13 +126,13 @@ public:
 				{
 					cloaks->push_back(cloak);
 
-					ServerInstance->Logs.Debug(MODNAME, "Cloaked {} ({}) [{}] as {} using the {} method.",
+					::Logs.Debug(MODNAME, "Cloaked {} ({}) [{}] as {} using the {} method.",
 						user->uuid, user->GetAddress(), user->GetRealHost(), cloak,
 						cloakmethod->GetName());
 				}
 				else
 				{
-					ServerInstance->Logs.Debug(MODNAME, "Unable to cloak {} ({}) [{}] using the {} method.",
+					::Logs.Debug(MODNAME, "Unable to cloak {} ({}) [{}] using the {} method.",
 						user->uuid, user->GetAddress(), user->GetRealHost(), cloakmethod->GetName());
 				}
 			}

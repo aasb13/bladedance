@@ -89,7 +89,7 @@ class Cap::ManagerImpl final
 
 	void OnReloadModuleSave(Module* mod, ReloadModule::CustomData& cd) override
 	{
-		ServerInstance->Logs.Debug(MODNAME, "OnReloadModuleSave()");
+		::Logs.Debug(MODNAME, "OnReloadModuleSave()");
 		if (mod == creator)
 			return;
 
@@ -102,7 +102,7 @@ class Cap::ManagerImpl final
 			if (cap->creator != mod)
 				continue;
 
-			ServerInstance->Logs.Debug(MODNAME, "Module being reloaded implements cap {}, saving cap users", cap->GetName());
+			::Logs.Debug(MODNAME, "Module being reloaded implements cap {}, saving cap users", cap->GetName());
 			capmoddata->caps.emplace_back(cap);
 			CapModData::Data& capdata = capmoddata->caps.back();
 
@@ -123,7 +123,7 @@ class Cap::ManagerImpl final
 			Capability* cap = ManagerImpl::Find(capdata.name);
 			if (!cap)
 			{
-				ServerInstance->Logs.Debug(MODNAME, "Cap {} is no longer available after reload", capdata.name);
+				::Logs.Debug(MODNAME, "Cap {} is no longer available after reload", capdata.name);
 				continue;
 			}
 
@@ -133,7 +133,7 @@ class Cap::ManagerImpl final
 				auto* user = ServerInstance->Users.FindUUID(uuid);
 				if (!user)
 				{
-					ServerInstance->Logs.Debug(MODNAME, "User {} is gone when trying to restore cap {}", uuid, capdata.name);
+					::Logs.Debug(MODNAME, "User {} is gone when trying to restore cap {}", uuid, capdata.name);
 					continue;
 				}
 
@@ -166,7 +166,7 @@ public:
 		if (cap->IsRegistered())
 			return;
 
-		ServerInstance->Logs.Debug(MODNAME, "Registering cap {}", cap->GetName());
+		::Logs.Debug(MODNAME, "Registering cap {}", cap->GetName());
 		cap->bit = AllocateBit();
 		cap->extitem = &capext;
 		caps.emplace(cap->GetName(), cap);
@@ -181,7 +181,7 @@ public:
 		if (!cap->IsRegistered())
 			return;
 
-		ServerInstance->Logs.Debug(MODNAME, "Unregistering cap {}", cap->GetName());
+		::Logs.Debug(MODNAME, "Unregistering cap {}", cap->GetName());
 
 		// Fire the event first so modules can still see who is using the cap which is being unregistered
 		evprov.Call(&Cap::EventListener::OnCapAddDel, cap, false);
@@ -205,7 +205,7 @@ public:
 
 	void NotifyValueChange(Capability* cap) override
 	{
-		ServerInstance->Logs.Debug(MODNAME, "Cap {} changed value", cap->GetName());
+		::Logs.Debug(MODNAME, "Cap {} changed value", cap->GetName());
 		evprov.Call(&Cap::EventListener::OnCapValueChange, cap);
 	}
 

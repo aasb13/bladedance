@@ -447,24 +447,24 @@ FilePtr ParseStack::DoOpenFile(const std::string& name, bool isexec)
 {
 	if (isexec)
 	{
-		ServerInstance->Logs.Debug("CONFIG", "Opening executable: {}", name);
+		::Logs.Debug("CONFIG", "Opening executable: {}", name);
 		return FilePtr(popen(name.c_str(), "r"), pclose);
 	}
 
 	const std::string path = ServerInstance->Config->Paths.PrependConfig(name);
-	ServerInstance->Logs.Debug("CONFIG", "Opening file: {}", path);
+	::Logs.Debug("CONFIG", "Opening file: {}", path);
 #ifndef _WIN32
 	struct stat pathinfo;
 	if (stat(path.c_str(), &pathinfo) == 0)
 	{
 		if (getegid() != pathinfo.st_gid)
 		{
-			ServerInstance->Logs.Warning("CONFIG", "Possible configuration error: {} is owned by group {} but the server is running as group {}.",
+			::Logs.Warning("CONFIG", "Possible configuration error: {} is owned by group {} but the server is running as group {}.",
 				path, pathinfo.st_gid, getegid());
 		}
 		if (geteuid() != pathinfo.st_uid)
 		{
-			ServerInstance->Logs.Warning("CONFIG", "Possible configuration error: {} is owned by user {} but the server is running as user {}.",
+			::Logs.Warning("CONFIG", "Possible configuration error: {} is owned by user {} but the server is running as user {}.",
 				path, pathinfo.st_uid, geteuid());
 		}
 	}
@@ -481,7 +481,7 @@ void ParseStack::DoReadFile(const std::string& key, const std::string& name, int
 
 	if (FilesOutput.emplace(key, std::make_pair(name, exec)).second)
 	{
-		ServerInstance->Logs.Debug("CONFIG", "Stored config key: {} => {} (executable: {}).",
+		::Logs.Debug("CONFIG", "Stored config key: {} => {} (executable: {}).",
 			key, name, exec ? "yes" : "no");
 	}
 }
@@ -551,7 +551,7 @@ bool ParseStack::ParseFile(const std::string& path, int flags, const std::string
 
 void ConfigTag::LogMalformed(const std::string& key, const std::string& val, const std::string& def, const std::string& reason) const
 {
-	ServerInstance->Logs.Warning("CONFIG", "The value of <{}:{}> at {} ({}) is {}; using the default ({}) instead.",
+	::Logs.Warning("CONFIG", "The value of <{}:{}> at {} ({}) is {}; using the default ({}) instead.",
 		name, key, source.str(), val, reason, def);
 }
 
@@ -565,7 +565,7 @@ bool ConfigTag::readString(const std::string& key, std::string& value, bool allo
 		value = ivalue;
 		if (!allow_lf && (value.find('\n') != std::string::npos))
 		{
-			ServerInstance->Logs.Warning("CONFIG", "Value of <" + name + ":" + key + "> at " + source.str() +
+			::Logs.Warning("CONFIG", "Value of <" + name + ":" + key + "> at " + source.str() +
 				" contains a linefeed, and linefeeds in this value are not permitted -- stripped to spaces.");
 
 			for (auto& chr : value)

@@ -66,7 +66,7 @@ private:
 		}
 
 		// If we have reached this point then we have encountered a bug.
-		ServerInstance->Logs.Debug(MODNAME, "BUG: ModuleConnectBan::GetRange(): socket type {} is unknown!", family);
+		::Logs.Debug(MODNAME, "BUG: ModuleConnectBan::GetRange(): socket type {} is unknown!", family);
 		return 0;
 	}
 
@@ -176,7 +176,7 @@ public:
 
 	void OnGarbageCollect() override
 	{
-		ServerInstance->Logs.Debug(MODNAME, "Clearing map.");
+		::Logs.Debug(MODNAME, "Clearing map.");
 		connects.clear();
 	}
 };

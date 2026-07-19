@@ -85,13 +85,13 @@ bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
 	int fd = eh->GetFd();
 	if (!eh->HasFd())
 	{
-		ServerInstance->Logs.Debug("SOCKET", "AddFd out of range: (fd: {})", fd);
+		::Logs.Debug("SOCKET", "AddFd out of range: (fd: {})", fd);
 		return false;
 	}
 
 	if (static_cast<unsigned int>(fd) < fd_mappings.size() && fd_mappings[fd] != -1)
 	{
-		ServerInstance->Logs.Debug("SOCKET", "Attempt to add duplicate fd: {}", fd);
+		::Logs.Debug("SOCKET", "Attempt to add duplicate fd: {}", fd);
 		return false;
 	}
 
@@ -99,14 +99,14 @@ bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
 
 	if (!SocketEngine::AddFdRef(eh))
 	{
-		ServerInstance->Logs.Debug("SOCKET", "Attempt to add duplicate fd: {}", fd);
+		::Logs.Debug("SOCKET", "Attempt to add duplicate fd: {}", fd);
 		return false;
 	}
 
 	// Use Rust implementation
 	if (!rust_socketengine_poll_add_fd(fd, event_mask, static_cast<void*>(eh)))
 	{
-		ServerInstance->Logs.Debug("SOCKET", "Error adding fd: {} to socketengine", fd);
+		::Logs.Debug("SOCKET", "Error adding fd: {} to socketengine", fd);
 		return false;
 	}
 
@@ -118,7 +118,7 @@ bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
 	events[index].fd = fd;
 	events[index].events = mask_to_poll(event_mask);
 
-	ServerInstance->Logs.Debug("SOCKET", "New file descriptor: {} ({}; index {})", fd, events[index].events, index);
+	::Logs.Debug("SOCKET", "New file descriptor: {} ({}; index {})", fd, events[index].events, index);
 	eh->SetEventMask(event_mask);
 	return true;
 }
@@ -128,7 +128,7 @@ void SocketEngine::OnSetEvent(EventHandler* eh, int old_mask, int new_mask)
 	int fd = eh->GetFd();
 	if (!eh->HasFd() || static_cast<unsigned int>(fd) >= fd_mappings.size() || fd_mappings[fd] == -1)
 	{
-		ServerInstance->Logs.Debug("SOCKET", "SetEvents() on unknown fd: {}", eh->GetFd());
+		::Logs.Debug("SOCKET", "SetEvents() on unknown fd: {}", eh->GetFd());
 		return;
 	}
 
@@ -143,13 +143,13 @@ void SocketEngine::DelFd(EventHandler* eh)
 	int fd = eh->GetFd();
 	if (!eh->HasFd())
 	{
-		ServerInstance->Logs.Debug("SOCKET", "DelFd out of range: (fd: {})", fd);
+		::Logs.Debug("SOCKET", "DelFd out of range: (fd: {})", fd);
 		return;
 	}
 
 	if (static_cast<unsigned int>(fd) >= fd_mappings.size() || fd_mappings[fd] == -1)
 	{
-		ServerInstance->Logs.Debug("SOCKET", "DelFd() on unknown fd: {}", fd);
+		::Logs.Debug("SOCKET", "DelFd() on unknown fd: {}", fd);
 		return;
 	}
 
@@ -180,7 +180,7 @@ void SocketEngine::DelFd(EventHandler* eh)
 
 	SocketEngine::DelFdRef(eh);
 
-	ServerInstance->Logs.Debug("SOCKET", "Remove file descriptor: {} (index: {}) "
+	::Logs.Debug("SOCKET", "Remove file descriptor: {} (index: {}) "
 			"(Filled gap with: {} (index: {}))", fd, index, last_fd, last_index);
 }
 

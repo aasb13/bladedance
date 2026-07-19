@@ -96,7 +96,7 @@ void Invite::APIImpl::Create(LocalUser* user, Channel* chan, time_t timeout)
 		// Expired, don't bother
 		return;
 
-	ServerInstance->Logs.Debug(MODNAME, "Invite::APIImpl::Create(): user={} chan={} timeout={}",
+	::Logs.Debug(MODNAME, "Invite::APIImpl::Create(): user={} chan={} timeout={}",
 		user->uuid, chan->name, timeout);
 
 	Invite* inv = Find(user, chan);
@@ -106,7 +106,7 @@ void Invite::APIImpl::Create(LocalUser* user, Channel* chan, time_t timeout)
 		if (!inv->IsTimed())
 			return;
 
-		ServerInstance->Logs.Debug(MODNAME, "Invite::APIImpl::Create(): changing expiration in {}",
+		::Logs.Debug(MODNAME, "Invite::APIImpl::Create(): changing expiration in {}",
 			fmt::ptr(inv));
 		if (timeout == 0)
 		{
@@ -130,7 +130,7 @@ void Invite::APIImpl::Create(LocalUser* user, Channel* chan, time_t timeout)
 
 		userext.Get(user, true)->invites.push_front(inv);
 		chanext.Get(chan, true)->invites.push_front(inv);
-		ServerInstance->Logs.Debug(MODNAME, "Invite::APIImpl::Create(): created new Invite {}",
+		::Logs.Debug(MODNAME, "Invite::APIImpl::Create(): created new Invite {}",
 			fmt::ptr(inv));
 	}
 }
@@ -178,7 +178,7 @@ Invite::Invite::Invite(LocalUser* u, Channel* c)
 Invite::Invite::~Invite()
 {
 	delete expiretimer;
-	ServerInstance->Logs.Debug(MODNAME, "Invite::~ {}", fmt::ptr(this));
+	::Logs.Debug(MODNAME, "Invite::~ {}", fmt::ptr(this));
 }
 
 void Invite::Invite::Serialize(bool human, bool show_chans, std::string& out)
@@ -204,7 +204,7 @@ InviteExpireTimer::InviteExpireTimer(Invite::Invite* invite, time_t timeout)
 
 bool InviteExpireTimer::Tick()
 {
-	ServerInstance->Logs.Debug(MODNAME, "InviteExpireTimer::Tick(): expired {}", fmt::ptr(inv));
+	::Logs.Debug(MODNAME, "InviteExpireTimer::Tick(): expired {}", fmt::ptr(inv));
 	apiimpl->Destruct(inv);
 	return false;
 }

@@ -86,7 +86,7 @@ public:
 			auto tblk = ServerInstance->Config->OperTypes.find(type);
 			if (tblk == ServerInstance->Config->OperTypes.end())
 			{
-				ServerInstance->Logs.Warning(MODNAME, "Sqloper block " + name + " has missing type " + type);
+				::Logs.Warning(MODNAME, "Sqloper block " + name + " has missing type " + type);
 				ServerInstance->SNO.WriteGlobalSno('a', "m_sqloper: Oper block {} has missing type {}", name, type);
 				continue;
 			}
@@ -106,7 +106,7 @@ public:
 
 	void OnError(const SQL::Error& error) override
 	{
-		ServerInstance->Logs.Warning(MODNAME, "query failed ({})", error.ToString());
+		::Logs.Warning(MODNAME, "query failed ({})", error.ToString());
 		ServerInstance->SNO.WriteGlobalSno('a', "m_sqloper: Failed to update blocks from database");
 		if (!uid.empty())
 		{
@@ -144,7 +144,7 @@ public:
 		}
 		else
 		{
-			ServerInstance->Logs.Debug(MODNAME, "BUG: WHAT?! Why do we have no OPER command?!");
+			::Logs.Debug(MODNAME, "BUG: WHAT?! Why do we have no OPER command?!");
 		}
 	}
 };
@@ -205,7 +205,7 @@ public:
 				 */
 				return MOD_RES_DENY;
 			}
-			ServerInstance->Logs.Warning(MODNAME, "database not present");
+			::Logs.Warning(MODNAME, "database not present");
 		}
 		else if (active)
 		{

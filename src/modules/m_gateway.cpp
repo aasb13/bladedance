@@ -402,7 +402,7 @@ public:
 
 				if (!password.empty() && insp::equalsci(passwordhash, "plaintext"))
 				{
-					ServerInstance->Logs.Normal(MODNAME, "<{}> tag at {} contains an plain text password, this is insecure!",
+					::Logs.Normal(MODNAME, "<{}> tag at {} contains an plain text password, this is insecure!",
 						tag->name, tag->source.str());
 				}
 
@@ -431,7 +431,7 @@ public:
 		const std::string* gateway = cmdwebirc.extban.gateway.Get(user);
 		if (!gateway)
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it requires a connection via a WebIRC gateway.",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as it requires a connection via a WebIRC gateway.",
 				klass->GetName());
 			return MOD_RES_DENY;
 		}
@@ -440,7 +440,7 @@ public:
 		// allow the check to continue. Otherwise, reject it.
 		if (!InspIRCd::Match(*gateway, webirc))
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as the WebIRC gateway name ({}) does not match {}.",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as the WebIRC gateway name ({}) does not match {}.",
 				klass->GetName(), *gateway, webirc);
 			return MOD_RES_DENY;
 		}
@@ -507,7 +507,7 @@ public:
 
 					default:
 						// If we have reached this point then we have encountered a bug.
-						ServerInstance->Logs.Debug(MODNAME, "BUG: OnWebIRCAuth({}): socket type {} is unknown!",
+						::Logs.Debug(MODNAME, "BUG: OnWebIRCAuth({}): socket type {} is unknown!",
 							user->uuid, user->client_sa.family());
 						return;
 				}
@@ -533,7 +533,7 @@ public:
 
 					default:
 						// If we have reached this point then we have encountered a bug.
-						ServerInstance->Logs.Debug(MODNAME, "BUG: OnWebIRCAuth({}): socket type {} is unknown!",
+						::Logs.Debug(MODNAME, "BUG: OnWebIRCAuth({}): socket type {} is unknown!",
 							user->uuid, user->server_sa.family());
 						return;
 				}

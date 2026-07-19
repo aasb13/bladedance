@@ -79,7 +79,7 @@ unsigned int& SnomaskRustAccess::Count(Snomask* s)
 
 void Snomask::Send(char letter, const std::string& desc, const std::string& msg)
 {
-	ServerInstance->Logs.Normal(desc, msg);
+	::Logs.Normal(desc, msg);
 	const std::string finalmsg = INSP_FORMAT("*** {}: {}", desc, msg);
 
 	for (auto* user : ServerInstance->Users.all_opers)

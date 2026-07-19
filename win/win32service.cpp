@@ -202,7 +202,7 @@ void InstallService()
 			CloseServiceHandle(SCMHandle);
 
 		// Service installation failed: {}
-		// Note: Cannot use ServerInstance->Logs here as it's not initialized yet
+		// Note: Cannot use ::Logs here as it's not initialized yet
 	}
 }
 
@@ -239,7 +239,7 @@ void UninstallService()
 			CloseServiceHandle(SCMHandle);
 
 		// Service deletion failed: {}
-		// Note: Cannot use ServerInstance->Logs here as it's not initialized yet
+		// Note: Cannot use ::Logs here as it's not initialized yet
 	}
 }
 

@@ -144,7 +144,7 @@ public:
 			if (!file)
 			{
 				// We can't process the file if it doesn't exist.
-				ServerInstance->Logs.Warning(MODNAME, "Unable to read motd for connect class \"{}\" at {}: {}",
+				::Logs.Warning(MODNAME, "Unable to read motd for connect class \"{}\" at {}: {}",
 					klass->GetName(), klass->config->source.str(), file.error);
 				continue;
 			}

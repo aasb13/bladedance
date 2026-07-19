@@ -99,7 +99,7 @@ User::User(const std::string& uid, Server* srv, Type type)
 	, uniqueusername(false)
 	, usertype(type)
 {
-	ServerInstance->Logs.Debug("USERS", "New UUID for user: {}", uuid);
+	::Logs.Debug("USERS", "New UUID for user: {}", uuid);
 
 	if (srv->IsService())
 		ServerInstance->Users.all_services.push_back(this);
@@ -452,7 +452,7 @@ void LocalUser::FullConnect()
 	ServerInstance->SNO.WriteToSnoMask('c', "Client connecting on port {} (class {}): {} ({}) [{}\x0F]",
 		server_sa.port(), GetClass()->GetName(), GetRealMask(), GetAddress(), GetRealName());
 
-	ServerInstance->Logs.Debug("BANCACHE", "Adding NEGATIVE hit for {}", this->GetAddress());
+	::Logs.Debug("BANCACHE", "Adding NEGATIVE hit for {}", this->GetAddress());
 	ServerInstance->BanCache.AddHit(this->GetAddress(), "", "");
 	// reset the flood penalty (which could have been raised due to things like auto +x)
 	CommandFloodPenalty = 0;
@@ -467,7 +467,7 @@ bool User::ChangeNick(const std::string& newnick, time_t newts)
 {
 	if (quitting)
 	{
-		ServerInstance->Logs.Debug("USERS", "BUG: Attempted to change nick of a quitting user: {}", this->nick);
+		::Logs.Debug("USERS", "BUG: Attempted to change nick of a quitting user: {}", this->nick);
 		return false;
 	}
 
@@ -566,7 +566,7 @@ irc::sockets::cidr_mask User::GetCIDRMask() const
 			break; // CIDR not supported.
 
 		default:
-			ServerInstance->Logs.Debug("SOCKET", "BUG: User::GetCIDRMask(): socket type {} is unknown!",
+			::Logs.Debug("SOCKET", "BUG: User::GetCIDRMask(): socket type {} is unknown!",
 				client_sa.family());
 			break;
 	}
@@ -602,19 +602,19 @@ void LocalUser::ChangeRemoteAddress(const irc::sockets::sockaddrs& sa)
 
 bool LocalUser::FindConnectClass(bool keepexisting)
 {
-	ServerInstance->Logs.Debug("CONNECTCLASS", "Finding a connect class for {} ({}) ...",
+	::Logs.Debug("CONNECTCLASS", "Finding a connect class for {} ({}) ...",
 		uuid, GetRealMask());
 
 	std::optional<Numeric::Numeric> errnum;
 	for (const auto& klass : ServerInstance->Config->Classes)
 	{
-		ServerInstance->Logs.Debug("CONNECTCLASS", "Checking the {} connect class ...",
+		::Logs.Debug("CONNECTCLASS", "Checking the {} connect class ...",
 			klass->GetName());
 
 		// Users can not be automatically assigned to a named class.
 		if (klass->type == ConnectClass::NAMED)
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as neither <connect:allow> nor <connect:deny> are set.",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is not suitable as neither <connect:allow> nor <connect:deny> are set.",
 				klass->GetName());
 			continue;
 		}
@@ -623,7 +623,7 @@ bool LocalUser::FindConnectClass(bool keepexisting)
 		FIRST_MOD_RESULT(OnPreChangeConnectClass, modres, (this, klass, errnum));
 		if (modres != MOD_RES_DENY)
 		{
-			ServerInstance->Logs.Debug("CONNECTCLASS", "The {} connect class is suitable for {} ({}).",
+			::Logs.Debug("CONNECTCLASS", "The {} connect class is suitable for {} ({}).",
 				klass->GetName(), uuid, GetRealMask());
 
 			ChangeConnectClass(klass, false);
@@ -679,7 +679,7 @@ void LocalUser::Write(const ClientProtocol::SerializedMessage& text)
 		if (nlpos == std::string::npos)
 			nlpos = text.length();
 
-		ServerInstance->Logs.RawIO("USEROUTPUT", "C[{}] O {}", uuid, std::string_view(text.c_str(), nlpos));
+		::Logs.RawIO("USEROUTPUT", "C[{}] O {}", uuid, std::string_view(text.c_str(), nlpos));
 	}
 
 	eh.AddWriteBuf(text);
@@ -694,7 +694,7 @@ void LocalUser::Send(ClientProtocol::Event& protoev)
 {
 	if (!serializer)
 	{
-		ServerInstance->Logs.Debug("USERS", "BUG: LocalUser::Send() called on {} who does not have a serializer!",
+		::Logs.Debug("USERS", "BUG: LocalUser::Send() called on {} who does not have a serializer!",
 			GetRealMask());
 		return;
 	}
@@ -1057,7 +1057,7 @@ void ConnectClass::Configure(const std::string& classname, const std::shared_ptr
 	passwordhash = tag->getString("hash", passwordhash);
 	if (!password.empty() && (passwordhash.empty() || insp::equalsci(passwordhash, "plaintext")))
 	{
-		ServerInstance->Logs.Normal("CONNECTCLASS", "<connect> tag '{}' at {} contains an plain text password, this is insecure!",
+		::Logs.Normal("CONNECTCLASS", "<connect> tag '{}' at {} contains an plain text password, this is insecure!",
 			name, tag->source.str());
 	}
 
@@ -1087,7 +1087,7 @@ void ConnectClass::Configure(const std::string& classname, const std::shared_ptr
 
 void ConnectClass::Update(const std::shared_ptr<ConnectClass>& src)
 {
-	ServerInstance->Logs.Debug("CONNECTCLASS", "Updating {} from {}", name, src->name);
+	::Logs.Debug("CONNECTCLASS", "Updating {} from {}", name, src->name);
 	commandrate = src->commandrate;
 	config = src->config;
 	fakelag = src->fakelag;
