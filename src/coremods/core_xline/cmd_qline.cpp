@@ -54,7 +54,7 @@ CmdResult CommandQline::Handle(User* user, const Params& parameters)
 		}
 
 		unsigned long duration = 0;
-		if (parameters.size() > 2 && !Duration::TryFrom(parameters[1], duration))
+		if (parameters.size() > 2 && !TryFrom(parameters[1], duration))
 		{
 			user->WriteNotice("*** Invalid duration for Q-line.");
 			return CmdResult::FAILURE;
@@ -71,7 +71,7 @@ CmdResult CommandQline::Handle(User* user, const Params& parameters)
 			else
 			{
 				ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed Q-line on {}, expires in {} (on {}): {}",
-					user->nick, parameters[0], Duration::ToLongString(duration), FromNow(duration), ql->reason);
+					user->nick, parameters[0], ToLongString(duration), FromNow(duration), ql->reason);
 			}
 			ServerInstance->XLines->ApplyLines();
 		}

@@ -101,7 +101,7 @@ public:
 
 		TimedBan T;
 		unsigned long duration;
-		if (!Duration::TryFrom(parameters[1], duration))
+		if (!TryFrom(parameters[1], duration))
 		{
 			user->WriteNotice("Invalid ban time");
 			return CmdResult::FAILURE;
@@ -150,7 +150,7 @@ public:
 		if (sendnotice)
 		{
 			const std::string message = INSP_FORMAT("Timed ban {} added by {} on {} lasting for {}.",
-				mask, user->nick, channel->name, Duration::ToLongString(duration));
+				mask, user->nick, channel->name, ToLongString(duration));
 
 			// If halfop is loaded, send notice to halfops and above, otherwise send to ops and above
 			PrefixMode* mh = ServerInstance->Modes.FindNearestPrefixMode(HALFOP_VALUE);

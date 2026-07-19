@@ -50,7 +50,7 @@ public:
 	CmdResult HandleLocal(LocalUser* user, const Params& parameters) override
 	{
 		unsigned long idle;
-		if (!Duration::TryFrom(parameters[0], idle))
+		if (!TryFrom(parameters[0], idle))
 		{
 			failrpl.SendIfCap(user, stdrplcap, this, "INVALID_IDLE_TIME", parameters[0], "Invalid idle time.");
 			return CmdResult::FAILURE;
@@ -61,7 +61,7 @@ public:
 		if (user->signon > user->idle_lastmsg)
 			user->signon = user->idle_lastmsg;
 
-		ServerInstance->SNO.WriteToSnoMask('a', "{} used SETIDLE to set their idle time to {}", user->nick, Duration::ToLongString(idle));
+		ServerInstance->SNO.WriteToSnoMask('a', "{} used SETIDLE to set their idle time to {}", user->nick, ToLongString(idle));
 		noterpl.SendIfCap(user, stdrplcap, this, "IDLE_TIME_SET", user->idle_lastmsg, "Idle time set.");
 		return CmdResult::SUCCESS;
 	}

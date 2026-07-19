@@ -705,7 +705,7 @@ unsigned long ConfigTag::getDuration(const std::string& key, unsigned long def, 
 		return def;
 
 	unsigned long ret;
-	if (!Duration::TryFrom(duration, ret))
+	if (!TryFrom(duration, ret))
 	{
 		LogMalformed(key, duration, ConvToStr(def), "is not a duration");
 		return def;

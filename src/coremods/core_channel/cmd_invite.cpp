@@ -72,7 +72,7 @@ CmdResult CommandInvite::Handle(User* user, const Params& parameters)
 			if (IS_LOCAL(user))
 			{
 				unsigned long duration;
-				if (!Duration::TryFrom(parameters[2], duration))
+				if (!TryFrom(parameters[2], duration))
 				{
 					user->WriteNotice("*** Invalid duration for invite");
 					return CmdResult::FAILURE;

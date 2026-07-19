@@ -161,7 +161,7 @@ public:
 				}
 
 				ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed Z-line on {}, expires in {} (on {}): {}",
-					zl->source, maskstr, Duration::ToLongString(zl->duration),
+					zl->source, maskstr, ToLongString(zl->duration),
 					ToString(zl->expiry), zl->reason);
 				ServerInstance->SNO.WriteGlobalSno('a', "Connect flooding from IP range {} ({})", maskstr, threshold);
 				connects.erase(i);

@@ -145,7 +145,7 @@ public:
 			if ((data) && !invapi->IsInvited(user, chan) && (!data->canjoin(user)))
 			{
 				user->WriteNumeric(ERR_UNAVAILRESOURCE, chan->name, INSP_FORMAT("You must wait for {} after being kicked to rejoin (+{} is set)",
-					Duration::ToLongString(data->delay), kr.GetModeChar()));
+					ToLongString(data->delay), kr.GetModeChar()));
 				return MOD_RES_DENY;
 			}
 		}

@@ -109,7 +109,7 @@ public:
 				// Back off a bit to avoid spamming opers.
 				if (backoff > 1)
 					SetInterval(std::min(GetInterval() * backoff, maxbackoff), false);
-				::Logs.Debug(MODNAME, "Trying again in {}", Duration::ToLongString(GetInterval()));
+				::Logs.Debug(MODNAME, "Trying again in {}", ToLongString(GetInterval()));
 			}
 		}
 		return true;
@@ -252,7 +252,7 @@ public:
 				{
 					ServerInstance->SNO.WriteToSnoMask('x', "database: added a timed {}{} on {}, expires in {} (on {}): {}",
 						xl->type, xl->type.length() <= 2 ? "-line" : "", xl->Displayable(),
-						Duration::ToLongString(xl->duration), FromNow(xl->duration), xl->reason);
+						ToLongString(xl->duration), FromNow(xl->duration), xl->reason);
 				}
 				else
 				{

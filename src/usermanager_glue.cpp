@@ -340,7 +340,7 @@ unsigned long um_ffi_local_user_class_pingtime(LocalUser* lu)
 
 const char* um_ffi_duration_to_long_string(unsigned long secs)
 {
-	tls_scratch = Duration::ToLongString(secs);
+	tls_scratch = ToLongString(secs);
 	return tls_scratch.c_str();
 }
 

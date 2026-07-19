@@ -125,7 +125,7 @@ public:
 		{
 			// Adding - XXX todo make this respect <insane> tag perhaps..
 			unsigned long duration = 0;
-			if (parameters.size() > 2 && !Duration::TryFrom(parameters[1], duration))
+			if (parameters.size() > 2 && !TryFrom(parameters[1], duration))
 			{
 				user->WriteNotice("*** Invalid duration for CBan.");
 				return CmdResult::FAILURE;
@@ -142,7 +142,7 @@ public:
 				else
 				{
 					ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed CBan on {}, expires in {} (on {}): {}",
-						user->nick, parameters[0], Duration::ToLongString(duration), FromNow(duration), r->reason);
+						user->nick, parameters[0], ToLongString(duration), FromNow(duration), r->reason);
 				}
 			}
 			else

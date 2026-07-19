@@ -72,7 +72,7 @@ CmdResult CommandZline::Handle(User* user, const Params& parameters)
 			return CmdResult::FAILURE;
 
 		unsigned long duration = 0;
-		if (parameters.size() > 2 && !Duration::TryFrom(parameters[1], duration))
+		if (parameters.size() > 2 && !TryFrom(parameters[1], duration))
 		{
 			user->WriteNotice("*** Invalid duration for Z-line.");
 			return CmdResult::FAILURE;
@@ -89,7 +89,7 @@ CmdResult CommandZline::Handle(User* user, const Params& parameters)
 			else
 			{
 				ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed Z-line on {}, expires in {} (on {}): {}",
-					user->nick, ipaddr, Duration::ToLongString(duration), FromNow(duration), zl->reason);
+					user->nick, ipaddr, ToLongString(duration), FromNow(duration), zl->reason);
 			}
 			ServerInstance->XLines->ApplyLines();
 		}

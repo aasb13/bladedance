@@ -380,7 +380,7 @@ bool CommandWho::MatchUser(LocalUser* source, User* user, WhoData& data)
 	// The source wants to match against users' connection times.
 	else if (data.flags['t'])
 	{
-		time_t seconds = ServerInstance->Time() - Duration::From(data.matchtext);
+		time_t seconds = ServerInstance->Time() - From(data.matchtext);
 		if (user->signon >= seconds)
 			match = true;
 	}

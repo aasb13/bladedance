@@ -86,7 +86,7 @@ private:
 		if (!stream.GetToken(durationstr))
 			return false;
 
-		if (!Duration::TryFrom(durationstr, duration) || duration == 0)
+		if (!TryFrom(durationstr, duration) || duration == 0)
 			return false;
 
 		if (IS_LOCAL(user) && maxduration && duration > maxduration)
@@ -155,7 +155,7 @@ public:
 	{
 		out.append(ConvToStr(history->maxlen));
 		out.append(":");
-		out.append(Duration::ToString(history->maxtime));
+		out.append(ToString(history->maxtime));
 	}
 };
 
@@ -283,7 +283,7 @@ public:
 		{
 			auto message = INSP_FORMAT("Replaying up to {} lines of pre-join history", list->maxlen);
 			if (list->maxtime > 0)
-				message += INSP_FORMAT(" from the last {}", Duration::ToLongString(list->maxtime));
+				message += INSP_FORMAT(" from the last {}", ToLongString(list->maxtime));
 			memb->WriteNotice(message);
 		}
 

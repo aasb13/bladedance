@@ -122,7 +122,7 @@ public:
 			{
 				user->WriteNotice("*** You cannot view the channel list right now. Please {}try again in {}.",
 					exemptregistered ? "log in to an account or " : "",
-					Duration::ToLongString(maxwaittime - ServerInstance->Time()));
+					ToLongString(maxwaittime - ServerInstance->Time()));
 			}
 			else
 			{

@@ -248,7 +248,7 @@ public:
 			/// :36DAAAAAA SVSHOLD NickServ 86400 :Reserved for services
 			/// :36DAAAAAA SVSHOLD NickServ 1d :Reserved for services
 			unsigned long duration;
-			if (!Duration::TryFrom(parameters[1], duration))
+			if (!TryFrom(parameters[1], duration))
 				return CmdResult::FAILURE;
 
 			auto* svshold = new SVSHold(ServerInstance->Time(), duration, user->nick, parameters[2], parameters[0]);

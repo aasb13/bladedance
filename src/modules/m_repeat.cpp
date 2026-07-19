@@ -342,7 +342,7 @@ private:
 		if ((settings.Lines = ConvToNum<unsigned int>(item)) == 0)
 			return false;
 
-		if ((!stream.GetToken(item)) || !Duration::TryFrom(item, settings.Seconds) || (settings.Seconds == 0))
+		if ((!stream.GetToken(item)) || !TryFrom(item, settings.Seconds) || (settings.Seconds == 0))
 			// Required parameter missing
 			return false;
 
@@ -479,8 +479,8 @@ public:
 			const std::string message = Template::Replace(rm.ms.Message, {
 				{ "channel",       chan->name                                },
 				{ "diff",          ConvToStr(settings->Diff)                 },
-				{ "duration",      Duration::ToString(settings->Seconds)     },
-				{ "duration.long", Duration::ToLongString(settings->Seconds) },
+				{ "duration",      ToString(settings->Seconds)     },
+				{ "duration.long", ToLongString(settings->Seconds) },
 				{ "lines",         ConvToStr(settings->Lines)                },
 				{ "seconds",       ConvToStr(settings->Seconds)              },
 			});

@@ -569,13 +569,13 @@ void XLine::DefaultApply(User* u, bool bancache)
 
 	Template::VariableMap vars = {
 		{ "created",        ToString(set_time)                                },
-		{ "duration",       Duration::ToString(duration)                            },
-		{ "duration.long",  Duration::ToLongString(duration)                        },
+		{ "duration",       ToString(duration)                            },
+		{ "duration.long",  ToLongString(duration)                        },
 		{ "expiry",         ToString(expiry)                                  },
 		{ "fulltype",       type.length() <= 2 ? type + "-lined" : type             },
 		{ "reason",         reason                                                  },
-		{ "remaining",      Duration::ToString(ServerInstance->Time() - expiry)     },
-		{ "remaining.long", Duration::ToLongString(ServerInstance->Time() - expiry) },
+		{ "remaining",      ToString(ServerInstance->Time() - expiry)     },
+		{ "remaining.long", ToLongString(ServerInstance->Time() - expiry) },
 		{ "setter",         source                                                  },
 		{ "type",           type                                                    },
 	};
@@ -721,7 +721,7 @@ void XLine::DisplayExpiry()
 {
 	ServerInstance->SNO.WriteToSnoMask('x', "Removing an expired {}{} on {} (set by {} {} ago): {}",
 		type, (type.length() <= 2 ? "-line" : ""), Displayable(), source,
-		Duration::ToLongString(ServerInstance->Time() - set_time), reason);
+		ToLongString(ServerInstance->Time() - set_time), reason);
 }
 
 const std::string& ELine::Displayable() const

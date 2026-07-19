@@ -146,7 +146,7 @@ private:
 		if (!stream.GetToken(periodstr))
 			return false;
 
-		return Duration::TryFrom(periodstr, period);
+		return TryFrom(periodstr, period);
 	}
 
 public:
@@ -221,7 +221,7 @@ public:
 			out.push_back(':');
 			out.append(ConvToStr(fs->messages));
 			out.push_back(':');
-			out.append(Duration::ToString(fs->period));
+			out.append(ToString(fs->period));
 		}
 		else
 		{
@@ -324,8 +324,8 @@ public:
 			{
 				const std::string msg = Template::Replace(message, {
 					{ "channel",       dest->name                        },
-					{ "duration",      Duration::ToString(f->period)     },
-					{ "duration.long", Duration::ToLongString(f->period) },
+					{ "duration",      ToString(f->period)     },
+					{ "duration.long", ToLongString(f->period) },
 					{ "messages",      ConvToStr(f->messages)            },
 					{ "seconds",       ConvToStr(f->period)              },
 				});

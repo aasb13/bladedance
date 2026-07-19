@@ -292,7 +292,7 @@ private:
 		}
 
 		ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed {} on {}, expires in {} (on {}): {}",
-			line->source, type, line->Displayable(), Duration::ToLongString(line->duration),
+			line->source, type, line->Displayable(), ToLongString(line->duration),
 			ToString(line->expiry), line->reason);
 		ServerInstance->XLines->ApplyLines();
 	}

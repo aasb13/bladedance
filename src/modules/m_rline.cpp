@@ -83,7 +83,7 @@ public:
 				else
 				{
 					ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed Z-line on {}, expires in {} (on {}): {}",
-						zl->source, u->GetAddress(), Duration::ToLongString(zl->duration),
+						zl->source, u->GetAddress(), ToLongString(zl->duration),
 						ToString(zl->duration), zl->reason);
 				}
 				addedzline = true;
@@ -158,7 +158,7 @@ public:
 			// Adding - XXX todo make this respect <insane> tag perhaps..
 
 			unsigned long duration = 0;
-			if (parameters.size() > 2 && !Duration::TryFrom(parameters[1], duration))
+			if (parameters.size() > 2 && !TryFrom(parameters[1], duration))
 			{
 				user->WriteNotice("*** Invalid duration for R-line.");
 				return CmdResult::FAILURE;
@@ -186,7 +186,7 @@ public:
 					else
 					{
 						ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed R-line on {}, expires in {} (on {}): {}",
-							user->nick, parameters[0], Duration::ToLongString(duration), FromNow(duration), r->reason);
+							user->nick, parameters[0], ToLongString(duration), FromNow(duration), r->reason);
 					}
 
 					ServerInstance->XLines->ApplyLines();

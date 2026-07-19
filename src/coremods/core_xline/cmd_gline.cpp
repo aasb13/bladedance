@@ -72,7 +72,7 @@ CmdResult CommandGline::Handle(User* user, const Params& parameters)
 		}
 
 		unsigned long duration = 0;
-		if (parameters.size() > 2 && !Duration::TryFrom(parameters[1], duration))
+		if (parameters.size() > 2 && !TryFrom(parameters[1], duration))
 		{
 			user->WriteNotice("*** Invalid duration for G-line.");
 			return CmdResult::FAILURE;
@@ -89,7 +89,7 @@ CmdResult CommandGline::Handle(User* user, const Params& parameters)
 			else
 			{
 				ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed G-line on {}, expires in {} (on {}): {}",
-					user->nick, target, Duration::ToLongString(duration), FromNow(duration), gl->reason);
+					user->nick, target, ToLongString(duration), FromNow(duration), gl->reason);
 			}
 
 			ServerInstance->XLines->ApplyLines();

@@ -104,7 +104,7 @@ public:
 			std::string expr;
 			if (parameters.size() > 2)
 			{
-				if (!Duration::TryFrom(parameters[1], duration))
+				if (!TryFrom(parameters[1], duration))
 				{
 					user->WriteNotice("*** Invalid duration for SHUN.");
 					return CmdResult::FAILURE;
@@ -128,7 +128,7 @@ public:
 				else
 				{
 					ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed SHUN on {}, expires in {} (on {}): {}",
-						user->nick, target, Duration::ToLongString(duration),
+						user->nick, target, ToLongString(duration),
 						FromNow(duration), expr);
 				}
 			}

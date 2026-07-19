@@ -298,14 +298,14 @@ public:
 					{
 						length = defaultlength;
 					}
-					else if (!Duration::IsValid(parameters[1]))
+					else if (!IsValid(parameters[1]))
 					{
 						user->WriteNumeric(ERR_DCCALLOWINVALID, user->nick, INSP_FORMAT("{} is not a valid DCCALLOW duration", parameters[1]));
 						return CmdResult::FAILURE;
 					}
 					else
 					{
-						if (!Duration::TryFrom(parameters[1], length))
+						if (!TryFrom(parameters[1], length))
 						{
 							user->WriteNotice("*** Invalid duration for DCC allow");
 							return CmdResult::FAILURE;
@@ -321,7 +321,7 @@ public:
 
 					if (length > 0)
 					{
-						user->WriteNumeric(RPL_DCCALLOWTIMED, user->nick, INSP_FORMAT("Added {} to DCCALLOW list for {}", target->nick, Duration::ToLongString(length)));
+						user->WriteNumeric(RPL_DCCALLOWTIMED, user->nick, INSP_FORMAT("Added {} to DCCALLOW list for {}", target->nick, ToLongString(length)));
 					}
 					else
 					{

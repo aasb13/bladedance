@@ -64,7 +64,7 @@ public:
 	unsigned long getDuration(const std::string& key, unsigned long def = 0) const
 	{
 		unsigned long value;
-		if (!Duration::TryFrom(getString(key, "0"), value))
+		if (!TryFrom(getString(key, "0"), value))
 			return def;
 
 		return value;

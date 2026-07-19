@@ -163,13 +163,13 @@ namespace
 		if (timediff > ServerInstance->Config->TimeSkipWarn)
 		{
 			ServerInstance->SNO.WriteToSnoMask('a', "\002Performance warning!\002 Server clock jumped forwards by {} (from {} to {})!",
-				Duration::ToLongString(timediff), ToString(oldtime), ToString(newtime));
+				ToLongString(timediff), ToString(oldtime), ToString(newtime));
 		}
 
 		else if (timediff < -ServerInstance->Config->TimeSkipWarn)
 		{
 			ServerInstance->SNO.WriteToSnoMask('a', "\002Performance warning!\002 Server clock jumped backwards by {} (from {} to {})!",
-				Duration::ToLongString(std::abs(timediff)), ToString(oldtime), ToString(newtime));
+				ToLongString(std::abs(timediff)), ToString(oldtime), ToString(newtime));
 		}
 	}
 

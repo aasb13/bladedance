@@ -19,57 +19,54 @@
 
 #pragma once
 
-namespace Duration
-{
-	/** Converts a string containing a duration to the number of seconds it
-	 * represents returning 0 on error.
-	 *
-	 * The string should should be in the format 1y2w3d4h6m5s which represents
-	 * one year, two weeks, three days, four hours, six minutes, and five
-	 * seconds. If called with this duration 33,019,565 will be returned.
-	 *
-	 * @param str A string containing a duration.
-	 * @return Either the number of seconds in the duration or 0 on error.
-	 */
-	__attribute__ ((visibility ("default"))) unsigned long From(const std::string& str);
+/** Converts a string containing a duration to the number of seconds it
+ * represents returning 0 on error.
+ *
+ * The string should should be in the format 1y2w3d4h6m5s which represents
+ * one year, two weeks, three days, four hours, six minutes, and five
+ * seconds. If called with this duration 33,019,565 will be returned.
+ *
+ * @param str A string containing a duration.
+ * @return Either the number of seconds in the duration or 0 on error.
+ */
+__attribute__ ((visibility ("default"))) unsigned long From(const std::string& str);
 
-	/** Determines whether a duration string is valid.
-	 * @param str The duration string to check.
-	 */
-	__attribute__ ((visibility ("default"))) bool IsValid(const std::string& str);
+/** Determines whether a duration string is valid.
+ * @param str The duration string to check.
+ */
+__attribute__ ((visibility ("default"))) bool IsValid(const std::string& str);
 
-	/** Converts a number of seconds to a human-readable duration string.
-	 *
-	 * e.g. 33,019,565 will result in 1 year, 2 weeks, 3 days, 4 hours, 6
-	 * minutes, 5 seconds.
-	 *
-	 * @param duration The number of seconds to convert.
-	 * @param brief Whether to round to the nearest time period.
-	 */
-	__attribute__ ((visibility ("default"))) std::string ToLongString(unsigned long duration, bool brief = false);
+/** Converts a number of seconds to a human-readable duration string.
+ *
+ * e.g. 33,019,565 will result in 1 year, 2 weeks, 3 days, 4 hours, 6
+ * minutes, 5 seconds.
+ *
+ * @param duration The number of seconds to convert.
+ * @param brief Whether to round to the nearest time period.
+ */
+__attribute__ ((visibility ("default"))) std::string ToLongString(unsigned long duration, bool brief = false);
 
-	/** Converts a number of seconds to a duration string.
-	 *
-	 * e.g. 33,019,565 will result in 1y2w3d4h6m5s which represents one year,
-	 * two weeks, three days, four hours, six minutes, and five seconds.
-	 *
-	 * @param duration The number of seconds to convert.
-	 */
-	__attribute__ ((visibility ("default"))) std::string ToString(unsigned long duration);
+/** Converts a number of seconds to a duration string.
+ *
+ * e.g. 33,019,565 will result in 1y2w3d4h6m5s which represents one year,
+ * two weeks, three days, four hours, six minutes, and five seconds.
+ *
+ * @param duration The number of seconds to convert.
+ */
+__attribute__ ((visibility ("default"))) std::string ToString(unsigned long duration);
 
-	/** Attempts to converts a string containing a duration to the number of
-	 * seconds it represents returning whether the conversion succeeded.
-	 *
-	 * The string should should be in the format 1y2w3d4h6m5s which represents
-	 * one year, two weeks, three days, four hours, six minutes, and five
-	 * seconds. If called with this duration 33,019,565 will be returned.
-	 *
-	 * @param str A string containing a duration.
-	 * @param duration The location to store the resulting duration.
-	 * @return True if the conversion succeeded; otherwise, false.
-	 */
-	__attribute__ ((visibility ("default"))) bool TryFrom(const std::string& str, unsigned long& duration);
-}
+/** Attempts to converts a string containing a duration to the number of
+ * seconds it represents returning whether the conversion succeeded.
+ *
+ * The string should should be in the format 1y2w3d4h6m5s which represents
+ * one year, two weeks, three days, four hours, six minutes, and five
+ * seconds. If called with this duration 33,019,565 will be returned.
+ *
+ * @param str A string containing a duration.
+ * @param duration The location to store the resulting duration.
+ * @return True if the conversion succeeded; otherwise, false.
+ */
+__attribute__ ((visibility ("default"))) bool TryFrom(const std::string& str, unsigned long& duration);
 
 /** A short time format picked for being readable (e.g. "Sun 23 Mar 2025 10:20:30") */
 inline constexpr const char* DEFAULT_SHORT = "%a %d %b %Y %H:%M:%S";

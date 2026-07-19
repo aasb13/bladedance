@@ -72,7 +72,7 @@ CmdResult CommandKline::Handle(User* user, const Params& parameters)
 		}
 
 		unsigned long duration = 0;
-		if (parameters.size() > 2 && !Duration::TryFrom(parameters[1], duration))
+		if (parameters.size() > 2 && !TryFrom(parameters[1], duration))
 		{
 			user->WriteNotice("*** Invalid duration for K-line.");
 			return CmdResult::FAILURE;
@@ -89,7 +89,7 @@ CmdResult CommandKline::Handle(User* user, const Params& parameters)
 			else
 			{
 				ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed K-line on {}, expires in {} (on {}): {}",
-					user->nick, target, Duration::ToLongString(duration), FromNow(duration), kl->reason);
+					user->nick, target, ToLongString(duration), FromNow(duration), kl->reason);
 			}
 
 			ServerInstance->XLines->ApplyLines();

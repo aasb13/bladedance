@@ -65,7 +65,7 @@ CmdResult CommandEline::Handle(User* user, const Params& parameters)
 			return CmdResult::FAILURE;
 
 		unsigned long duration = 0;
-		if (parameters.size() > 2 && !Duration::TryFrom(parameters[1], duration))
+		if (parameters.size() > 2 && !TryFrom(parameters[1], duration))
 		{
 			user->WriteNotice("*** Invalid duration for E-line.");
 			return CmdResult::FAILURE;
@@ -82,7 +82,7 @@ CmdResult CommandEline::Handle(User* user, const Params& parameters)
 			else
 			{
 				ServerInstance->SNO.WriteToSnoMask('x', "{} added a timed E-line on {}, expires in {} (on {}): {}",
-					user->nick, target, Duration::ToLongString(duration), FromNow(duration), el->reason);
+					user->nick, target, ToLongString(duration), FromNow(duration), el->reason);
 			}
 		}
 		else

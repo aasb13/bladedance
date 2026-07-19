@@ -175,7 +175,7 @@ namespace
 	constexpr const auto SECONDS_PER_AVG_YEAR = SECONDS_PER_YEAR + (SECONDS_PER_HOUR * 6);
 }
 
-bool Duration::TryFrom(const std::string& str, unsigned long& duration)
+bool TryFrom(const std::string& str, unsigned long& duration)
 {
 	uint64_t rust_duration;
 	if (helperfuncs_duration_try_from(str.c_str(), &rust_duration))
@@ -186,17 +186,17 @@ bool Duration::TryFrom(const std::string& str, unsigned long& duration)
 	return false;
 }
 
-unsigned long Duration::From(const std::string& str)
+unsigned long From(const std::string& str)
 {
 	return static_cast<unsigned long>(helperfuncs_duration_from(str.c_str()));
 }
 
-bool Duration::IsValid(const std::string& duration)
+bool IsValid(const std::string& duration)
 {
 	return helperfuncs_duration_is_valid(duration.c_str()) != 0;
 }
 
-std::string Duration::ToString(unsigned long duration)
+std::string ToString(unsigned long duration)
 {
 	char* result = helperfuncs_duration_to_string(static_cast<uint64_t>(duration));
 	if (!result)
@@ -206,7 +206,7 @@ std::string Duration::ToString(unsigned long duration)
 	return str;
 }
 
-std::string Duration::ToLongString(unsigned long duration, bool brief)
+std::string ToLongString(unsigned long duration, bool brief)
 {
 	char* result = helperfuncs_duration_to_long_string(static_cast<uint64_t>(duration), brief ? 1 : 0);
 	if (!result)
