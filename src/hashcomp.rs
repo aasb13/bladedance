@@ -169,6 +169,99 @@ impl Drop for RustSepStream {
     }
 }
 
+/// TokenStream for parsing IRC messages according to RFC 1459/2812
+/// This struct is used to split IRC messages into tokens
+#[repr(C)]
+pub struct RustTokenStream {
+    message: *mut c_char,
+    position: usize,
+}
+
+impl RustTokenStream {
+    pub fn new(msg: &str, start: usize) -> Self {
+        RustTokenStream {
+            message: CString::new(msg).unwrap().into_raw(),
+            position: start.min(msg.len()),
+        }
+    }
+
+    /// Get next middle token (separated by spaces)
+    pub fn get_middle(&mut self) -> Option<String> {
+        let msg = unsafe { CStr::from_ptr(self.message) }.to_str().unwrap_or("");
+        
+        if self.position >= msg.len() {
+            return None;
+        }
+
+        // Skip leading spaces
+        while self.position < msg.len() && msg.as_bytes()[self.position] == b' ' {
+            self.position += 1;
+        }
+        
+        if self.position >= msg.len() {
+            return None;
+        }
+
+        // Find next space
+        let separator = msg[self.position..].find(' ');
+        let separator_pos = match separator {
+            Some(pos) => self.position + pos,
+            None => msg.len(),
+        };
+
+        let token = msg[self.position..separator_pos].to_string();
+        
+        // Move position past the separator
+        self.position = separator_pos + 1;
+
+        Some(token)
+    }
+
+    /// Get trailing token (starts with : and contains rest of message)
+    pub fn get_trailing(&mut self) -> Option<String> {
+        let msg = unsafe { CStr::from_ptr(self.message) }.to_str().unwrap_or("");
+        
+        if self.position >= msg.len() {
+            return None;
+        }
+
+        // Skip leading spaces
+        while self.position < msg.len() && msg.as_bytes()[self.position] == b' ' {
+            self.position += 1;
+        }
+        
+        if self.position >= msg.len() {
+            return None;
+        }
+
+        if msg.as_bytes()[self.position] == b':' {
+            // Trailing token starts with : and includes everything after it
+            self.position += 1;
+            if self.position < msg.len() {
+                let token = msg[self.position..].to_string();
+                self.position = msg.len();
+                return Some(token);
+            } else {
+                self.position = msg.len();
+                return Some(String::new());
+            }
+        }
+
+        // Not a trailing token, try to get middle token
+        self.get_middle()
+    }
+}
+
+impl Drop for RustTokenStream {
+    fn drop(&mut self) {
+        if !self.message.is_null() {
+            unsafe {
+                let _ = CString::from_raw(self.message);
+            }
+        }
+    }
+}
+
 // FFI exports for C++ interop
 
 #[unsafe(no_mangle)]
@@ -288,6 +381,75 @@ pub extern "C" fn hashcomp_free_string(ptr: *mut c_char) {
     }
 }
 
+// TokenStream FFI exports
+
+#[unsafe(no_mangle)]
+pub extern "C" fn hashcomp_tokenstream_new(msg: *const c_char, start: usize) -> *mut RustTokenStream {
+    if msg.is_null() {
+        return std::ptr::null_mut();
+    }
+    
+    let msg_str = unsafe { CStr::from_ptr(msg) }.to_str().unwrap_or("");
+    Box::into_raw(Box::new(RustTokenStream::new(msg_str, start)))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn hashcomp_tokenstream_get_middle(
+    stream: *mut RustTokenStream,
+    token_out: *mut *mut c_char,
+) -> bool {
+    if stream.is_null() || token_out.is_null() {
+        return false;
+    }
+    
+    let stream_ref = unsafe { &mut *stream };
+    match stream_ref.get_middle() {
+        Some(token) => {
+            unsafe {
+                *token_out = CString::new(token).unwrap().into_raw();
+            }
+            true
+        }
+        None => {
+            unsafe { *token_out = std::ptr::null_mut(); }
+            false
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn hashcomp_tokenstream_get_trailing(
+    stream: *mut RustTokenStream,
+    token_out: *mut *mut c_char,
+) -> bool {
+    if stream.is_null() || token_out.is_null() {
+        return false;
+    }
+    
+    let stream_ref = unsafe { &mut *stream };
+    match stream_ref.get_trailing() {
+        Some(token) => {
+            unsafe {
+                *token_out = CString::new(token).unwrap().into_raw();
+            }
+            true
+        }
+        None => {
+            unsafe { *token_out = std::ptr::null_mut(); }
+            false
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn hashcomp_tokenstream_free(stream: *mut RustTokenStream) {
+    if !stream.is_null() {
+        unsafe {
+            let _ = Box::from_raw(stream);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -343,5 +505,43 @@ mod tests {
         assert_eq!(stream.get_token(), Some("a".to_string()));
         assert_eq!(stream.get_token(), Some("".to_string()));
         assert_eq!(stream.get_token(), Some("c".to_string()));
+    }
+
+    #[test]
+    fn test_tokenstream_basic() {
+        let mut stream = RustTokenStream::new("PRIVMSG #test :hello world", 0);
+        assert_eq!(stream.get_middle(), Some("PRIVMSG".to_string()));
+        assert_eq!(stream.get_middle(), Some("#test".to_string()));
+        assert_eq!(stream.get_trailing(), Some("hello world".to_string()));
+    }
+
+    #[test]
+    fn test_tokenstream_no_trailing() {
+        let mut stream = RustTokenStream::new("JOIN #channel", 0);
+        assert_eq!(stream.get_middle(), Some("JOIN".to_string()));
+        assert_eq!(stream.get_middle(), Some("#channel".to_string()));
+        assert_eq!(stream.get_middle(), None);
+    }
+
+    #[test]
+    fn test_tokenstream_with_colon_no_trailing() {
+        let mut stream = RustTokenStream::new("PRIVMSG #test", 0);
+        assert_eq!(stream.get_middle(), Some("PRIVMSG".to_string()));
+        assert_eq!(stream.get_middle(), Some("#test".to_string()));
+        assert_eq!(stream.get_middle(), None);
+    }
+
+    #[test]
+    fn test_tokenstream_trailing_only() {
+        let mut stream = RustTokenStream::new(":hello world", 0);
+        assert_eq!(stream.get_trailing(), Some("hello world".to_string()));
+    }
+
+    #[test]
+    fn test_tokenstream_with_start() {
+        let mut stream = RustTokenStream::new("PREFIX command arg1 arg2", 7); // start at "command"
+        assert_eq!(stream.get_middle(), Some("command".to_string()));
+        assert_eq!(stream.get_middle(), Some("arg1".to_string()));
+        assert_eq!(stream.get_middle(), Some("arg2".to_string()));
     }
 }

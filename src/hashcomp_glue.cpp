@@ -40,6 +40,14 @@ extern "C" {
 	char* hashcomp_sepstream_get_remaining(RustSepStream* stream);
 	bool hashcomp_sepstream_stream_end(RustSepStream* stream);
 	void hashcomp_sepstream_free(RustSepStream* stream);
+	
+	// TokenStream FFI
+	struct RustTokenStream;
+	RustTokenStream* hashcomp_tokenstream_new(const char* msg, size_t start);
+	bool hashcomp_tokenstream_get_middle(RustTokenStream* stream, char** token);
+	bool hashcomp_tokenstream_get_trailing(RustTokenStream* stream, char** token);
+	void hashcomp_tokenstream_free(RustTokenStream* stream);
+	
 	void hashcomp_free_string(char* ptr);
 }
 
@@ -126,12 +134,35 @@ size_t irc::insensitive::operator()(const std::string& s) const
 
 irc::tokenstream::tokenstream(const std::string& msg, size_t start, size_t end)
 	: message(msg, start, end)
+	, rust_stream(reinterpret_cast<RustTokenStream*>(hashcomp_tokenstream_new(msg.c_str(), start)))
 {
+}
+
+irc::tokenstream::~tokenstream()
+{
+	if (rust_stream)
+		hashcomp_tokenstream_free(reinterpret_cast<RustTokenStream*>(rust_stream));
 }
 
 bool irc::tokenstream::GetMiddle(std::string& token)
 {
-	// If we are past the end of the string we can't do anything.
+	if (rust_stream)
+	{
+		char* rust_token = nullptr;
+		bool result = hashcomp_tokenstream_get_middle(reinterpret_cast<RustTokenStream*>(rust_stream), &rust_token);
+		if (result && rust_token)
+		{
+			token = rust_token;
+			hashcomp_free_string(rust_token);
+		}
+		else
+		{
+			token.clear();
+		}
+		return result;
+	}
+
+	// Fallback to C++ implementation if Rust stream not available
 	if (position >= message.length())
 	{
 		token.clear();
@@ -154,7 +185,23 @@ bool irc::tokenstream::GetMiddle(std::string& token)
 
 bool irc::tokenstream::GetTrailing(std::string& token)
 {
-	// If we are past the end of the string we can't do anything.
+	if (rust_stream)
+	{
+		char* rust_token = nullptr;
+		bool result = hashcomp_tokenstream_get_trailing(reinterpret_cast<RustTokenStream*>(rust_stream), &rust_token);
+		if (result && rust_token)
+		{
+			token = rust_token;
+			hashcomp_free_string(rust_token);
+		}
+		else
+		{
+			token.clear();
+		}
+		return result;
+	}
+
+	// Fallback to C++ implementation if Rust stream not available
 	if (position >= message.length())
 	{
 		token.clear();
@@ -172,6 +219,8 @@ bool irc::tokenstream::GetTrailing(std::string& token)
 	// There is no <trailing> token so it must be a <middle> token.
 	return GetMiddle(token);
 }
+
+
 
 irc::sepstream::sepstream(const std::string& source, char separator, bool allowempty)
 	: tokens(source)

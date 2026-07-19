@@ -211,10 +211,17 @@ namespace irc
 
 		/** The current position within the message. */
 		size_t position = 0;
+		
+		/** Pointer to Rust implementation */
+		struct RustTokenStream;
+		RustTokenStream* rust_stream = nullptr;
 
 	public:
 		/** Create a tokenstream and fill it with the provided data. */
 		tokenstream(const std::string& msg, size_t start = 0, size_t end = std::string::npos);
+		
+		/** Destructor */
+		~tokenstream();
 
 		/** Retrieves the underlying message. */
 		std::string& GetMessage() { return message; }
