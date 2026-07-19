@@ -7,8 +7,7 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
-use std::ffi::{c_char, c_void};
-use std::os::raw::c_ulong;
+use std::ffi::c_char;
 use crate::stringutils::{StdString, StdString_Destroy};
 
 /// Holds the values for different type of modes that can exist, USER or CHANNEL type.

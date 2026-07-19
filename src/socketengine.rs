@@ -12,13 +12,9 @@ use winapi::um::winsock2::{closesocket, ioctlsocket, FIONBIO, connect, bind, shu
 use winapi::um::winsock2::SOCKADDR as sockaddr;
 #[cfg(target_os = "windows")]
 use winapi::shared::ws2def::SOCKADDR as sockaddr_alias;
-use std::os::raw::c_void;
 
 #[cfg(not(target_os = "windows"))]
-use libc::{close, fcntl, F_GETFL, F_SETFL, O_NONBLOCK, connect, bind, shutdown, listen, accept, socklen_t, setsockopt};
-
-type ssize_t = libc::ssize_t;
-type uint64_t = libc::uint64_t;
+use libc::{close, fcntl, F_GETFL, F_SETFL, O_NONBLOCK, connect, bind, shutdown, listen, accept, socklen_t};
 
 #[cfg(target_os = "windows")]
 #[unsafe(no_mangle)]
@@ -68,10 +64,10 @@ pub unsafe extern "C" fn rust_socketengine_nonblocking(fd: c_int) -> c_int {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_socketengine_stats_update_read_counters(
-    len_in: ssize_t,
-    read_events: *mut uint64_t,
+    len_in: isize,
+    read_events: *mut u64,
     indata: *mut usize,
-    error_events: *mut uint64_t,
+    error_events: *mut u64,
 ) {
     if len_in > 0 {
         *read_events += 1;
@@ -86,10 +82,10 @@ pub unsafe extern "C" fn rust_socketengine_stats_update_read_counters(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_socketengine_stats_update_write_counters(
-    len_out: ssize_t,
-    write_events: *mut uint64_t,
+    len_out: isize,
+    write_events: *mut u64,
     outdata: *mut usize,
-    error_events: *mut uint64_t,
+    error_events: *mut u64,
 ) {
     if len_out > 0 {
         *write_events += 1;
@@ -217,7 +213,7 @@ pub unsafe extern "C" fn rust_socketengine_recvfrom(
     flags: c_int,
     from: *mut sockaddr,
     fromlen: *mut libc::c_int,
-) -> ssize_t {
+) -> isize {
     winapi::um::winsock2::recvfrom(fd, buf as *mut _, len as i32, flags, from as *mut _, fromlen)
 }
 
@@ -230,7 +226,7 @@ pub unsafe extern "C" fn rust_socketengine_recvfrom(
     flags: c_int,
     from: *mut libc::sockaddr,
     fromlen: *mut socklen_t,
-) -> ssize_t {
+) -> isize {
     libc::recvfrom(fd, buf as *mut _, len, flags, from, fromlen)
 }
 
@@ -241,7 +237,7 @@ pub unsafe extern "C" fn rust_socketengine_send(
     buf: *const u8,
     len: usize,
     flags: c_int,
-) -> ssize_t {
+) -> isize {
     winapi::um::winsock2::send(fd, buf as *const _, len as i32, flags)
 }
 
@@ -252,7 +248,7 @@ pub unsafe extern "C" fn rust_socketengine_send(
     buf: *const u8,
     len: usize,
     flags: c_int,
-) -> ssize_t {
+) -> isize {
     libc::send(fd, buf as *const _, len, flags)
 }
 
@@ -263,7 +259,7 @@ pub unsafe extern "C" fn rust_socketengine_recv(
     buf: *mut u8,
     len: usize,
     flags: c_int,
-) -> ssize_t {
+) -> isize {
     winapi::um::winsock2::recv(fd, buf as *mut _, len as i32, flags)
 }
 
@@ -274,7 +270,7 @@ pub unsafe extern "C" fn rust_socketengine_recv(
     buf: *mut u8,
     len: usize,
     flags: c_int,
-) -> ssize_t {
+) -> isize {
     libc::recv(fd, buf as *mut _, len, flags)
 }
 
@@ -287,7 +283,7 @@ pub unsafe extern "C" fn rust_socketengine_sendto(
     flags: c_int,
     to: *const sockaddr,
     tolen: libc::c_int,
-) -> ssize_t {
+) -> isize {
     winapi::um::winsock2::sendto(fd, buf as *const _, len as i32, flags, to as *const _, tolen)
 }
 
@@ -300,6 +296,6 @@ pub unsafe extern "C" fn rust_socketengine_sendto(
     flags: c_int,
     to: *const libc::sockaddr,
     tolen: socklen_t,
-) -> ssize_t {
+) -> isize {
     libc::sendto(fd, buf as *const _, len, flags, to, tolen)
 }

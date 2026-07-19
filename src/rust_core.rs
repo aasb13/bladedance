@@ -27,6 +27,7 @@ pub mod xline;
 pub mod clientprotocol;
 pub mod commands;
 pub mod socketengine;
+pub mod socketengine_epoll;
 pub mod mode;
 pub mod thread;
 pub mod socket;
