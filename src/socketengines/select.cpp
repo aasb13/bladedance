@@ -1,9 +1,9 @@
 /*
  * InspIRCd -- Internet Relay Chat Daemon
  *
+ *   Copyright (C) 2021 Mistral AI
  *   Copyright (C) 2017, 2019, 2022-2023 Sadie Powell <sadie@witchery.services>
  *   Copyright (C) 2013-2015 Attila Molnar <attilamolnar@hush.com>
- *   Copyright (C) 2012 Robby <robby@chatbelgie.be>
  *   Copyright (C) 2012 ChrisTX <xpipe@hotmail.de>
  *   Copyright (C) 2011, 2014 Adam <Adam@anope.org>
  *   Copyright (C) 2009-2010 Daniel De Graaf <danieldg@inspircd.org>
@@ -24,11 +24,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+#include "inspircd.h"
+
 #ifndef _WIN32
 #include <sys/select.h>
 #endif // _WIN32
 
-#include "inspircd.h"
+/** Rust FFI declarations for select socket engine */
+extern "C" bool rust_socketengine_select_init();
+extern "C" void rust_socketengine_select_deinit();
+extern "C" bool rust_socketengine_select_recover_from_fork();
+extern "C" bool rust_socketengine_select_add_fd(int fd, int event_mask, void* eh_ptr);
+extern "C" bool rust_socketengine_select_mod_fd(int fd, int old_mask, int new_mask, void* eh_ptr);
+extern "C" bool rust_socketengine_select_del_fd(int fd);
+extern "C" int rust_socketengine_select_wait(int timeout_sec, int timeout_usec);
+extern "C" int rust_socketengine_select_get_max_fd();
+extern "C" int rust_socketengine_select_has_events(int fd, const fd_set* rfdset, const fd_set* wfdset, const fd_set* errfdset);
 
 /** A specialisation of the SocketEngine class, designed to use traditional select().
  */
@@ -48,6 +60,9 @@ void SocketEngine::Init()
 
 	MaxSetSize = FD_SETSIZE;
 
+	// Initialize Rust select engine
+	rust_socketengine_select_init();
+
 	FD_ZERO(&ReadSet);
 	FD_ZERO(&WriteSet);
 	FD_ZERO(&ErrSet);
@@ -55,10 +70,14 @@ void SocketEngine::Init()
 
 void SocketEngine::Deinit()
 {
+	// Clean up Rust select engine
+	rust_socketengine_select_deinit();
 }
 
 void SocketEngine::RecoverFromFork()
 {
+	// Recover Rust select engine after fork
+	rust_socketengine_select_recover_from_fork();
 }
 
 bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
@@ -71,6 +90,10 @@ bool SocketEngine::AddFd(EventHandler* eh, int event_mask)
 		return false;
 
 	if (!SocketEngine::AddFdRef(eh))
+		return false;
+
+	// Use Rust implementation
+	if (!rust_socketengine_select_add_fd(fd, event_mask, static_cast<void*>(eh)))
 		return false;
 
 	eh->SetEventMask(event_mask);
@@ -92,6 +115,9 @@ void SocketEngine::DelFd(EventHandler* eh)
 	if (static_cast<size_t>(fd) >= GetMaxFds())
 		return;
 
+	// Use Rust implementation
+	rust_socketengine_select_del_fd(fd);
+
 	SocketEngine::DelFdRef(eh);
 
 	FD_CLR(fd, &ReadSet);
@@ -107,6 +133,9 @@ void SocketEngine::OnSetEvent(EventHandler* eh, int old_mask, int new_mask)
 {
 	int fd = eh->GetFd();
 	int diff = old_mask ^ new_mask;
+
+	// Use Rust implementation
+	rust_socketengine_select_mod_fd(fd, old_mask, new_mask, static_cast<void*>(eh));
 
 	if (diff & (FD_WANT_POLL_READ | FD_WANT_FAST_READ))
 	{
@@ -126,18 +155,21 @@ void SocketEngine::OnSetEvent(EventHandler* eh, int old_mask, int new_mask)
 
 int SocketEngine::DispatchEvents()
 {
-	timeval tval;
-	tval.tv_sec = 1;
-	tval.tv_usec = 0;
-
-	fd_set rfdset = ReadSet, wfdset = WriteSet, errfdset = ErrSet;
-
-	int sresult = select(MaxFD + 1, &rfdset, &wfdset, &errfdset, &tval);
+	// Use Rust implementation to wait for events
+	int sresult = rust_socketengine_select_wait(1, 0);
 	ServerInstance->UpdateTime();
+
+	// Get the max_fd from Rust
+	MaxFD = rust_socketengine_select_get_max_fd();
 
 	for (int i = 0, j = sresult; i <= MaxFD && j > 0; i++)
 	{
-		int has_read = FD_ISSET(i, &rfdset), has_write = FD_ISSET(i, &wfdset), has_error = FD_ISSET(i, &errfdset);
+		// Use Rust to check if this fd has events
+		int events = rust_socketengine_select_has_events(i, &ReadSet, &WriteSet, &ErrSet);
+		
+		int has_read = events & 1;
+		int has_write = events & 2;
+		int has_error = events & 4;
 
 		if (!(has_read || has_write || has_error))
 			continue;
