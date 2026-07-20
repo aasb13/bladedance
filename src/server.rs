@@ -179,3 +179,80 @@ pub unsafe extern "C" fn rust_uid_get() -> StdString {
     let uid = get_uid();
     StdString::from_vec(uid.into_bytes())
 }
+
+// Server public name functionality
+
+/// Returns the public name for a server, respecting the hideserver configuration.
+/// 
+/// If hideserver is configured and not empty, returns the hideserver value.
+/// Otherwise, returns the server's name.
+/// 
+/// # Safety
+/// This function is unsafe because it takes raw pointers and lengths.
+/// The caller must ensure that the pointers are valid for the specified lengths.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_server_get_public_name(
+    server_name: *const c_char,
+    server_name_length: usize,
+    hide_server: *const c_char,
+    hide_server_length: usize,
+) -> StdString {
+    // Handle null pointers
+    if server_name.is_null() {
+        return StdString::from_vec("".to_string().into_bytes());
+    }
+
+    // Get server name
+    let sname_data = unsafe {
+        if server_name_length > 0 {
+            std::slice::from_raw_parts(server_name as *const u8, server_name_length)
+        } else {
+            &[]
+        }
+    };
+    let server_name_str = String::from_utf8_lossy(sname_data);
+
+    // Check if hide_server is set and not empty
+    if !hide_server.is_null() && hide_server_length > 0 {
+        let hs_data = unsafe {
+            std::slice::from_raw_parts(hide_server as *const u8, hide_server_length)
+        };
+        let hide_server_str = String::from_utf8_lossy(hs_data);
+        if !hide_server_str.is_empty() {
+            return StdString::from_vec(hide_server_str.as_bytes().to_vec());
+        }
+    }
+
+    // Return server name
+    StdString::from_vec(server_name_str.as_bytes().to_vec())
+}
+
+/// SendMetadata for Server - no-op for local server
+/// 
+/// # Safety
+/// This function is unsafe because it takes raw pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_server_send_metadata(
+    _key: *const c_char,
+    _key_length: usize,
+    _data: *const c_char,
+    _data_length: usize,
+) {
+    // Do nothing for the local server.
+}
+
+/// SendMetadata for Server with extensible - no-op for local server
+/// 
+/// # Safety
+/// This function is unsafe because it takes raw pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_server_send_metadata_ext(
+    _ext: *const (),
+    _key: *const c_char,
+    _key_length: usize,
+    _data: *const c_char,
+    _data_length: usize,
+) {
+    // Do nothing for the local server.
+}
+

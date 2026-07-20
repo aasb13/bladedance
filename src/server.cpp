@@ -32,6 +32,9 @@ extern "C" {
     StdString rust_generate_sid(const char* servername, size_t servername_length, const char* serverdesc, size_t serverdesc_length);
     void rust_uid_init(const char* sid, size_t sid_length);
     StdString rust_uid_get();
+    StdString rust_server_get_public_name(const char* server_name, size_t server_name_length, const char* hide_server, size_t hide_server_length);
+    void rust_server_send_metadata(const char* key, size_t key_length, const char* data, size_t data_length);
+    void rust_server_send_metadata_ext(const void* ext, const char* key, size_t key_length, const char* data, size_t data_length);
 }
 
 void InspIRCd::HandleSignal(sig_atomic_t signal)
@@ -104,17 +107,24 @@ std::string UIDGenerator::GetUID()
 
 const std::string& Server::GetPublicName() const
 {
-	if (!ServerInstance->Config->HideServer.empty())
-		return ServerInstance->Config->HideServer;
-	return GetName();
+	// Use Rust implementation
+	StdString result = rust_server_get_public_name(
+		GetName().c_str(), GetName().length(),
+		ServerInstance->Config->HideServer.c_str(), ServerInstance->Config->HideServer.length()
+	);
+	static std::string cached_result;
+	cached_result.assign(result.data, result.length);
+	return cached_result;
 }
 
 void Server::SendMetadata(const std::string& key, const std::string& data) const
 {
-	// Do nothing for the local server.
+	// Delegate to Rust implementation
+	rust_server_send_metadata(key.c_str(), key.length(), data.c_str(), data.length());
 }
 
 void Server::SendMetadata(const Extensible* ext, const std::string& key, const std::string& data) const
 {
-	// Do nothing for the local server.
+	// Delegate to Rust implementation
+	rust_server_send_metadata_ext(static_cast<const void*>(ext), key.c_str(), key.length(), data.c_str(), data.length());
 }
