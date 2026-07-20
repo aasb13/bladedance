@@ -1,5 +1,7 @@
 # AGENTS.md — Bladedance
 
+This file is meant ONLY for LLM agents.
+
 Bladedance is an IRC server forked from InspIRCd v4.10.1, in the middle of a
 full, permanent migration from C++ to Rust. This file tells any AI agent
 working in this repo how to build/run it and how to make migration progress
