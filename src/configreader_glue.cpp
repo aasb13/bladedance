@@ -776,12 +776,10 @@ void ServerConfig::Fill()
 		}
 		else
 		{
-			// Fall back to C++ parser completely
-			::Logs.Normal("CONFIG", "Rust config parsers failed, using C++ parser");
+			::Logs.Critical("CONFIG", "Config parsing failed");
 		}
 	}
 	
-	// Read the <server> config using C++ parser.
 	const auto& server = ConfValue("server");
 	if (ServerId.empty())
 	{
@@ -950,7 +948,7 @@ void ServerConfig::Apply(ServerConfig* old, const std::string& useruid)
 
 	if (!valid)
 	{
-		::Logs.Normal("CONFIG", "There were errors in your configuration file:");
+		::Logs.Critical("CONFIG", "There were errors in your configuration file:");
 		Classes.clear();
 	}
 
