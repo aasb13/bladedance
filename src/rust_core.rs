@@ -20,6 +20,7 @@ pub mod serverconfig;
 pub mod traits;
 pub mod account;
 pub mod configreader;
+pub mod configtoml;
 pub mod dynamic;
 pub mod hashcomp;
 pub mod inspircd;

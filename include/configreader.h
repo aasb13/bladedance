@@ -365,6 +365,11 @@ public:
 		 */
 		ServerLimits(const std::shared_ptr<ConfigTag>& tag);
 
+		/** Constructor for direct value initialization (used by TOML parser) */
+		ServerLimits(size_t line, size_t nick, size_t channel, size_t modes, size_t user,
+		             size_t quit, size_t topic, size_t kick, size_t real, size_t away,
+		             size_t host, size_t key);
+
 		/** Maximum length of a n!u\@h mask */
 		size_t GetMaxMask() const { return MaxNick + 1 + MaxUser + 1 + MaxHost; }
 	};
@@ -396,6 +401,10 @@ public:
 		std::string Runtime;
 
 		ServerPaths(const std::shared_ptr<ConfigTag>& tag);
+
+		/** Constructor for direct value initialization (used by TOML parser) */
+		ServerPaths(const std::string& config, const std::string& data, const std::string& log,
+		           const std::string& module, const std::string& runtime);
 
 		inline std::string PrependConfig(const std::string& fn) const { return ExpandPath(Config, fn); }
 		inline std::string PrependData(const std::string& fn) const { return ExpandPath(Data, fn); }

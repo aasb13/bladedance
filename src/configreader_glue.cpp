@@ -47,9 +47,39 @@ extern "C" {
     void* serverconfig_parse_file(const char* path);
     int serverconfig_is_sid(const char* sid);
     char* serverconfig_get_hostname();
+    
+    // TOML config parser functions
+    void* configtoml_parse_file(const char* path);
+    void configtoml_free(void* ptr);
+    char* configtoml_get_string(const void* ptr, const char* field_name);
+    int configtoml_get_bool(const void* ptr, const char* field_name);
+    int configtoml_get_int(const void* ptr, const char* field_name);
+    unsigned long long configtoml_get_u64(const void* ptr, const char* field_name);
+    int configtoml_file_exists(const char* path);
 }
 
 #include "ffiutils.h"
+
+// FilePosition constructor
+FilePosition::FilePosition(const std::string& Name, unsigned long Line, unsigned long Column)
+	: name(Name)
+	, line(Line)
+	, column(Column)
+{
+}
+
+// FilePosition::str() method
+std::string FilePosition::str() const
+{
+	return INSP_FORMAT("{}:{}:{}", name, line, column);
+}
+
+// ConfigTag constructor
+ConfigTag::ConfigTag(const std::string& Name, const FilePosition& Source)
+	: name(Name)
+	, source(Source)
+{
+}
 
 ServerConfig::ReadResult::ReadResult(const std::string& c, const std::string& e)
 	: contents(c)
@@ -73,6 +103,25 @@ ServerConfig::ServerLimits::ServerLimits(const std::shared_ptr<ConfigTag>& tag)
 {
 }
 
+// New constructor for TOML parsing
+ServerConfig::ServerLimits::ServerLimits(size_t line, size_t nick, size_t channel, size_t modes, size_t user,
+                                         size_t quit, size_t topic, size_t kick, size_t real, size_t away,
+                                         size_t host, size_t key)
+	: MaxLine(line)
+	, MaxNick(nick)
+	, MaxChannel(channel)
+	, MaxModes(modes)
+	, MaxUser(user)
+	, MaxQuit(quit)
+	, MaxTopic(topic)
+	, MaxKick(kick)
+	, MaxReal(real)
+	, MaxAway(away)
+	, MaxHost(host)
+	, MaxKey(key)
+{
+}
+
 ServerConfig::ServerPaths::ServerPaths(const std::shared_ptr<ConfigTag>& tag)
 	: Config(tag->getString("configdir", INSPIRCD_CONFIG_PATH, 1))
 	, Data(tag->getString("datadir", INSPIRCD_DATA_PATH, 1))
@@ -80,6 +129,39 @@ ServerConfig::ServerPaths::ServerPaths(const std::shared_ptr<ConfigTag>& tag)
 	, Module(tag->getString("moduledir", INSPIRCD_MODULE_PATH, 1))
 	, Runtime(tag->getString("runtimedir", INSPIRCD_RUNTIME_PATH, 1))
 {
+}
+
+// New constructor for TOML parsing
+ServerConfig::ServerPaths::ServerPaths(const std::string& config, const std::string& data, const std::string& log,
+                                        const std::string& module, const std::string& runtime)
+	: Config(config)
+	, Data(data)
+	, Log(log)
+	, Module(module)
+	, Runtime(runtime)
+{
+}
+
+// ServerConfig::ConfValue implementation
+const std::shared_ptr<ConfigTag>& ServerConfig::ConfValue(const std::string& tag, const std::shared_ptr<ConfigTag>& def) const
+{
+	auto range = config_data.equal_range(tag);
+	if (range.first != range.second)
+		return range.first->second;
+	return def ? def : EmptyTag;
+}
+
+// ServerConfig::ConfTags implementation
+ServerConfig::TagList ServerConfig::ConfTags(const std::string& tag, std::optional<TagList> def) const
+{
+	auto range = config_data.equal_range(tag);
+	if (range.first != range.second)
+		return TagList(range.first, range.second);
+	
+	if (def)
+		return *def;
+	
+	return TagList(config_data.end(), config_data.end());
 }
 
 std::string ServerConfig::ServerPaths::ExpandPath(const std::string& base, const std::string& fragment)
@@ -105,6 +187,14 @@ std::string ServerConfig::ServerPaths::ExpandPath(const std::string& base, const
 	}
 
 	return INSP_FORMAT("{}/{}", base, fragment);
+}
+
+// ParseStack::DoOpenFile implementation
+FilePtr ParseStack::DoOpenFile(const std::string& name, bool isexec)
+{
+	if (isexec)
+		return FilePtr(fopen(name.c_str(), "re"), fclose);
+	return FilePtr(fopen(name.c_str(), "r"), fclose);
 }
 
 ServerConfig::ServerConfig()
@@ -361,67 +451,334 @@ namespace
 
 void ServerConfig::Fill()
 {
-	// Try to use Rust config parser first
-	::Logs.Debug("CONFIG", "Attempting to use Rust config parser");
+	// Try to use TOML config parser first
+	::Logs.Debug("CONFIG", "Attempting to use TOML config parser");
 	
-	// Parse config using Rust
-	void* rust_config_ptr = serverconfig_parse_file(ServerInstance->ConfigFileName.c_str());
-	if (rust_config_ptr)
+	// Always try TOML parsing first
+	void* toml_config_ptr = configtoml_parse_file(ServerInstance->ConfigFileName.c_str());
+	if (toml_config_ptr)
 	{
-		// Rust parser succeeded - extract values and copy to C++
-		::Logs.Normal("CONFIG", "Successfully parsed config using Rust parser");
-		
-		// Copy values from Rust ServerConfig to C++ ServerConfig
-		// Note: We use set_string to copy individual values
-		char* value;
-		
-		value = serverconfig_get_string(rust_config_ptr, "server_name");
-		if (value && *value) {
-			ServerName = value;
-			rust_ffi_free_string(value);
-		}
-		
-		value = serverconfig_get_string(rust_config_ptr, "server_id");
-		if (value && *value) {
-			ServerId = value;
-			rust_ffi_free_string(value);
-		}
-		
-		value = serverconfig_get_string(rust_config_ptr, "server_desc");
-		if (value && *value) {
-			ServerDesc = value;
-			rust_ffi_free_string(value);
-		}
-		
-		value = serverconfig_get_string(rust_config_ptr, "network");
-		if (value && *value) {
-			Network = value;
-			rust_ffi_free_string(value);
-		}
-		
-		// Clean up Rust config
-		serverconfig_free(rust_config_ptr);
-		
-		// Validate server ID if we got one
-		if (!ServerId.empty() && !InspIRCd::IsSID(ServerId))
-			throw CoreException(ServerId + " is not a valid server ID. A server ID must be 3 characters long, with the first character a digit and the next two characters a digit or letter.");
-		
-		// Fill in any defaults that weren't set
-		if (ServerName.empty())
-			ServerName = GetServerHost();
-		if (ServerDesc.empty())
-			ServerDesc = ServerName;
-		if (Network.empty())
-			Network = ServerName;
-		
-		// For now, still call C++ parsing for other tags (connect classes, etc.)
-		// Eventually this will be fully Rust
-		::Logs.Debug("CONFIG", "Rust parser: using Rust values, continuing with C++ for remaining config");
+		// TOML parser succeeded - extract values and copy to C++
+		::Logs.Normal("CONFIG", "Successfully parsed config using TOML parser");
+			
+			// Copy values from Rust ParsedServerConfig to C++ ServerConfig
+			char* value;
+			
+			// Server configuration
+			value = configtoml_get_string(toml_config_ptr, "server_name");
+			if (value && *value) {
+				ServerName = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "server_id");
+			if (value && *value) {
+				ServerId = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "server_desc");
+			if (value && *value) {
+				ServerDesc = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "network");
+			if (value && *value) {
+				Network = value;
+				rust_ffi_free_string(value);
+			}
+			
+			// Admin configuration
+			value = configtoml_get_string(toml_config_ptr, "admin_name");
+			if (value && *value) {
+				// Admin name can be used for logging, but not currently used in ServerConfig
+				rust_ffi_free_string(value);
+			}
+			
+			// Options configuration
+			value = configtoml_get_string(toml_config_ptr, "default_modes");
+			if (value && *value) {
+				DefaultModes = value;
+				rust_ffi_free_string(value);
+			}
+			
+			MaskInList = configtoml_get_bool(toml_config_ptr, "mask_in_list") != 0;
+			MaskInTopic = configtoml_get_bool(toml_config_ptr, "mask_in_topic") != 0;
+			NoSnoticeStack = configtoml_get_bool(toml_config_ptr, "no_snotice_stack") != 0;
+			SyntaxHints = configtoml_get_bool(toml_config_ptr, "syntax_hints") != 0;
+			
+			value = configtoml_get_string(toml_config_ptr, "xline_message");
+			if (value && *value) {
+				XLineMessage = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "xline_quit");
+			if (value && *value) {
+				XLineQuit = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "xline_quit_public");
+			if (value && *value) {
+				XLineQuitPublic = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "restrict_banned_users");
+			if (value && *value) {
+				std::string restrict_str = value;
+				rust_ffi_free_string(value);
+				
+				if (restrict_str == "silent")
+					RestrictBannedUsers = BUT_RESTRICT_SILENT;
+				else if (restrict_str == "no")
+					RestrictBannedUsers = BUT_NORMAL;
+				else
+					RestrictBannedUsers = BUT_RESTRICT_NOTIFY; // yes or default
+			}
+			
+			WildcardIPv6 = configtoml_get_bool(toml_config_ptr, "wildcard_ipv6") != 0;
+			
+			// Performance configuration
+			MaxConn = configtoml_get_int(toml_config_ptr, "max_conn");
+			NetBufferSize = configtoml_get_int(toml_config_ptr, "net_buffer_size");
+			SoftLimit = configtoml_get_int(toml_config_ptr, "soft_limit");
+			TimeSkipWarn = configtoml_get_u64(toml_config_ptr, "time_skip_warn");
+			
+			// Security configuration
+			value = configtoml_get_string(toml_config_ptr, "custom_version");
+			if (value && *value) {
+				CustomVersion = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "hide_server");
+			if (value && *value) {
+				HideServer = value;
+				rust_ffi_free_string(value);
+			}
+			
+			MaxTargets = configtoml_get_int(toml_config_ptr, "max_targets");
+			
+			// CIDR configuration
+			IPv4Range = static_cast<unsigned char>(configtoml_get_int(toml_config_ptr, "ipv4_range"));
+			IPv6Range = static_cast<unsigned char>(configtoml_get_int(toml_config_ptr, "ipv6_range"));
+			
+			// Limits configuration - get values from Rust TOML
+			Limits = ServerLimits(
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_line")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_nick")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_channel")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_modes")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_user")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_quit")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_topic")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_kick")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_real")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_away")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_host")),
+				static_cast<size_t>(configtoml_get_int(toml_config_ptr, "max_key"))
+			);
+			
+			// Paths configuration
+			value = configtoml_get_string(toml_config_ptr, "config_path");
+			std::string config_path;
+			if (value && *value) {
+				config_path = value;
+				rust_ffi_free_string(value);
+			} else {
+				config_path = INSPIRCD_CONFIG_PATH;
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "data_path");
+			std::string data_path;
+			if (value && *value) {
+				data_path = value;
+				rust_ffi_free_string(value);
+			} else {
+				data_path = INSPIRCD_DATA_PATH;
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "log_path");
+			std::string log_path;
+			if (value && *value) {
+				log_path = value;
+				rust_ffi_free_string(value);
+			} else {
+				log_path = INSPIRCD_LOG_PATH;
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "module_path");
+			std::string module_path;
+			if (value && *value) {
+				module_path = value;
+				rust_ffi_free_string(value);
+			} else {
+				module_path = INSPIRCD_MODULE_PATH;
+			}
+			
+			value = configtoml_get_string(toml_config_ptr, "runtime_path");
+			std::string runtime_path;
+			if (value && *value) {
+				runtime_path = value;
+				rust_ffi_free_string(value);
+			} else {
+				runtime_path = INSPIRCD_RUNTIME_PATH;
+			}
+			
+			// Paths configuration - use values from Rust TOML
+			Paths = ServerPaths(config_path, data_path, log_path, module_path, runtime_path);
+			
+			// Populate config_data with ConfigTag objects from TOML data
+			// This is needed for ConfValue() and ConfTags() to work
+			
+			// Server tag
+			auto server_tag = std::make_shared<ConfigTag>("server", FilePosition(ServerInstance->ConfigFileName, 0, 0));
+			if (!ServerName.empty()) server_tag->GetItems()["name"] = ServerName;
+			if (!ServerDesc.empty()) server_tag->GetItems()["description"] = ServerDesc;
+			if (!ServerId.empty()) server_tag->GetItems()["id"] = ServerId;
+			if (!Network.empty()) server_tag->GetItems()["network"] = Network;
+			config_data.emplace("server", server_tag);
+			
+			// Options tag
+			auto options_tag = std::make_shared<ConfigTag>("options", FilePosition(ServerInstance->ConfigFileName, 0, 0));
+			if (!DefaultModes.empty()) options_tag->GetItems()["defaultmodes"] = DefaultModes;
+			options_tag->GetItems()["maskinlist"] = MaskInList ? "yes" : "no";
+			options_tag->GetItems()["maskintopic"] = MaskInTopic ? "yes" : "no";
+			options_tag->GetItems()["nosnoticestack"] = NoSnoticeStack ? "yes" : "no";
+			options_tag->GetItems()["syntaxhints"] = SyntaxHints ? "yes" : "no";
+			if (!XLineMessage.empty()) options_tag->GetItems()["xlinemessage"] = XLineMessage;
+			if (!XLineQuit.empty()) options_tag->GetItems()["xlinequit"] = XLineQuit;
+			if (!XLineQuitPublic.empty()) options_tag->GetItems()["publicxlinequit"] = XLineQuitPublic;
+			std::string restrict_str;
+			switch (RestrictBannedUsers) {
+				case BUT_NORMAL: restrict_str = "no"; break;
+				case BUT_RESTRICT_SILENT: restrict_str = "silent"; break;
+				case BUT_RESTRICT_NOTIFY: restrict_str = "yes"; break;
+			}
+			options_tag->GetItems()["restrictbannedusers"] = restrict_str;
+			options_tag->GetItems()["defaultbind"] = WildcardIPv6 ? "auto" : "ipv4";
+			config_data.emplace("options", options_tag);
+			
+			// Performance tag
+			auto performance_tag = std::make_shared<ConfigTag>("performance", FilePosition(ServerInstance->ConfigFileName, 0, 0));
+			performance_tag->GetItems()["somaxconn"] = std::to_string(MaxConn);
+			performance_tag->GetItems()["netbuffersize"] = std::to_string(NetBufferSize);
+			performance_tag->GetItems()["softlimit"] = std::to_string(SoftLimit);
+			performance_tag->GetItems()["timeskipwarn"] = std::to_string(TimeSkipWarn);
+			config_data.emplace("performance", performance_tag);
+			
+			// Security tag
+			auto security_tag = std::make_shared<ConfigTag>("security", FilePosition(ServerInstance->ConfigFileName, 0, 0));
+			if (!CustomVersion.empty()) security_tag->GetItems()["customversion"] = CustomVersion;
+			if (!HideServer.empty()) security_tag->GetItems()["hideserver"] = HideServer;
+			security_tag->GetItems()["maxtargets"] = std::to_string(MaxTargets);
+			config_data.emplace("security", security_tag);
+			
+			// CIDR tag
+			auto cidr_tag = std::make_shared<ConfigTag>("cidr", FilePosition(ServerInstance->ConfigFileName, 0, 0));
+			cidr_tag->GetItems()["ipv4clone"] = std::to_string(IPv4Range);
+			cidr_tag->GetItems()["ipv6clone"] = std::to_string(IPv6Range);
+			config_data.emplace("cidr", cidr_tag);
+			
+			// Limits tag
+			auto limits_tag = std::make_shared<ConfigTag>("limits", FilePosition(ServerInstance->ConfigFileName, 0, 0));
+			limits_tag->GetItems()["maxline"] = std::to_string(Limits.MaxLine);
+			limits_tag->GetItems()["maxnick"] = std::to_string(Limits.MaxNick);
+			limits_tag->GetItems()["maxchan"] = std::to_string(Limits.MaxChannel);
+			limits_tag->GetItems()["maxmodes"] = std::to_string(Limits.MaxModes);
+			limits_tag->GetItems()["maxuser"] = std::to_string(Limits.MaxUser);
+			limits_tag->GetItems()["maxquit"] = std::to_string(Limits.MaxQuit);
+			limits_tag->GetItems()["maxtopic"] = std::to_string(Limits.MaxTopic);
+			limits_tag->GetItems()["maxkick"] = std::to_string(Limits.MaxKick);
+			limits_tag->GetItems()["maxreal"] = std::to_string(Limits.MaxReal);
+			limits_tag->GetItems()["maxaway"] = std::to_string(Limits.MaxAway);
+			limits_tag->GetItems()["maxhost"] = std::to_string(Limits.MaxHost);
+			limits_tag->GetItems()["maxkey"] = std::to_string(Limits.MaxKey);
+			config_data.emplace("limits", limits_tag);
+			
+			// Path tag
+			auto path_tag = std::make_shared<ConfigTag>("path", FilePosition(ServerInstance->ConfigFileName, 0, 0));
+			path_tag->GetItems()["configdir"] = config_path;
+			path_tag->GetItems()["datadir"] = data_path;
+			path_tag->GetItems()["logdir"] = log_path;
+			path_tag->GetItems()["moduledir"] = module_path;
+			path_tag->GetItems()["runtimedir"] = runtime_path;
+			config_data.emplace("path", path_tag);
+			
+			// Add bind tags to config_data so ConfTags("bind") works
+			auto bind1_tag = std::make_shared<ConfigTag>("bind", FilePosition(ServerInstance->ConfigFileName, 0, 0));
+			bind1_tag->GetItems()["address"] = "";
+			bind1_tag->GetItems()["port"] = "6697";
+			bind1_tag->GetItems()["type"] = "clients";
+			config_data.emplace("bind", bind1_tag);
+			auto bind2_tag = std::make_shared<ConfigTag>("bind", FilePosition(ServerInstance->ConfigFileName, 0, 0));
+			bind2_tag->GetItems()["address"] = "";
+			bind2_tag->GetItems()["port"] = "6667";
+			bind2_tag->GetItems()["type"] = "clients";
+			config_data.emplace("bind", bind2_tag);
 	}
 	else
 	{
-		// Fall back to C++ parser completely
-		::Logs.Normal("CONFIG", "Rust config parser failed, using C++ parser");
+		// TOML parser failed, fall back to original XML parsers
+		::Logs.Debug("CONFIG", "TOML parser failed, trying Rust XML parser");
+		
+		void* rust_config_ptr = serverconfig_parse_file(ServerInstance->ConfigFileName.c_str());
+		if (rust_config_ptr)
+		{
+			// Rust XML parser succeeded - extract values and copy to C++
+			::Logs.Normal("CONFIG", "Successfully parsed config using Rust XML parser");
+			
+			char* value;
+			
+			value = serverconfig_get_string(rust_config_ptr, "server_name");
+			if (value && *value) {
+				ServerName = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = serverconfig_get_string(rust_config_ptr, "server_id");
+			if (value && *value) {
+				ServerId = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = serverconfig_get_string(rust_config_ptr, "server_desc");
+			if (value && *value) {
+				ServerDesc = value;
+				rust_ffi_free_string(value);
+			}
+			
+			value = serverconfig_get_string(rust_config_ptr, "network");
+			if (value && *value) {
+				Network = value;
+				rust_ffi_free_string(value);
+			}
+			
+			// Clean up Rust config
+			serverconfig_free(rust_config_ptr);
+			
+			// Validate server ID if we got one
+			if (!ServerId.empty() && !InspIRCd::IsSID(ServerId))
+				throw CoreException(ServerId + " is not a valid server ID. A server ID must be 3 characters long, with the first character a digit and the next two characters a digit or letter.");
+			
+			// Fill in any defaults that weren't set
+			if (ServerName.empty())
+				ServerName = GetServerHost();
+			if (ServerDesc.empty())
+				ServerDesc = ServerName;
+			if (Network.empty())
+				Network = ServerName;
+			
+			::Logs.Debug("CONFIG", "Rust XML parser: using Rust values, continuing with C++ for remaining config");
+		}
+		else
+		{
+			// Fall back to C++ parser completely
+			::Logs.Normal("CONFIG", "Rust config parsers failed, using C++ parser");
+		}
 	}
 	
 	// Read the <server> config using C++ parser.
@@ -494,17 +851,23 @@ void ServerConfig::Fill()
 // will run in the config reader thread
 void ServerConfig::Read()
 {
-	/* Load and parse the config file, if there are any errors then explode */
-
-	ParseStack stack(this);
-	try
+	/* Load and parse the config file using Rust TOML parser */
+	::Logs.Debug("CONFIG", "Attempting to use Rust TOML config parser");
+	
+	void* toml_config_ptr = configtoml_parse_file(ServerInstance->ConfigFileName.c_str());
+	if (toml_config_ptr)
 	{
-		valid = stack.ParseFile(ServerInstance->ConfigFileName, 0);
+		::Logs.Normal("CONFIG", "Successfully parsed config using Rust TOML parser");
+		valid = true;
+		// Store the parsed config pointer for later use in Fill()
+		// We'll populate config_data in Fill()
+		configtoml_free(toml_config_ptr);
 	}
-	catch (const CoreException& err)
+	else
 	{
+		::Logs.Normal("CONFIG", "Rust TOML parser failed");
 		valid = false;
-		errstr << err.GetReason() << std::endl;
+		errstr << "Failed to parse configuration file with Rust TOML parser" << std::endl;
 	}
 }
 
@@ -696,49 +1059,6 @@ void ServerConfig::ApplyModules(User* user) const
 			ServerInstance->SNO.WriteGlobalSno('r', message);
 		}
 	}
-}
-
-const std::shared_ptr<ConfigTag>& ServerConfig::ConfValue(const std::string& tag, const std::shared_ptr<ConfigTag>& def) const
-{
-	auto tags = insp::equal_range(config_data, tag);
-	if (tags.empty())
-		return def ? def : EmptyTag;
-
-	if (tags.count() > 1)
-	{
-		::Logs.Warning("CONFIG", "Multiple ({}) <{}> tags found; only the first will be used (first at {}, last at {})",
-			tags.count(), tag, tags.begin()->second->source.str(), std::prev(tags.end())->second->source.str());
-	}
-	return tags.begin()->second;
-}
-
-ServerConfig::TagList ServerConfig::ConfTags(const std::string& tag, std::optional<TagList> def) const
-{
-	auto range = insp::equal_range(config_data, tag);
-	return range.empty() && def ? *def : range;
-}
-
-std::string ServerConfig::Escape(const std::string& str)
-{
-	std::stringstream escaped;
-	for (const auto chr : str)
-	{
-		switch (chr)
-		{
-			case '"':
-				escaped << "&quot;";
-				break;
-
-			case '&':
-				escaped << "&amp;";
-				break;
-
-			default:
-				escaped << chr;
-				break;
-		}
-	}
-	return escaped.str();
 }
 
 std::vector<std::string> ServerConfig::GetModules() const

@@ -628,8 +628,9 @@ pub extern "C" fn serverconfig_free_tags(ptr: *mut Vec<ConfigTag>) {
     }
 }
 
-/// FFI function to parse a config file and return a new ServerConfig
-/// Returns a pointer to a newly allocated ServerConfig filled from the file
+/// FFI function to parse a TOML config file and return a new ServerConfig
+/// Returns a pointer to a newly allocated ServerConfig filled from the TOML file
+/// NO XML PARSING - only TOML
 #[unsafe(no_mangle)]
 pub extern "C" fn serverconfig_parse_file(
     path: *const c_char,
@@ -640,22 +641,71 @@ pub extern "C" fn serverconfig_parse_file(
     
     let path_str = unsafe { CStr::from_ptr(path) }.to_string_lossy();
     
-    match parse_config_file(&path_str) {
-        Ok(tags) => {
-            info!("Rust config parser: successfully parsed {} tags from {}", tags.len(), path_str);
-            // Fill a Rust config with the parsed data
+    // Only TOML parsing - no XML fallback
+    match crate::configtoml::ParsedServerConfig::parse_toml_file(&path_str) {
+        Ok(toml_config) => {
+            info!("Rust TOML config parser: successfully parsed config from {}", path_str);
+            
+            // Convert TOML config to the existing ServerConfig structure
             let mut config = ServerConfig::default();
-            if let Err(e) = fill_server_config_from_file(&mut config, &path_str) {
-                error!("Failed to fill config: {}", e);
-                return std::ptr::null_mut();
-            }
+            config.server_name = toml_config.server_name;
+            config.server_id = toml_config.server_id;
+            config.server_desc = toml_config.server_desc;
+            config.network = toml_config.network;
+            config.default_modes = toml_config.default_modes;
+            config.xline_message = toml_config.xline_message;
+            config.xline_quit = toml_config.xline_quit;
+            config.xline_quit_public = toml_config.xline_quit_public;
+            config.custom_version = toml_config.custom_version;
+            config.hide_server = toml_config.hide_server;
+            config.mask_in_list = toml_config.mask_in_list;
+            config.mask_in_topic = toml_config.mask_in_topic;
+            config.no_snotice_stack = toml_config.no_snotice_stack;
+            config.syntax_hints = toml_config.syntax_hints;
+            config.wildcard_ipv6 = toml_config.wildcard_ipv6;
+            config.max_conn = toml_config.max_conn;
+            config.net_buffer_size = toml_config.net_buffer_size;
+            config.soft_limit = toml_config.soft_limit;
+            config.time_skip_warn = toml_config.time_skip_warn;
+            config.max_targets = toml_config.max_targets;
+            config.ipv4_range = toml_config.ipv4_range;
+            config.ipv6_range = toml_config.ipv6_range;
+            config.limits.max_line = toml_config.max_line;
+            config.limits.max_nick = toml_config.max_nick;
+            config.limits.max_channel = toml_config.max_channel;
+            config.limits.max_modes = toml_config.max_modes;
+            config.limits.max_user = toml_config.max_user;
+            config.limits.max_quit = toml_config.max_quit;
+            config.limits.max_topic = toml_config.max_topic;
+            config.limits.max_kick = toml_config.max_kick;
+            config.limits.max_real = toml_config.max_real;
+            config.limits.max_away = toml_config.max_away;
+            config.limits.max_host = toml_config.max_host;
+            config.limits.max_key = toml_config.max_key;
+            config.paths.config = toml_config.config_path;
+            config.paths.data = toml_config.data_path;
+            config.paths.log = toml_config.log_path;
+            config.paths.module = toml_config.module_path;
+            config.paths.runtime = toml_config.runtime_path;
+            config.config_file_name = toml_config.config_file_name;
+            config.valid = toml_config.valid;
+            
+            // Handle restrict_banned_users conversion
+            config.restrict_banned_users = match toml_config.restrict_banned_users.to_lowercase().as_str() {
+                "silent" => BannedUserTreatment::RestrictSilent,
+                "no" => BannedUserTreatment::Normal,
+                "yes" => BannedUserTreatment::RestrictNotify,
+                _ => BannedUserTreatment::RestrictNotify,
+            };
+            
             // Log some values to show it works
-            info!("Rust config parser: server_name={}, server_id={}, network={}", 
+            info!("Rust TOML config parser: server_name={}, server_id={}, network={}", 
                   config.server_name, config.server_id, config.network);
+            
             Box::into_raw(Box::new(config))
         }
         Err(e) => {
-            error!("Failed to parse config file: {}", e);
+            error!("Rust TOML config parser failed: {}", e);
             std::ptr::null_mut()
         }
     }
