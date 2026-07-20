@@ -1,7 +1,7 @@
 project('bladedance', 'cpp', 'rust',
   version: '4.10.1',
   default_options: [
-    'cpp_std=c++26',
+    'cpp_std=c++23',
     'rust_std=2024',
     'warning_level=3',
     'buildtype=release',
